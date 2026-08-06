@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bg: #17151d;
+  --color-surface: #201d28;
+  --color-surface-2: #2a2733;
+  --color-accent: #ff6b39;
+  --color-accent-dim: #8c4222;
+  --color-paper: #f5f4f7;
+  --color-muted: #8b889a;
+  --color-line: rgba(245, 244, 247, 0.09);
+  --color-line-strong: rgba(245, 244, 247, 0.2);
+  --color-dot-red: #ff4d6d;
+  --color-dot-green: #34d399;
+  --color-dot-yellow: #fbbf24;
+  --color-dot-purple: #a855f7;
+
+  --font-sans: "Google Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Google Sans Code", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+}
+
+/* Jagged gradient banner shape, from preem-design-system.html */
+.jag-shape {
+  background: linear-gradient(135deg, #ff6fa8 0%, #a855f7 45%, #ff7a3d 100%);
+  clip-path: polygon(
+    100% 50%,
+    84.2% 64.2%,
+    85.35% 85.35%,
+    64.2% 84.2%,
+    50% 100%,
+    35.8% 84.2%,
+    14.65% 85.35%,
+    15.8% 64.2%,
+    0% 50%,
+    15.8% 35.8%,
+    14.65% 14.65%,
+    35.8% 15.8%,
+    50% 0%,
+    64.2% 15.8%,
+    85.35% 14.65%,
+    84.2% 35.8%
+  );
+}
