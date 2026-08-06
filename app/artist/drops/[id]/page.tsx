@@ -1,9 +1,11 @@
 import { redirect, notFound } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
 import { Badge } from "@/components/Badge";
 import { DistributionGuidance } from "@/components/DistributionGuidance";
 import { formatNaira, isDropLive } from "@/lib/format";
+import { artworkFallback } from "@/lib/placeholder";
 
 export default async function ArtistDropDetailPage({
   params,
@@ -41,9 +43,26 @@ export default async function ArtistDropDetailPage({
         <NavLink href="/artist/dashboard">← Dashboard</NavLink>
       </Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-8 sm:px-8">
-        <div className="mb-6 flex items-center gap-3">
-          <h1 className="text-2xl font-bold">{drop.title}</h1>
-          {live ? <Badge status="live">Live</Badge> : <Badge status="closed">Released</Badge>}
+        <div className="mb-6 flex items-center gap-4">
+          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-surface-2">
+            <Image
+              src={drop.artwork_path || artworkFallback(drop.id)}
+              alt={drop.title}
+              fill
+              className="object-cover"
+              sizes="64px"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">{drop.title}</h1>
+            {drop.is_exclusive ? (
+              <Badge status="exclusive">Exclusive</Badge>
+            ) : live ? (
+              <Badge status="live">Live</Badge>
+            ) : (
+              <Badge status="closed">Released</Badge>
+            )}
+          </div>
         </div>
 
         {!live && (

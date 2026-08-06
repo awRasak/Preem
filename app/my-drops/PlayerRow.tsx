@@ -1,78 +1,70 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
+import { usePlayer } from "@/lib/player-context";
+import { artworkFallback } from "@/lib/placeholder";
 
 export function PlayerRow({
   dropId,
   title,
   artistName,
   artworkUrl,
+  lyrics,
 }: {
   dropId: string;
   title: string;
   artistName: string;
   artworkUrl: string | null;
+  lyrics?: string | null;
 }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [src, setSrc] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const { track, playing, loading, play, toggle } = usePlayer();
+  const isCurrent = track?.dropId === dropId;
+  const [showLyrics, setShowLyrics] = useState(false);
 
-  async function togglePlay() {
-    setError(false);
-
-    if (audioRef.current && src) {
-      if (playing) {
-        audioRef.current.pause();
-      } else {
-        await audioRef.current.play();
-      }
-      return;
+  function handleClick() {
+    if (isCurrent) {
+      toggle();
+    } else {
+      play({ dropId, title, artistName, artworkUrl });
     }
-
-    setLoading(true);
-    const res = await fetch(`/api/stream/${dropId}`);
-    setLoading(false);
-
-    if (!res.ok) {
-      setError(true);
-      return;
-    }
-    const { url } = await res.json();
-    setSrc(url);
   }
 
   return (
-    <div className="flex items-center gap-3.5 border-b border-line py-3 last:border-none">
-      <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-[10px] bg-surface-2">
-        {artworkUrl && (
-          <Image src={artworkUrl} alt={title} fill className="object-cover" />
+    <div className="border-b border-line py-3 last:border-none">
+      <div className="flex items-center gap-3.5">
+        <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-[10px] bg-surface-2">
+          <Image
+            src={artworkUrl || artworkFallback(dropId)}
+            alt={title}
+            fill
+            className="object-cover"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{title}</div>
+          <div className="mt-0.5 truncate text-xs text-muted">{artistName}</div>
+        </div>
+        {lyrics && (
+          <button
+            onClick={() => setShowLyrics((v) => !v)}
+            className="flex-shrink-0 text-[11px] font-bold text-muted underline hover:text-paper"
+          >
+            Lyrics
+          </button>
         )}
+        <button
+          onClick={handleClick}
+          disabled={isCurrent && loading}
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
+        >
+          {isCurrent && loading ? "…" : isCurrent && playing ? "❚❚" : "▶"}
+        </button>
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{title}</div>
-        <div className="mt-0.5 truncate text-xs text-muted">{artistName}</div>
-      </div>
-      <button
-        onClick={togglePlay}
-        disabled={loading}
-        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
-      >
-        {loading ? "…" : playing ? "❚❚" : "▶"}
-      </button>
-      {error && <span className="text-xs text-[#ff6b6b]">Failed</span>}
-      {src && (
-        <audio
-          ref={audioRef}
-          src={src}
-          autoPlay
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onEnded={() => setPlaying(false)}
-          className="hidden"
-        />
+      {showLyrics && lyrics && (
+        <p className="ml-[59px] mt-3 whitespace-pre-line text-sm leading-relaxed text-paper/90">
+          {lyrics}
+        </p>
       )}
     </div>
   );

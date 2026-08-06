@@ -1,13 +1,17 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, isDropLive } from "@/lib/format";
+import { artworkFallback } from "@/lib/placeholder";
 import { DeleteDropButton } from "./DeleteDropButton";
 import { BankDetailsForm } from "./BankDetailsForm";
-import type { Drop, Purchase } from "@/lib/types";
+import { ProfileForm } from "./ProfileForm";
+import { DiscoverLinksForm } from "./DiscoverLinksForm";
+import type { ArtistLink, Drop, Purchase } from "@/lib/types";
 
 export default async function ArtistDashboardPage() {
   const supabase = await createClient();
@@ -23,6 +27,12 @@ export default async function ArtistDashboardPage() {
     .single();
 
   if (!artist) redirect("/artist/login");
+
+  const { data: links } = await supabase
+    .from("artist_links")
+    .select("*")
+    .eq("artist_id", user.id)
+    .order("created_at", { ascending: false });
 
   const { data: drops } = await supabase
     .from("drops")
@@ -86,6 +96,7 @@ export default async function ArtistDashboardPage() {
   return (
     <>
       <Nav>
+        <NavLink href={`/artist/${user.id}`}>View public profile</NavLink>
         <Button href="/artist/drops/new" variant="primary">
           + New drop
         </Button>
@@ -112,6 +123,15 @@ export default async function ArtistDashboardPage() {
                 key={drop.id}
                 className="flex items-center justify-between gap-3 p-4"
               >
+                <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                  <Image
+                    src={drop.artwork_path || artworkFallback(drop.id)}
+                    alt={drop.title}
+                    fill
+                    className="object-cover"
+                    sizes="44px"
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <a
                     href={`/artist/drops/${drop.id}`}
@@ -124,7 +144,9 @@ export default async function ArtistDashboardPage() {
                     {formatNaira(sales.revenueKobo)}
                   </div>
                 </div>
-                {live ? (
+                {drop.is_exclusive ? (
+                  <Badge status="exclusive">Exclusive</Badge>
+                ) : live ? (
                   <Badge status="live">Live</Badge>
                 ) : (
                   <Badge status="closed">Released</Badge>
@@ -135,8 +157,16 @@ export default async function ArtistDashboardPage() {
           })}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 space-y-6">
+          <ProfileForm
+            artistId={user.id}
+            stageName={artist.stage_name}
+            currentAvatarUrl={artist.avatar_url ?? null}
+            currentBio={artist.bio}
+            currentProfileLink={artist.profile_link}
+          />
           <BankDetailsForm currentAccountName={artist.account_name} />
+          <DiscoverLinksForm links={(links ?? []) as ArtistLink[]} />
         </div>
       </main>
     </>

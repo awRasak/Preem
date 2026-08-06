@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
 import { Badge } from "@/components/Badge";
+import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
 import { ArtistApprovalRow } from "./ArtistApprovalRow";
 import { PayoutRow } from "./PayoutRow";
@@ -45,6 +46,29 @@ export default async function AdminPage() {
     .eq("status", "success")
     .eq("paid_out", false);
 
+  const { count: totalArtistCount } = await supabase
+    .from("artists")
+    .select("id", { count: "exact", head: true })
+    .eq("approval_status", "approved");
+
+  const { count: totalDropCount } = await supabase
+    .from("drops")
+    .select("id", { count: "exact", head: true });
+
+  const { data: allSuccessPurchases } = await supabase
+    .from("purchases")
+    .select("fan_phone, amount_kobo")
+    .eq("status", "success");
+
+  const totalListeners = new Set(
+    (allSuccessPurchases ?? []).map((p) => p.fan_phone),
+  ).size;
+  const totalSales = (allSuccessPurchases ?? []).length;
+  const platformRevenueKobo = (allSuccessPurchases ?? []).reduce(
+    (sum, p) => sum + Math.round(p.amount_kobo * 0.2),
+    0,
+  );
+
   const balanceByArtist = new Map<string, number>();
   for (const p of unpaidPurchases ?? []) {
     type WithDrop = { amount_kobo: number; drops: { artist_id: string } | { artist_id: string }[] | null };
@@ -63,6 +87,20 @@ export default async function AdminPage() {
         <NavLink href="/artist/login">Sign out</NavLink>
       </Nav>
       <main className="mx-auto w-full max-w-4xl flex-1 space-y-12 px-5 py-8 sm:px-8">
+        <section>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <StatBox icon="♪" value={String(totalDropCount ?? 0)} label="Songs" />
+            <StatBox icon="◐" value={String(totalArtistCount ?? 0)} label="Artists" />
+            <StatBox icon="☺" value={String(totalListeners)} label="Listeners" />
+            <StatBox icon="↻" value={String(totalSales)} label="Sales" />
+            <StatBox
+              icon="₦"
+              value={formatNaira(platformRevenueKobo)}
+              label="Platform revenue"
+            />
+          </div>
+        </section>
+
         <section>
           <h2 className="mb-4 text-lg font-bold">
             Pending approvals ({pendingArtists?.length ?? 0})

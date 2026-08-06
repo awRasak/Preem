@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PlayerProvider } from "@/lib/player-context";
+import { PlayerBar } from "@/components/PlayerBar";
 
 export const metadata: Metadata = {
   title: "Preem — Live off your music",
@@ -17,8 +19,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col bg-bg text-paper">
-        {children}
+      <body className="min-h-full flex flex-col bg-bg text-paper pb-20">
+        <PlayerProvider>
+          {children}
+          <PlayerBar />
+        </PlayerProvider>
       </body>
     </html>
   );

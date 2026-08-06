@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Nav } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
@@ -118,9 +119,9 @@ export default function ArtistSignupPage() {
 
             <p className="mt-4 text-center text-xs text-muted">
               Already have an account?{" "}
-              <a href="/artist/login" className="text-paper underline">
+              <Link href="/artist/login" className="text-paper underline">
                 Sign in
-              </a>
+              </Link>
             </p>
           </form>
         )}
