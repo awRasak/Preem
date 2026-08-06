@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Script from "next/script";
 import { Button } from "@/components/Button";
+import { Badge } from "@/components/Badge";
 import { Field, Input } from "@/components/Field";
 import { formatNaira } from "@/lib/format";
 
@@ -27,10 +28,12 @@ export function BuyButton({
   dropId,
   priceKobo,
   title,
+  isExclusive,
 }: {
   dropId: string;
   priceKobo: number;
   title: string;
+  isExclusive?: boolean;
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [fanName, setFanName] = useState("");
@@ -120,10 +123,15 @@ export function BuyButton({
               </div>
             ) : (
               <form onSubmit={handlePay}>
-                <h3 className="mb-1 text-base font-bold">{title}</h3>
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-base font-bold">{title}</h3>
+                  {isExclusive && <Badge status="exclusive">EXCLUSIVE</Badge>}
+                </div>
                 <p className="mb-4 text-xs text-muted">
-                  Pay {formatNaira(priceKobo)} for permanent streaming access. No
-                  refunds once access is granted.
+                  Pay {formatNaira(priceKobo)} for permanent streaming access.
+                  {isExclusive
+                    ? " This track is exclusive to Preem — it won't be released anywhere else."
+                    : " No refunds once access is granted."}
                 </p>
                 <Field label="Name">
                   <Input

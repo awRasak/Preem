@@ -4,7 +4,8 @@ export function formatNaira(kobo: number): string {
   })}`;
 }
 
-export function isDropLive(windowEnd: string): boolean {
+export function isDropLive(windowEnd: string | null): boolean {
+  if (windowEnd === null) return true;
   return new Date(windowEnd).getTime() > Date.now();
 }
 

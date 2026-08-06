@@ -1,9 +1,11 @@
-type BadgeStatus = "live" | "pending" | "closed";
+type BadgeStatus = "live" | "pending" | "closed" | "exclusive";
 
 const styles: Record<BadgeStatus, string> = {
   live: "bg-[#d4f4dd] text-[#12703a]",
   pending: "bg-[#fff3cd] text-[#8a6d00]",
   closed: "bg-surface-2 text-muted",
+  exclusive:
+    "bg-gradient-to-r from-[#FF6FA8] via-[#A855F7] to-[#FF7A3D] text-white",
 };
 
 export function Badge({

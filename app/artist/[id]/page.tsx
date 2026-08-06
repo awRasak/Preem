@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
 import { Avatar } from "@/components/Avatar";
 import { DropCard } from "@/components/DropCard";
-import type { Artist, Drop } from "@/lib/types";
+import { DiscoverMore } from "@/components/DiscoverMore";
+import type { Artist, ArtistLink, Drop } from "@/lib/types";
 
 export const revalidate = 0;
 
@@ -26,6 +27,12 @@ export default async function ArtistProfilePage({
 
   const { data: drops } = await supabase
     .from("drops")
+    .select("*")
+    .eq("artist_id", id)
+    .order("created_at", { ascending: false });
+
+  const { data: links } = await supabase
+    .from("artist_links")
     .select("*")
     .eq("artist_id", id)
     .order("created_at", { ascending: false });
@@ -74,6 +81,11 @@ export default async function ArtistProfilePage({
             ))}
           </div>
         )}
+
+        <DiscoverMore
+          artistName={artist.stage_name}
+          links={(links ?? []) as ArtistLink[]}
+        />
       </main>
     </>
   );

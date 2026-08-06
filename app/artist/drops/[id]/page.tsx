@@ -55,7 +55,13 @@ export default async function ArtistDropDetailPage({
           </div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{drop.title}</h1>
-            {live ? <Badge status="live">Live</Badge> : <Badge status="closed">Released</Badge>}
+            {drop.is_exclusive ? (
+              <Badge status="exclusive">Exclusive</Badge>
+            ) : live ? (
+              <Badge status="live">Live</Badge>
+            ) : (
+              <Badge status="closed">Released</Badge>
+            )}
           </div>
         </div>
 

@@ -32,7 +32,9 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
 
   const { data: purchases } = await admin
     .from("purchases")
-    .select("drop_id, purchased_at, drops(id, title, artwork_path, artist:artists(stage_name))")
+    .select(
+      "drop_id, purchased_at, drops(id, title, artwork_path, lyrics, artist:artists(stage_name))",
+    )
     .eq("fan_phone", phone)
     .eq("status", "success")
     .order("purchased_at", { ascending: false });
@@ -43,6 +45,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
       id: string;
       title: string;
       artwork_path: string | null;
+      lyrics: string | null;
       artist: { stage_name: string } | { stage_name: string }[] | null;
     } | null;
   };
@@ -72,6 +75,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
                 title={drop.title}
                 artistName={artist?.stage_name ?? ""}
                 artworkUrl={drop.artwork_path}
+                lyrics={drop.lyrics}
               />
             );
           })}

@@ -10,7 +10,8 @@ import { artworkFallback } from "@/lib/placeholder";
 import { DeleteDropButton } from "./DeleteDropButton";
 import { BankDetailsForm } from "./BankDetailsForm";
 import { ProfileForm } from "./ProfileForm";
-import type { Drop, Purchase } from "@/lib/types";
+import { DiscoverLinksForm } from "./DiscoverLinksForm";
+import type { ArtistLink, Drop, Purchase } from "@/lib/types";
 
 export default async function ArtistDashboardPage() {
   const supabase = await createClient();
@@ -26,6 +27,12 @@ export default async function ArtistDashboardPage() {
     .single();
 
   if (!artist) redirect("/artist/login");
+
+  const { data: links } = await supabase
+    .from("artist_links")
+    .select("*")
+    .eq("artist_id", user.id)
+    .order("created_at", { ascending: false });
 
   const { data: drops } = await supabase
     .from("drops")
@@ -137,7 +144,9 @@ export default async function ArtistDashboardPage() {
                     {formatNaira(sales.revenueKobo)}
                   </div>
                 </div>
-                {live ? (
+                {drop.is_exclusive ? (
+                  <Badge status="exclusive">Exclusive</Badge>
+                ) : live ? (
                   <Badge status="live">Live</Badge>
                 ) : (
                   <Badge status="closed">Released</Badge>
@@ -157,6 +166,7 @@ export default async function ArtistDashboardPage() {
             currentProfileLink={artist.profile_link}
           />
           <BankDetailsForm currentAccountName={artist.account_name} />
+          <DiscoverLinksForm links={(links ?? []) as ArtistLink[]} />
         </div>
       </main>
     </>

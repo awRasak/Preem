@@ -12,12 +12,17 @@ export default async function MarketplacePage() {
 
   const { data } = await supabase
     .from("drops")
-    .select("*, artist:artists(id, stage_name, approval_status)")
-    .gt("window_end", new Date().toISOString())
+    .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
+    .or(`window_end.is.null,window_end.gt.${new Date().toISOString()}`)
     .order("created_at", { ascending: false });
 
   const drops = ((data ?? []) as (Drop & {
-    artist: { id: string; stage_name: string; approval_status: string } | null;
+    artist: {
+      id: string;
+      stage_name: string;
+      avatar_url: string | null;
+      approval_status: string;
+    } | null;
   })[]).filter((d) => d.artist?.approval_status === "approved");
 
   return (

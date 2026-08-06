@@ -16,13 +16,26 @@ export type Drop = {
   artist_id: string;
   title: string;
   description: string | null;
+  lyrics: string | null;
   price_kobo: number;
   audio_file_path: string;
   artwork_path: string | null;
   window_start: string;
-  window_end: string;
+  window_end: string | null;
+  is_exclusive: boolean;
   created_at: string;
-  artist?: Pick<Artist, "id" | "stage_name">;
+  artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;
+};
+
+export type ArtistLink = {
+  id: string;
+  artist_id: string;
+  url: string;
+  platform: "audiomack" | "boomplay" | "spotify";
+  title: string | null;
+  thumbnail_url: string | null;
+  embed_html: string | null;
+  created_at: string;
 };
 
 export type Purchase = {
