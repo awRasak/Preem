@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
 import { Badge } from "@/components/Badge";
 import { formatNaira, isDropLive } from "@/lib/format";
+import { artworkFallback } from "@/lib/placeholder";
 import { CountdownBadge } from "./CountdownBadge";
 import { BuyButton } from "./BuyButton";
 import type { Drop } from "@/lib/types";
@@ -39,20 +41,21 @@ export default async function DropPage({
       </Nav>
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-5 py-8 sm:flex-row sm:px-8">
         <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden rounded-xl bg-surface-2 sm:w-[240px]">
-          {drop.artwork_path && (
-            <Image
-              src={drop.artwork_path}
-              alt={drop.title}
-              fill
-              className="object-cover"
-              sizes="240px"
-            />
-          )}
+          <Image
+            src={drop.artwork_path || artworkFallback(drop.id)}
+            alt={drop.title}
+            fill
+            className="object-cover"
+            sizes="240px"
+          />
         </div>
         <div className="flex-1">
-          <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted">
+          <Link
+            href={`/artist/${drop.artist?.id}`}
+            className="mb-1 inline-block text-[11px] font-bold uppercase tracking-wide text-muted hover:text-paper"
+          >
             {drop.artist?.stage_name}
-          </div>
+          </Link>
           <h1 className="mb-3 text-2xl font-bold sm:text-3xl">{drop.title}</h1>
           {live ? (
             <CountdownBadge windowEnd={drop.window_end} />

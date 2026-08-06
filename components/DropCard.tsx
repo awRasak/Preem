@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Drop } from "@/lib/types";
 import { formatNaira, formatTimeLeft, isDropLive } from "@/lib/format";
+import { artworkFallback } from "@/lib/placeholder";
 import { Badge } from "./Badge";
 
 export function DropCard({ drop }: { drop: Drop }) {
@@ -13,15 +14,13 @@ export function DropCard({ drop }: { drop: Drop }) {
       className="block rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
     >
       <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-surface-2">
-        {drop.artwork_path ? (
-          <Image
-            src={drop.artwork_path}
-            alt={drop.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, 25vw"
-          />
-        ) : null}
+        <Image
+          src={drop.artwork_path || artworkFallback(drop.id)}
+          alt={drop.title}
+          fill
+          className="object-cover"
+          sizes="(max-width: 640px) 50vw, 25vw"
+        />
       </div>
       <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted">
         {drop.artist?.stage_name ?? "Unknown artist"}

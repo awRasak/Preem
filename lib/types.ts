@@ -6,6 +6,7 @@ export type Artist = {
   stage_name: string;
   bio: string | null;
   profile_link: string | null;
+  avatar_url: string | null;
   approval_status: ApprovalStatus;
   created_at: string;
 };

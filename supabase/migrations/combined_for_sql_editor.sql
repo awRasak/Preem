@@ -243,3 +243,5 @@ create policy "artist can delete own artwork"
     bucket_id = 'artwork'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+-- Public artist profile support
+alter table artists add column avatar_url text;
