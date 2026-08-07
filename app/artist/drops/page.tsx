@@ -4,12 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { ArtistShell } from "@/components/ArtistShell";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
-import { StatBox } from "@/components/StatBox";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
-import type { Drop, Purchase } from "@/lib/types";
+import { DeleteDropButton } from "../dashboard/DeleteDropButton";
+import type { Drop } from "@/lib/types";
 
-export default async function ArtistDashboardPage() {
+export default async function ArtistDropsPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,10 +18,9 @@ export default async function ArtistDashboardPage() {
 
   const { data: artist } = await supabase
     .from("artists")
-    .select("*")
+    .select("stage_name, avatar_url")
     .eq("id", user.id)
     .single();
-
   if (!artist) redirect("/artist/login");
 
   const { data: drops } = await supabase
@@ -31,82 +30,32 @@ export default async function ArtistDashboardPage() {
     .order("created_at", { ascending: false });
 
   const dropIds = (drops ?? []).map((d) => d.id);
+  const { data: tracks } = dropIds.length
+    ? await supabase.from("drop_tracks").select("drop_id, audio_file_path").in("drop_id", dropIds)
+    : { data: [] as { drop_id: string; audio_file_path: string }[] };
 
-  const { data: purchases } = dropIds.length
-    ? await supabase
-        .from("purchases")
-        .select("*")
-        .in("drop_id", dropIds)
-        .eq("status", "success")
-    : { data: [] as Purchase[] };
-
-  const successPurchases = purchases ?? [];
-  const revenueKobo = successPurchases.reduce(
-    (sum, p) => sum + Math.round(p.amount_kobo * 0.8),
-    0,
-  );
-  const buyerCount = new Set(successPurchases.map((p) => p.fan_phone)).size;
-  const liveDropCount = (drops ?? []).filter(
-    (d) => d.status === "published" && isDropLive(d.window_end),
-  ).length;
-
-  const salesByDrop = new Map<string, { count: number; revenueKobo: number }>();
-  for (const p of successPurchases) {
-    const entry = salesByDrop.get(p.drop_id) ?? { count: 0, revenueKobo: 0 };
-    entry.count += 1;
-    entry.revenueKobo += Math.round(p.amount_kobo * 0.8);
-    salesByDrop.set(p.drop_id, entry);
-  }
-
-  if (artist.approval_status !== "approved") {
-    return (
-      <ArtistShell
-        active="home"
-        artistName={artist.stage_name}
-        avatarUrl={artist.avatar_url ?? null}
-        artistId={user.id}
-      >
-        <main className="mx-auto w-full max-w-lg flex-1 px-5 py-16 text-center">
-          <h1 className="mb-4 text-2xl font-bold">
-            {artist.approval_status === "pending"
-              ? "Your account is pending approval"
-              : "Your account was not approved"}
-          </h1>
-          <p className="mb-4 text-sm text-muted">
-            {artist.approval_status === "pending"
-              ? "An admin is reviewing your profile link. You'll be able to publish drops once approved."
-              : "Reach out to the Preem team if you think this is a mistake."}
-          </p>
-          <Badge status={artist.approval_status === "pending" ? "pending" : "closed"}>
-            {artist.approval_status === "pending" ? "Pending admin approval" : "Not approved"}
-          </Badge>
-        </main>
-      </ArtistShell>
-    );
+  const pathsByDrop = new Map<string, string[]>();
+  for (const t of tracks ?? []) {
+    const list = pathsByDrop.get(t.drop_id) ?? [];
+    list.push(t.audio_file_path);
+    pathsByDrop.set(t.drop_id, list);
   }
 
   return (
     <ArtistShell
-      active="home"
+      active="drops"
       artistName={artist.stage_name}
       avatarUrl={artist.avatar_url ?? null}
       artistId={user.id}
     >
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold">Home</h1>
+          <h1 className="text-xl font-bold">Drops</h1>
           <Button href="/artist/drops/new" variant="primary">
             + New drop
           </Button>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatBox icon="₦" value={formatNaira(revenueKobo)} label="Revenue (80%)" />
-          <StatBox icon="◐" value={String(buyerCount)} label="Buyers" />
-          <StatBox icon="♪" value={String(liveDropCount)} label="Live drops" />
-        </div>
-
-        <h2 className="mb-4 text-lg font-bold">Your drops</h2>
         <div className="divide-y divide-line rounded-xl border border-line">
           {(drops ?? []).length === 0 && (
             <p className="p-5 text-sm text-muted">
@@ -114,13 +63,9 @@ export default async function ArtistDashboardPage() {
             </p>
           )}
           {(drops as Drop[] | null)?.map((drop) => {
-            const sales = salesByDrop.get(drop.id) ?? { count: 0, revenueKobo: 0 };
             const live = drop.status === "published" && isDropLive(drop.window_end);
             return (
-              <div
-                key={drop.id}
-                className="flex items-center justify-between gap-3 p-4"
-              >
+              <div key={drop.id} className="flex items-center justify-between gap-3 p-4">
                 <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
                   <Image
                     src={drop.artwork_path || artworkFallback(drop.id)}
@@ -138,8 +83,7 @@ export default async function ArtistDashboardPage() {
                     {drop.title}
                   </a>
                   <div className="mt-1 text-xs text-muted">
-                    {sales.count} sale{sales.count === 1 ? "" : "s"} ·{" "}
-                    {formatNaira(sales.revenueKobo)}
+                    {drop.release_type} · Min. {formatNaira(drop.min_price_kobo)}
                   </div>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-2">
@@ -152,6 +96,7 @@ export default async function ArtistDashboardPage() {
                   ) : (
                     <Badge status="closed">Released</Badge>
                   )}
+                  <DeleteDropButton dropId={drop.id} audioPaths={pathsByDrop.get(drop.id) ?? []} />
                 </div>
               </div>
             );

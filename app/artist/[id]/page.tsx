@@ -29,6 +29,7 @@ export default async function ArtistProfilePage({
     .from("drops")
     .select("*")
     .eq("artist_id", id)
+    .eq("status", "published")
     .order("created_at", { ascending: false });
 
   const { data: links } = await supabase
@@ -67,6 +68,42 @@ export default async function ArtistProfilePage({
               >
                 Listen on other platforms →
               </a>
+            )}
+            {((artist as Artist).instagram_url ||
+              (artist as Artist).twitter_url ||
+              (artist as Artist).tiktok_url) && (
+              <div className="mt-3 flex flex-wrap justify-center gap-3 sm:justify-start">
+                {(artist as Artist).instagram_url && (
+                  <a
+                    href={(artist as Artist).instagram_url!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-muted underline hover:text-paper"
+                  >
+                    Instagram
+                  </a>
+                )}
+                {(artist as Artist).twitter_url && (
+                  <a
+                    href={(artist as Artist).twitter_url!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-muted underline hover:text-paper"
+                  >
+                    X / Twitter
+                  </a>
+                )}
+                {(artist as Artist).tiktok_url && (
+                  <a
+                    href={(artist as Artist).tiktok_url!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-muted underline hover:text-paper"
+                  >
+                    TikTok
+                  </a>
+                )}
+              </div>
             )}
           </div>
         </div>

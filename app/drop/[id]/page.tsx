@@ -11,7 +11,7 @@ import { CountdownBadge } from "./CountdownBadge";
 import { BuyButton } from "./BuyButton";
 import { LyricsSection } from "./LyricsSection";
 import { DiscoverMore } from "@/components/DiscoverMore";
-import type { ArtistLink, Drop } from "@/lib/types";
+import type { ArtistLink, Drop, DropTrack } from "@/lib/types";
 
 export const revalidate = 0;
 
@@ -27,6 +27,7 @@ export default async function DropPage({
     .from("drops")
     .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
     .eq("id", id)
+    .eq("status", "published")
     .single();
 
   const drop = data as
@@ -43,6 +44,14 @@ export default async function DropPage({
   if (!drop || drop.artist?.approval_status !== "approved") notFound();
 
   const live = isDropLive(drop.window_end);
+
+  const { data: tracksData } = await supabase
+    .from("drop_tracks")
+    .select("*")
+    .eq("drop_id", drop.id)
+    .order("track_number", { ascending: true });
+  const tracks = (tracksData ?? []) as DropTrack[];
+  const isBundle = drop.release_type !== "single" && tracks.length > 1;
 
   const { data: links } = await supabase
     .from("artist_links")
@@ -80,30 +89,39 @@ export default async function DropPage({
               {drop.artist?.stage_name}
             </Link>
             <h1 className="mb-3 text-2xl font-bold sm:text-3xl">{drop.title}</h1>
-            {drop.is_exclusive ? (
-              <Badge status="exclusive">EXCLUSIVE</Badge>
-            ) : live && drop.window_end ? (
-              <CountdownBadge windowEnd={drop.window_end} />
-            ) : (
-              <Badge status="closed">Released</Badge>
-            )}
-            {drop.collaborators && (
-              <p className="mt-3 text-xs text-muted">{drop.collaborators}</p>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {drop.is_exclusive ? (
+                <Badge status="exclusive">EXCLUSIVE</Badge>
+              ) : live && drop.window_end ? (
+                <CountdownBadge windowEnd={drop.window_end} />
+              ) : (
+                <Badge status="closed">Released</Badge>
+              )}
+              {isBundle && (
+                <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                  {drop.release_type} · {tracks.length} tracks
+                </span>
+              )}
+            </div>
             {drop.description && (
               <p className="mt-4 text-sm text-muted">{drop.description}</p>
             )}
-            {drop.lyrics && <LyricsSection lyrics={drop.lyrics} />}
+            {!isBundle && tracks[0]?.collaborators && (
+              <p className="mt-3 text-xs text-muted">{tracks[0].collaborators}</p>
+            )}
+            {!isBundle && tracks[0]?.lyrics && (
+              <LyricsSection lyrics={tracks[0].lyrics} />
+            )}
             <div className="mt-6 flex items-center gap-4">
-              <span className="font-mono text-lg text-accent">
-                {formatNaira(drop.price_kobo)}
-              </span>
+              <Badge status="price">Min. Price {formatNaira(drop.min_price_kobo)}</Badge>
               {live ? (
                 <BuyButton
                   dropId={drop.id}
-                  priceKobo={drop.price_kobo}
+                  trackId={!isBundle ? tracks[0]?.id : undefined}
+                  minPriceKobo={drop.min_price_kobo}
                   title={drop.title}
                   isExclusive={drop.is_exclusive}
+                  label={isBundle ? "Buy full release" : "Buy access"}
                 />
               ) : (
                 <p className="text-xs text-muted">
@@ -112,10 +130,48 @@ export default async function DropPage({
               )}
             </div>
             <p className="mt-4 text-[11px] text-muted">
-              No refunds once access is granted.
+              You decide the price — every contribution supports the artist. No refunds once access is granted.
             </p>
           </div>
         </div>
+
+        {isBundle && (
+          <div className="mt-8">
+            <h2 className="mb-3 text-lg font-bold">Tracklist</h2>
+            <p className="mb-4 text-xs text-muted">
+              Buying all tracks individually costs more in total than the full release —
+              the release price above is the discount for buying everything at once.
+            </p>
+            <div className="divide-y divide-line rounded-xl border border-line">
+              {tracks.map((track) => (
+                <div key={track.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">
+                      {track.track_number}. {track.title}
+                    </div>
+                    {track.collaborators && (
+                      <div className="mt-0.5 text-xs text-muted">{track.collaborators}</div>
+                    )}
+                    {track.lyrics && <LyricsSection lyrics={track.lyrics} />}
+                  </div>
+                  <div className="flex flex-shrink-0 items-center gap-3">
+                    <Badge status="price">Min. {formatNaira(track.min_price_kobo)}</Badge>
+                    {live && (
+                      <BuyButton
+                        dropId={drop.id}
+                        trackId={track.id}
+                        minPriceKobo={track.min_price_kobo}
+                        title={track.title}
+                        isExclusive={drop.is_exclusive}
+                        label="Buy track"
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <DiscoverMore
           artistName={drop.artist?.stage_name ?? ""}

@@ -5,6 +5,8 @@ import { isDropLive } from "@/lib/format";
 
 const schema = z.object({
   dropId: z.string().uuid(),
+  trackId: z.string().uuid().optional(),
+  amountKobo: z.number().int().positive(),
   fanName: z.string().trim().min(1).max(120),
   fanPhone: z
     .string()
@@ -21,22 +23,42 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { dropId, fanName, fanPhone, fanEmail } = parsed.data;
+  const { dropId, trackId, amountKobo, fanName, fanPhone, fanEmail } = parsed.data;
 
   const supabase = createAdminClient();
 
   const { data: drop } = await supabase
     .from("drops")
-    .select("id, price_kobo, window_end, title")
+    .select("id, min_price_kobo, window_end, status, title")
     .eq("id", dropId)
     .single();
 
-  if (!drop) {
+  if (!drop || drop.status !== "published") {
     return NextResponse.json({ error: "Drop not found" }, { status: 404 });
   }
   if (!isDropLive(drop.window_end)) {
     return NextResponse.json(
       { error: "This drop's early-access window has closed." },
+      { status: 400 },
+    );
+  }
+
+  let minPriceKobo = drop.min_price_kobo;
+  if (trackId) {
+    const { data: track } = await supabase
+      .from("drop_tracks")
+      .select("id, drop_id, min_price_kobo")
+      .eq("id", trackId)
+      .single();
+    if (!track || track.drop_id !== dropId) {
+      return NextResponse.json({ error: "Track not found" }, { status: 404 });
+    }
+    minPriceKobo = track.min_price_kobo;
+  }
+
+  if (amountKobo < minPriceKobo) {
+    return NextResponse.json(
+      { error: "Amount is below the minimum price." },
       { status: 400 },
     );
   }
@@ -61,10 +83,11 @@ export async function POST(req: Request) {
 
   const { error: insertError } = await supabase.from("purchases").insert({
     drop_id: dropId,
+    track_id: trackId ?? null,
     fan_name: fanName,
     fan_phone: fanPhone,
     fan_email: fanEmail,
-    amount_kobo: drop.price_kobo,
+    amount_kobo: amountKobo,
     paystack_ref: reference,
     status: "pending",
   });
@@ -78,7 +101,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     reference,
-    amountKobo: drop.price_kobo,
+    amountKobo,
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
   });
 }

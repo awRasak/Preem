@@ -6,10 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 
 export function DeleteDropButton({
   dropId,
-  audioPath,
+  audioPaths,
 }: {
   dropId: string;
-  audioPath: string;
+  audioPaths: string[];
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,9 @@ export function DeleteDropButton({
     }
     setLoading(true);
     const supabase = createClient();
-    await supabase.storage.from("audio").remove([audioPath]);
+    if (audioPaths.length > 0) {
+      await supabase.storage.from("audio").remove(audioPaths);
+    }
     await supabase.from("drops").delete().eq("id", dropId);
     setLoading(false);
     router.refresh();

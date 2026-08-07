@@ -13,17 +13,26 @@ export function ProfileForm({
   currentAvatarUrl,
   currentBio,
   currentProfileLink,
+  currentInstagramUrl,
+  currentTwitterUrl,
+  currentTiktokUrl,
 }: {
   artistId: string;
   stageName: string;
   currentAvatarUrl: string | null;
   currentBio: string | null;
   currentProfileLink: string | null;
+  currentInstagramUrl?: string | null;
+  currentTwitterUrl?: string | null;
+  currentTiktokUrl?: string | null;
 }) {
   const router = useRouter();
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl);
   const [bio, setBio] = useState(currentBio ?? "");
   const [profileLink, setProfileLink] = useState(currentProfileLink ?? "");
+  const [instagramUrl, setInstagramUrl] = useState(currentInstagramUrl ?? "");
+  const [twitterUrl, setTwitterUrl] = useState(currentTwitterUrl ?? "");
+  const [tiktokUrl, setTiktokUrl] = useState(currentTiktokUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +72,14 @@ export function ProfileForm({
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from("artists")
-      .update({ avatar_url: avatarUrl, bio, profile_link: profileLink })
+      .update({
+        avatar_url: avatarUrl,
+        bio,
+        profile_link: profileLink,
+        instagram_url: instagramUrl || null,
+        twitter_url: twitterUrl || null,
+        tiktok_url: tiktokUrl || null,
+      })
       .eq("id", artistId);
 
     setSaving(false);
@@ -105,6 +121,30 @@ export function ProfileForm({
             value={profileLink}
             onChange={(e) => setProfileLink(e.target.value)}
             placeholder="https://..."
+          />
+        </Field>
+        <Field label="Instagram (optional)">
+          <Input
+            type="url"
+            value={instagramUrl}
+            onChange={(e) => setInstagramUrl(e.target.value)}
+            placeholder="https://instagram.com/..."
+          />
+        </Field>
+        <Field label="X / Twitter (optional)">
+          <Input
+            type="url"
+            value={twitterUrl}
+            onChange={(e) => setTwitterUrl(e.target.value)}
+            placeholder="https://x.com/..."
+          />
+        </Field>
+        <Field label="TikTok (optional)">
+          <Input
+            type="url"
+            value={tiktokUrl}
+            onChange={(e) => setTiktokUrl(e.target.value)}
+            placeholder="https://tiktok.com/@..."
           />
         </Field>
         {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}

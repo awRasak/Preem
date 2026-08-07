@@ -26,31 +26,43 @@ type Step = "closed" | "form" | "submitting" | "verifying" | "done" | "error";
 
 export function BuyButton({
   dropId,
-  priceKobo,
+  trackId,
+  minPriceKobo,
   title,
   isExclusive,
+  label = "Buy access",
 }: {
   dropId: string;
-  priceKobo: number;
+  trackId?: string;
+  minPriceKobo: number;
   title: string;
   isExclusive?: boolean;
+  label?: string;
 }) {
   const [step, setStep] = useState<Step>("closed");
+  const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
   const [fanName, setFanName] = useState("");
   const [fanPhone, setFanPhone] = useState("");
   const [fanEmail, setFanEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
 
+  const amountKobo = Math.round(Number(amountNaira) * 100);
+  const amountValid = Number.isFinite(amountKobo) && amountKobo >= minPriceKobo;
+
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!amountValid) {
+      setError(`Enter at least ${formatNaira(minPriceKobo)}.`);
+      return;
+    }
     setStep("submitting");
 
     const res = await fetch("/api/checkout/initialize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dropId, fanName, fanPhone, fanEmail }),
+      body: JSON.stringify({ dropId, trackId, amountKobo, fanName, fanPhone, fanEmail }),
     });
     const body = await res.json();
 
@@ -97,7 +109,7 @@ export function BuyButton({
         onLoad={() => setScriptReady(true)}
       />
       <Button variant="primary" onClick={() => setStep("form")}>
-        Buy access
+        {label}
       </Button>
 
       {step !== "closed" && (
@@ -127,12 +139,25 @@ export function BuyButton({
                   <h3 className="text-base font-bold">{title}</h3>
                   {isExclusive && <Badge status="exclusive">EXCLUSIVE</Badge>}
                 </div>
+                <div className="mb-3">
+                  <Badge status="price">Min. Price {formatNaira(minPriceKobo)}</Badge>
+                </div>
                 <p className="mb-4 text-xs text-muted">
-                  Pay {formatNaira(priceKobo)} for permanent streaming access.
+                  You decide the price — every contribution supports the artist.
                   {isExclusive
                     ? " This track is exclusive to Preem — it won't be released anywhere else."
                     : " No refunds once access is granted."}
                 </p>
+                <Field label={`Your price (₦${minPriceKobo / 100} minimum)`}>
+                  <Input
+                    required
+                    type="number"
+                    min={minPriceKobo / 100}
+                    step="1"
+                    value={amountNaira}
+                    onChange={(e) => setAmountNaira(e.target.value)}
+                  />
+                </Field>
                 <Field label="Name">
                   <Input
                     required
@@ -181,7 +206,7 @@ export function BuyButton({
                       ? "…"
                       : step === "verifying"
                         ? "Verifying…"
-                        : `Pay ${formatNaira(priceKobo)}`}
+                        : "Continue"}
                   </Button>
                 </div>
               </form>

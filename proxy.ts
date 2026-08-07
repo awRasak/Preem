@@ -31,7 +31,10 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isArtistRoute =
-    path.startsWith("/artist/dashboard") || path.startsWith("/artist/drops");
+    path.startsWith("/artist/dashboard") ||
+    path.startsWith("/artist/drops") ||
+    path.startsWith("/artist/listeners") ||
+    path.startsWith("/artist/profile");
   const isAdminRoute = path.startsWith("/admin") && path !== "/admin/setup";
 
   if ((isArtistRoute || isAdminRoute) && !user) {
@@ -64,5 +67,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/artist/dashboard/:path*", "/artist/drops/:path*", "/admin/:path*"],
+  matcher: [
+    "/artist/dashboard/:path*",
+    "/artist/drops/:path*",
+    "/artist/listeners/:path*",
+    "/artist/profile/:path*",
+    "/admin/:path*",
+  ],
 };

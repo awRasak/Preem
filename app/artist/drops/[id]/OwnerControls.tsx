@@ -5,31 +5,31 @@ import { usePlayer } from "@/lib/player-context";
 import { Button } from "@/components/Button";
 
 export function OwnerControls({
-  dropId,
+  trackId,
   title,
   artistName,
   artworkUrl,
 }: {
-  dropId: string;
+  trackId: string;
   title: string;
   artistName: string;
   artworkUrl: string | null;
 }) {
   const { track, playing, loading, play, toggle } = usePlayer();
   const [downloading, setDownloading] = useState(false);
-  const isCurrent = track?.dropId === dropId;
+  const isCurrent = track?.trackId === trackId;
 
   function handlePlay() {
     if (isCurrent) {
       toggle();
     } else {
-      play({ dropId, title, artistName, artworkUrl });
+      play({ trackId, title, artistName, artworkUrl });
     }
   }
 
   async function handleDownload() {
     setDownloading(true);
-    const res = await fetch(`/api/artist/drops/${dropId}/download`);
+    const res = await fetch(`/api/artist/tracks/${trackId}/download`);
     setDownloading(false);
     if (!res.ok) return;
     const { url } = await res.json();

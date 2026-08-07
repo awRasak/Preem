@@ -22,7 +22,7 @@ export function PlayerBar() {
       <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
         <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
           <Image
-            src={track.artworkUrl || artworkFallback(track.dropId)}
+            src={track.artworkUrl || artworkFallback(track.trackId)}
             alt={track.title}
             fill
             className="object-cover"
