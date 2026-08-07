@@ -71,7 +71,7 @@ export default async function ArtistDashboardPage() {
   if (artist.approval_status !== "approved") {
     return (
       <>
-        <Nav>
+        <Nav role="artist">
           <NavLink href="/artist/login">Sign out</NavLink>
         </Nav>
         <main className="mx-auto w-full max-w-lg flex-1 px-5 py-16 text-center">
@@ -95,7 +95,7 @@ export default async function ArtistDashboardPage() {
 
   return (
     <>
-      <Nav>
+      <Nav role="artist">
         <NavLink href={`/artist/${user.id}`}>View public profile</NavLink>
         <Button href="/artist/drops/new" variant="primary">
           + New drop

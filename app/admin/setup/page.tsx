@@ -51,7 +51,7 @@ export default function AdminSetupPage() {
 
   return (
     <>
-      <Nav />
+      <Nav role="admin" />
       <main className="mx-auto w-full max-w-sm flex-1 px-5 py-10">
         <h1 className="mb-2 text-2xl font-bold">Set up the admin account</h1>
         <p className="mb-6 text-sm text-muted">

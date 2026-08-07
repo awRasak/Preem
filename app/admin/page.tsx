@@ -83,7 +83,7 @@ export default async function AdminPage() {
 
   return (
     <>
-      <Nav>
+      <Nav role="admin">
         <NavLink href="/artist/login">Sign out</NavLink>
       </Nav>
       <main className="mx-auto w-full max-w-4xl flex-1 space-y-12 px-5 py-8 sm:px-8">

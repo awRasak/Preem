@@ -15,7 +15,7 @@ export default async function MyDropsPage() {
 
   return (
     <>
-      <Nav />
+      <Nav role="fan" />
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 sm:px-8">
         {!phone ? (
           <PhoneLookupForm />

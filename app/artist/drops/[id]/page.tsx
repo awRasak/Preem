@@ -39,7 +39,7 @@ export default async function ArtistDropDetailPage({
 
   return (
     <>
-      <Nav>
+      <Nav role="artist">
         <NavLink href="/artist/dashboard">← Dashboard</NavLink>
       </Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-8 sm:px-8">
