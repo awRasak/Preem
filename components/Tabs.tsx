@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function SettingsTabs({
+export function Tabs({
   tabs,
 }: {
   tabs: { id: string; label: string; content: React.ReactNode }[];

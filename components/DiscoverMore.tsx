@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Tabs } from "./Tabs";
 import type { ArtistLink } from "@/lib/types";
 
 const PLATFORM_LABEL: Record<ArtistLink["platform"], string> = {
@@ -36,6 +37,35 @@ function dedupeByTitle(links: ArtistLink[]): ArtistLink[] {
   return [...byTitle.values(), ...untitled];
 }
 
+function LinkCard({ link }: { link: ArtistLink }) {
+  if (link.embed_html) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-line bg-surface p-3">
+        {link.title && (
+          <div className="mb-2 truncate text-[11px] text-muted">{link.title}</div>
+        )}
+        <div
+          className="overflow-hidden rounded-lg [&_iframe]:block [&_iframe]:w-full"
+          // Trusted: HTML comes from the platform's own oEmbed response
+          // fetched server-side at submission time, not user input.
+          dangerouslySetInnerHTML={{ __html: link.embed_html }}
+        />
+      </div>
+    );
+  }
+  return (
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 text-sm hover:border-line-strong"
+    >
+      <span>{link.title ?? `Listen on ${PLATFORM_LABEL[link.platform]}`}</span>
+      <span className="text-xs font-bold text-muted">{PLATFORM_LABEL[link.platform]} →</span>
+    </a>
+  );
+}
+
 export function DiscoverMore({
   artistName,
   links,
@@ -48,6 +78,27 @@ export function DiscoverMore({
 
   if (deduped.length === 0) return null;
 
+  const byPlatform = new Map<ArtistLink["platform"], ArtistLink[]>();
+  for (const link of deduped) {
+    const list = byPlatform.get(link.platform) ?? [];
+    list.push(link);
+    byPlatform.set(link.platform, list);
+  }
+
+  const tabs = (["audiomack", "spotify", "boomplay"] as const)
+    .filter((platform) => byPlatform.has(platform))
+    .map((platform) => ({
+      id: platform,
+      label: PLATFORM_LABEL[platform],
+      content: (
+        <div className="space-y-4">
+          {byPlatform.get(platform)!.map((link) => (
+            <LinkCard key={link.id} link={link} />
+          ))}
+        </div>
+      ),
+    }));
+
   return (
     <div className="mt-10">
       <button
@@ -58,43 +109,8 @@ export function DiscoverMore({
       </button>
 
       {open && (
-        <div className="mt-4 space-y-4">
-          {deduped.map((link) =>
-            link.embed_html ? (
-              <div
-                key={link.id}
-                className="overflow-hidden rounded-xl border border-line bg-surface p-3"
-              >
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                    {PLATFORM_LABEL[link.platform]}
-                  </span>
-                  {link.title && (
-                    <span className="truncate text-[11px] text-muted">{link.title}</span>
-                  )}
-                </div>
-                <div
-                  className="overflow-hidden rounded-lg [&_iframe]:block [&_iframe]:w-full"
-                  // Trusted: HTML comes from the platform's own oEmbed response
-                  // fetched server-side at submission time, not user input.
-                  dangerouslySetInnerHTML={{ __html: link.embed_html }}
-                />
-              </div>
-            ) : (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 text-sm hover:border-line-strong"
-              >
-                <span>{link.title ?? `Listen on ${PLATFORM_LABEL[link.platform]}`}</span>
-                <span className="text-xs font-bold text-muted">
-                  {PLATFORM_LABEL[link.platform]} →
-                </span>
-              </a>
-            ),
-          )}
+        <div className="mt-4">
+          <Tabs tabs={tabs} />
         </div>
       )}
     </div>

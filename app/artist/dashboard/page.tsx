@@ -11,7 +11,7 @@ import { DeleteDropButton } from "./DeleteDropButton";
 import { BankDetailsForm } from "./BankDetailsForm";
 import { ProfileForm } from "./ProfileForm";
 import { DiscoverLinksForm } from "./DiscoverLinksForm";
-import { SettingsTabs } from "./SettingsTabs";
+import { Tabs } from "@/components/Tabs";
 import type { ArtistLink, Drop, Purchase } from "@/lib/types";
 
 export default async function ArtistDashboardPage() {
@@ -192,7 +192,7 @@ export default async function ArtistDashboardPage() {
         )}
 
         <div className="mt-8">
-          <SettingsTabs
+          <Tabs
             tabs={[
               {
                 id: "profile",
