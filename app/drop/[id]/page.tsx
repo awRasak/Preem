@@ -87,6 +87,9 @@ export default async function DropPage({
             ) : (
               <Badge status="closed">Released</Badge>
             )}
+            {drop.collaborators && (
+              <p className="mt-3 text-xs text-muted">{drop.collaborators}</p>
+            )}
             {drop.description && (
               <p className="mt-4 text-sm text-muted">{drop.description}</p>
             )}

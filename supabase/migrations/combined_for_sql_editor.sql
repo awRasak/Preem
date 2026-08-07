@@ -280,3 +280,4 @@ create policy "artist can insert own links"
 create policy "artist can delete own links"
   on artist_links for delete
   using (auth.uid() = artist_id);
+alter table drops add column collaborators text;

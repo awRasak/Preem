@@ -17,6 +17,7 @@ export type Drop = {
   title: string;
   description: string | null;
   lyrics: string | null;
+  collaborators: string | null;
   price_kobo: number;
   audio_file_path: string;
   artwork_path: string | null;

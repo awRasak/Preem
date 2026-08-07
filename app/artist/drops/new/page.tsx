@@ -20,6 +20,7 @@ export default function NewDropPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [lyrics, setLyrics] = useState("");
+  const [collaborators, setCollaborators] = useState("");
   const [priceNaira, setPriceNaira] = useState("");
   const [dropType, setDropType] = useState<DropType>("early-access");
   const [windowHours, setWindowHours] = useState(48);
@@ -89,6 +90,7 @@ export default function NewDropPage() {
       title,
       description: description || null,
       lyrics: lyrics || null,
+      collaborators: collaborators || null,
       price_kobo: priceKobo,
       audio_file_path: audioPath,
       artwork_path: artworkPublicUrl,
@@ -145,6 +147,13 @@ export default function NewDropPage() {
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+          </Field>
+          <Field label="Collaborators (optional)">
+            <Input
+              value={collaborators}
+              onChange={(e) => setCollaborators(e.target.value)}
+              placeholder="e.g. Prod. by Sarz, feat. Amaarae"
             />
           </Field>
           <Field label="Lyrics (optional)">
