@@ -34,9 +34,7 @@ export function DropCard({ drop }: { drop: Drop }) {
       </div>
       <div className="mb-2 truncate text-[15px] font-medium">{drop.title}</div>
       <div className="flex items-center justify-between">
-        <span className="font-mono text-sm text-accent">
-          {formatNaira(drop.price_kobo)}
-        </span>
+        <Badge status="price">Min. {formatNaira(drop.min_price_kobo)}</Badge>
         {drop.is_exclusive ? (
           <Badge status="exclusive">EXCLUSIVE</Badge>
         ) : live ? (

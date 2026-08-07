@@ -4,9 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ trackId: string }> },
 ) {
-  const { id } = await params;
+  const { trackId } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,17 +16,27 @@ export async function GET(
   }
 
   const admin = createAdminClient();
-  const { data: drop } = await admin
-    .from("drops")
-    .select("artist_id, audio_file_path, title")
-    .eq("id", id)
+  const { data } = await admin
+    .from("drop_tracks")
+    .select("audio_file_path, title, drop:drops(artist_id)")
+    .eq("id", trackId)
     .single();
 
-  if (!drop) {
+  const track = data as
+    | {
+        audio_file_path: string;
+        title: string;
+        drop: { artist_id: string } | { artist_id: string }[] | null;
+      }
+    | null;
+
+  if (!track) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  let authorized = drop.artist_id === user.id;
+  const artistId = Array.isArray(track.drop) ? track.drop[0]?.artist_id : track.drop?.artist_id;
+
+  let authorized = artistId === user.id;
   if (!authorized) {
     const { data: roleRow } = await supabase
       .from("user_roles")
@@ -39,11 +49,11 @@ export async function GET(
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  const ext = drop.audio_file_path.split(".").pop();
+  const ext = track.audio_file_path.split(".").pop();
   const { data: signed, error } = await admin.storage
     .from("audio")
-    .createSignedUrl(drop.audio_file_path, 300, {
-      download: `${drop.title}.${ext}`,
+    .createSignedUrl(track.audio_file_path, 300, {
+      download: `${track.title}.${ext}`,
     });
 
   if (error || !signed) {

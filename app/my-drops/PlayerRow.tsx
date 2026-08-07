@@ -6,27 +6,27 @@ import { usePlayer } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
 
 export function PlayerRow({
-  dropId,
+  trackId,
   title,
   artistName,
   artworkUrl,
   lyrics,
 }: {
-  dropId: string;
+  trackId: string;
   title: string;
   artistName: string;
   artworkUrl: string | null;
   lyrics?: string | null;
 }) {
   const { track, playing, loading, play, toggle } = usePlayer();
-  const isCurrent = track?.dropId === dropId;
+  const isCurrent = track?.trackId === trackId;
   const [showLyrics, setShowLyrics] = useState(false);
 
   function handleClick() {
     if (isCurrent) {
       toggle();
     } else {
-      play({ dropId, title, artistName, artworkUrl });
+      play({ trackId, title, artistName, artworkUrl });
     }
   }
 
@@ -35,7 +35,7 @@ export function PlayerRow({
       <div className="flex items-center gap-3.5">
         <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-[10px] bg-surface-2">
           <Image
-            src={artworkUrl || artworkFallback(dropId)}
+            src={artworkUrl || artworkFallback(trackId)}
             alt={title}
             fill
             className="object-cover"

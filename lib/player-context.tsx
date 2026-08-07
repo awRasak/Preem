@@ -10,7 +10,7 @@ import {
 } from "react";
 
 export type PlayerTrack = {
-  dropId: string;
+  trackId: string;
   title: string;
   artistName: string;
   artworkUrl: string | null;
@@ -77,7 +77,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (!audio) return;
       setError(false);
 
-      if (track?.dropId === nextTrack.dropId && audio.src) {
+      if (track?.trackId === nextTrack.trackId && audio.src) {
         await audio.play();
         return;
       }
@@ -85,7 +85,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setTrack(nextTrack);
       try {
-        const res = await fetch(`/api/stream/${nextTrack.dropId}`);
+        const res = await fetch(`/api/stream/${nextTrack.trackId}`);
         if (!res.ok) throw new Error("stream failed");
         const { url } = await res.json();
         audio.src = url;
