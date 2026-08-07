@@ -11,6 +11,7 @@ import { DeleteDropButton } from "./DeleteDropButton";
 import { BankDetailsForm } from "./BankDetailsForm";
 import { ProfileForm } from "./ProfileForm";
 import { DiscoverLinksForm } from "./DiscoverLinksForm";
+import { SettingsTabs } from "./SettingsTabs";
 import type { ArtistLink, Drop, Purchase } from "@/lib/types";
 
 export default async function ArtistDashboardPage() {
@@ -67,6 +68,13 @@ export default async function ArtistDashboardPage() {
     entry.revenueKobo += Math.round(p.amount_kobo * 0.8);
     salesByDrop.set(p.drop_id, entry);
   }
+
+  const dropTitleById = new Map((drops ?? []).map((d) => [d.id, d.title]));
+  const listeners = [...successPurchases].sort(
+    (a, b) =>
+      new Date(b.purchased_at ?? 0).getTime() -
+      new Date(a.purchased_at ?? 0).getTime(),
+  );
 
   if (artist.approval_status !== "approved") {
     return (
@@ -157,16 +165,60 @@ export default async function ArtistDashboardPage() {
           })}
         </div>
 
-        <div className="mt-8 space-y-6">
-          <ProfileForm
-            artistId={user.id}
-            stageName={artist.stage_name}
-            currentAvatarUrl={artist.avatar_url ?? null}
-            currentBio={artist.bio}
-            currentProfileLink={artist.profile_link}
+        {listeners.length > 0 && (
+          <div className="mt-8">
+            <h2 className="mb-4 text-lg font-bold">Listeners ({listeners.length})</h2>
+            <div className="max-h-80 overflow-y-auto rounded-xl border border-line">
+              <div className="divide-y divide-line">
+                {listeners.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between gap-3 p-4 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{p.fan_name}</div>
+                      <div className="mt-0.5 truncate text-xs text-muted">
+                        {p.fan_phone} · {dropTitleById.get(p.drop_id) ?? "Deleted drop"}
+                      </div>
+                    </div>
+                    <span className="flex-shrink-0 font-mono text-accent">
+                      {formatNaira(p.amount_kobo)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-8">
+          <SettingsTabs
+            tabs={[
+              {
+                id: "profile",
+                label: "Public Profile",
+                content: (
+                  <ProfileForm
+                    artistId={user.id}
+                    stageName={artist.stage_name}
+                    currentAvatarUrl={artist.avatar_url ?? null}
+                    currentBio={artist.bio}
+                    currentProfileLink={artist.profile_link}
+                  />
+                ),
+              },
+              {
+                id: "payout",
+                label: "Payout Bank Account",
+                content: <BankDetailsForm currentAccountName={artist.account_name} />,
+              },
+              {
+                id: "discover",
+                label: "Discover More",
+                content: <DiscoverLinksForm links={(links ?? []) as ArtistLink[]} />,
+              },
+            ]}
           />
-          <BankDetailsForm currentAccountName={artist.account_name} />
-          <DiscoverLinksForm links={(links ?? []) as ArtistLink[]} />
         </div>
       </main>
     </>

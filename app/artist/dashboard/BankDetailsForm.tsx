@@ -60,8 +60,7 @@ export function BankDetailsForm({
   }
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-5">
-      <h3 className="mb-1 text-sm font-bold">Payout bank account</h3>
+    <>
       <p className="mb-4 text-xs text-muted">
         {currentAccountName
           ? `Currently linked: ${currentAccountName}`
@@ -98,6 +97,6 @@ export function BankDetailsForm({
           {loading ? "Verifying…" : "Save bank account"}
         </Button>
       </form>
-    </div>
+    </>
   );
 }

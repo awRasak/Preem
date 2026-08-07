@@ -45,8 +45,7 @@ export function DiscoverLinksForm({ links }: { links: ArtistLink[] }) {
   }
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-5">
-      <h3 className="mb-1 text-sm font-bold">Discover more from you</h3>
+    <>
       <p className="mb-4 text-xs text-muted">
         Add links to your already-released music elsewhere — shown on your drop
         pages so fans can find your other tracks.
@@ -91,6 +90,6 @@ export function DiscoverLinksForm({ links }: { links: ArtistLink[] }) {
         </Button>
       </form>
       {error && <p className="text-sm text-[#ff6b6b]">{error}</p>}
-    </div>
+    </>
   );
 }

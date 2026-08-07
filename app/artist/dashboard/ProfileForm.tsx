@@ -76,8 +76,7 @@ export function ProfileForm({
   }
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-5">
-      <h3 className="mb-4 text-sm font-bold">Public profile</h3>
+    <>
       <form onSubmit={handleSave}>
         <div className="mb-4 flex items-center gap-4">
           <Avatar src={avatarUrl} seed={artistId} alt={stageName} size={64} />
@@ -114,6 +113,6 @@ export function ProfileForm({
           {saving ? "Saving…" : "Save profile"}
         </Button>
       </form>
-    </div>
+    </>
   );
 }
