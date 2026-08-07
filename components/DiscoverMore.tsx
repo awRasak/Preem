@@ -45,7 +45,11 @@ function LinkCard({ link }: { link: ArtistLink }) {
           <div className="mb-2 truncate text-[11px] text-muted">{link.title}</div>
         )}
         <div
-          className="overflow-hidden rounded-lg [&_iframe]:block [&_iframe]:w-full"
+          // Spotify's own iframe breaks its internal layout (text overlapping
+          // the artwork) below ~340px — we can't restyle it (cross-origin), so
+          // it gets a safe minimum width and scrolls horizontally instead of
+          // being squeezed.
+          className="overflow-x-auto rounded-lg [&_iframe]:block [&_iframe]:w-full [&_iframe]:min-w-[340px]"
           // Trusted: HTML comes from the platform's own oEmbed response
           // fetched server-side at submission time, not user input.
           dangerouslySetInnerHTML={{ __html: link.embed_html }}
