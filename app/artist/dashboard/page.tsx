@@ -5,6 +5,7 @@ import { Nav, NavLink } from "@/components/Nav";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
+import { AccountMenu } from "@/components/AccountMenu";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { DeleteDropButton } from "./DeleteDropButton";
@@ -14,7 +15,12 @@ import { DiscoverLinksForm } from "./DiscoverLinksForm";
 import { Tabs } from "@/components/Tabs";
 import type { ArtistLink, Drop, Purchase } from "@/lib/types";
 
-export default async function ArtistDashboardPage() {
+export default async function ArtistDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -104,10 +110,21 @@ export default async function ArtistDashboardPage() {
   return (
     <>
       <Nav role="artist">
-        <NavLink href={`/artist/${user.id}`}>View public profile</NavLink>
         <Button href="/artist/drops/new" variant="primary">
           + New drop
         </Button>
+        <AccountMenu
+          name={artist.stage_name}
+          avatarUrl={artist.avatar_url ?? null}
+          seed={user.id}
+          items={[
+            { label: "View public profile", href: `/artist/${user.id}` },
+            { label: "Edit Profile", href: "/artist/dashboard?tab=profile#settings" },
+            { label: "Payout Bank Account", href: "/artist/dashboard?tab=payout#settings" },
+            { label: "Discover More", href: "/artist/dashboard?tab=discover#settings" },
+            { label: "Sign out", href: "/artist/login" },
+          ]}
+        />
       </Nav>
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
         <div className="mb-8 grid grid-cols-3 gap-3">
@@ -143,7 +160,7 @@ export default async function ArtistDashboardPage() {
                 <div className="min-w-0 flex-1">
                   <a
                     href={`/artist/drops/${drop.id}`}
-                    className="truncate text-sm font-medium hover:underline"
+                    className="block truncate text-sm font-medium hover:underline"
                   >
                     {drop.title}
                   </a>
@@ -152,14 +169,16 @@ export default async function ArtistDashboardPage() {
                     {formatNaira(sales.revenueKobo)}
                   </div>
                 </div>
-                {drop.is_exclusive ? (
-                  <Badge status="exclusive">Exclusive</Badge>
-                ) : live ? (
-                  <Badge status="live">Live</Badge>
-                ) : (
-                  <Badge status="closed">Released</Badge>
-                )}
-                <DeleteDropButton dropId={drop.id} audioPath={drop.audio_file_path} />
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  {drop.is_exclusive ? (
+                    <Badge status="exclusive">Exclusive</Badge>
+                  ) : live ? (
+                    <Badge status="live">Live</Badge>
+                  ) : (
+                    <Badge status="closed">Released</Badge>
+                  )}
+                  <DeleteDropButton dropId={drop.id} audioPath={drop.audio_file_path} />
+                </div>
               </div>
             );
           })}
@@ -191,8 +210,9 @@ export default async function ArtistDashboardPage() {
           </div>
         )}
 
-        <div className="mt-8">
+        <div id="settings" className="mt-8 scroll-mt-20">
           <Tabs
+            defaultTabId={tab}
             tabs={[
               {
                 id: "profile",

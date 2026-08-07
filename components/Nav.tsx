@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 export type NavRole = "artist" | "admin" | "fan";
 
@@ -23,10 +25,12 @@ export function Nav({
   children?: ReactNode;
   role?: NavRole;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <nav className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
+    <nav className="relative flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
       <div className="flex items-center gap-3">
-        <Link href="/" className="block">
+        <Link href="/" className="block" onClick={() => setOpen(false)}>
           <Image
             src="/preem-logo.png"
             alt="Preem"
@@ -43,7 +47,29 @@ export function Nav({
           </span>
         )}
       </div>
-      <div className="flex items-center gap-4">{children}</div>
+
+      {children && (
+        <>
+          <div className="hidden items-center gap-4 sm:flex">{children}</div>
+
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-line-strong text-sm sm:hidden"
+            aria-label={open ? "Close menu" : "Open menu"}
+          >
+            {open ? "✕" : "☰"}
+          </button>
+
+          {open && (
+            <div
+              className="absolute inset-x-0 top-full z-50 flex flex-col items-stretch gap-2 border-b border-line bg-surface p-4 sm:hidden"
+              onClick={() => setOpen(false)}
+            >
+              {children}
+            </div>
+          )}
+        </>
+      )}
     </nav>
   );
 }
@@ -52,7 +78,7 @@ export function NavLink({ href, children }: { href: string; children: ReactNode 
   return (
     <Link
       href={href}
-      className="rounded-full border border-line-strong px-3.5 py-1.5 text-[13px] text-muted transition-colors hover:text-paper"
+      className="rounded-full border border-line-strong px-3.5 py-1.5 text-center text-[13px] text-muted transition-colors hover:text-paper"
     >
       {children}
     </Link>

@@ -4,10 +4,26 @@ import { useState } from "react";
 
 export function Tabs({
   tabs,
+  defaultTabId,
 }: {
   tabs: { id: string; label: string; content: React.ReactNode }[];
+  defaultTabId?: string;
 }) {
-  const [active, setActive] = useState(tabs[0]?.id);
+  const [active, setActive] = useState(
+    (defaultTabId && tabs.some((t) => t.id === defaultTabId) ? defaultTabId : tabs[0]?.id),
+  );
+
+  // Client-side navigation (e.g. from a dropdown link with ?tab=payout) keeps
+  // this component mounted, so the useState initializer above won't re-run.
+  // Adjusting state during render (rather than in an effect) is the pattern
+  // React recommends for syncing state to a changed prop.
+  const [prevDefaultTabId, setPrevDefaultTabId] = useState(defaultTabId);
+  if (defaultTabId !== prevDefaultTabId) {
+    setPrevDefaultTabId(defaultTabId);
+    if (defaultTabId && tabs.some((t) => t.id === defaultTabId)) {
+      setActive(defaultTabId);
+    }
+  }
 
   return (
     <div className="rounded-xl border border-line bg-surface">
