@@ -1,9 +1,49 @@
 import { cookies } from "next/headers";
 import { Nav } from "@/components/Nav";
+import { Button } from "@/components/Button";
+import { DropCard } from "@/components/DropCard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PHONE_SESSION_COOKIE, verifyPhoneSessionCookieValue } from "@/lib/phone-session";
 import { PhoneLookupForm } from "./PhoneLookupForm";
 import { PlayerRow } from "./PlayerRow";
+import type { Drop } from "@/lib/types";
+
+const GHOST_DROPS: Drop[] = [
+  {
+    id: "ghost-1",
+    artist_id: "ghost-artist-1",
+    title: "Your first drop will show up here",
+    description: null,
+    release_type: "single",
+    status: "published",
+    genre: "other",
+    secondary_genre: null,
+    min_price_kobo: 50000,
+    artwork_path: null,
+    window_start: new Date().toISOString(),
+    window_end: null,
+    is_exclusive: false,
+    created_at: new Date().toISOString(),
+    artist: { id: "ghost-artist-1", stage_name: "Artist name", avatar_url: null },
+  },
+  {
+    id: "ghost-2",
+    artist_id: "ghost-artist-2",
+    title: "Buy access to unlock it",
+    description: null,
+    release_type: "single",
+    status: "published",
+    genre: "other",
+    secondary_genre: null,
+    min_price_kobo: 50000,
+    artwork_path: null,
+    window_start: new Date().toISOString(),
+    window_end: null,
+    is_exclusive: false,
+    created_at: new Date().toISOString(),
+    artist: { id: "ghost-artist-2", stage_name: "Artist name", avatar_url: null },
+  },
+];
 
 export const revalidate = 0;
 
@@ -56,9 +96,19 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
     return (
       <div>
         <h1 className="mb-6 text-2xl font-bold">My Drops</h1>
-        <p className="text-sm text-muted">
+        <p className="mb-6 text-sm text-muted">
           Nothing here yet — buy access to a drop and it&apos;ll show up here permanently.
         </p>
+        <Button href="/" variant="primary" className="mb-8">
+          Browse live drops
+        </Button>
+        <div className="grid grid-cols-2 gap-4 opacity-40 sm:grid-cols-3">
+          {GHOST_DROPS.map((drop) => (
+            <div key={drop.id} className="pointer-events-none select-none">
+              <DropCard drop={drop} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

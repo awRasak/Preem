@@ -2,15 +2,16 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Nav, NavLink } from "@/components/Nav";
 import { Badge } from "@/components/Badge";
 import { Avatar } from "@/components/Avatar";
+import { DropCard } from "@/components/DropCard";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { CountdownBadge } from "./CountdownBadge";
 import { BuyButton } from "./BuyButton";
 import { LyricsSection } from "./LyricsSection";
 import { DiscoverMore } from "@/components/DiscoverMore";
+import { genreLabel } from "@/lib/genres";
 import type { ArtistLink, Drop, DropTrack } from "@/lib/types";
 
 export const revalidate = 0;
@@ -44,6 +45,8 @@ export default async function DropPage({
   if (!drop || drop.artist?.approval_status !== "approved") notFound();
 
   const live = isDropLive(drop.window_end);
+  const artistId = drop.artist?.id ?? drop.artist_id;
+  const artistName = drop.artist?.stage_name ?? "";
 
   const { data: tracksData } = await supabase
     .from("drop_tracks")
@@ -59,11 +62,44 @@ export default async function DropPage({
     .eq("artist_id", drop.artist_id)
     .order("created_at", { ascending: false });
 
+  const { data: moreData } = await supabase
+    .from("drops")
+    .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
+    .eq("artist_id", drop.artist_id)
+    .eq("status", "published")
+    .neq("id", drop.id)
+    .or(`window_end.is.null,window_end.gt.${new Date().toISOString()}`)
+    .order("created_at", { ascending: false })
+    .limit(8);
+  const moreFromArtist = (moreData ?? []) as (Drop & {
+    artist: {
+      id: string;
+      stage_name: string;
+      avatar_url: string | null;
+      approval_status: string;
+    } | null;
+  })[];
+
   return (
     <>
-      <Nav>
-        <NavLink href="/">← Back</NavLink>
-      </Nav>
+      {/* Drop-link entry: artist identity leads, not the Preem wordmark */}
+      <nav className="flex items-center justify-between border-b border-line px-5 py-3 sm:px-8">
+        <Link href="/" className="text-xs font-bold text-muted hover:text-paper">
+          ← Back
+        </Link>
+        <Link
+          href={`/artist/${artistId}`}
+          className="flex items-center gap-2 rounded-full border border-line-strong py-1 pl-1 pr-3"
+        >
+          <Avatar
+            src={drop.artist?.avatar_url ?? null}
+            seed={artistId}
+            alt={artistName}
+            size={26}
+          />
+          <span className="max-w-[140px] truncate text-sm font-medium">{artistName}</span>
+        </Link>
+      </nav>
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
         <div className="flex flex-col gap-6 sm:flex-row">
           <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden rounded-xl bg-surface-2 sm:w-[240px]">
@@ -76,18 +112,6 @@ export default async function DropPage({
             />
           </div>
           <div className="flex-1">
-            <Link
-              href={`/artist/${drop.artist?.id}`}
-              className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted hover:text-paper"
-            >
-              <Avatar
-                src={drop.artist?.avatar_url ?? null}
-                seed={drop.artist?.id ?? drop.artist_id}
-                alt={drop.artist?.stage_name ?? ""}
-                size={24}
-              />
-              {drop.artist?.stage_name}
-            </Link>
             <h1 className="mb-3 text-2xl font-bold sm:text-3xl">{drop.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               {drop.is_exclusive ? (
@@ -97,11 +121,11 @@ export default async function DropPage({
               ) : (
                 <Badge status="closed">Released</Badge>
               )}
-              {isBundle && (
-                <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                  {drop.release_type} · {tracks.length} tracks
-                </span>
-              )}
+              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                {genreLabel(drop.genre)}
+                {drop.secondary_genre ? ` / ${genreLabel(drop.secondary_genre)}` : ""}
+                {isBundle ? ` · ${drop.release_type} · ${tracks.length} tracks` : ""}
+              </span>
             </div>
             {drop.description && (
               <p className="mt-4 text-sm text-muted">{drop.description}</p>
@@ -173,8 +197,21 @@ export default async function DropPage({
           </div>
         )}
 
+        {moreFromArtist.length > 0 && (
+          <div className="mt-10">
+            <h2 className="mb-4 text-lg font-bold">More from {artistName}</h2>
+            <div className="-mx-5 flex gap-4 overflow-x-auto px-5 pb-2 sm:-mx-8 sm:px-8">
+              {moreFromArtist.map((d) => (
+                <div key={d.id} className="w-[160px] flex-shrink-0 sm:w-[190px]">
+                  <DropCard drop={d} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <DiscoverMore
-          artistName={drop.artist?.stage_name ?? ""}
+          artistName={artistName}
           links={(links ?? []) as ArtistLink[]}
         />
       </main>

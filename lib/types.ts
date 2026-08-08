@@ -2,6 +2,15 @@ export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type PurchaseStatus = "pending" | "success" | "failed";
 export type ReleaseType = "single" | "ep" | "album";
 export type DropStatus = "draft" | "published";
+export type Genre =
+  | "afrobeats"
+  | "hip_hop"
+  | "rnb"
+  | "amapiano"
+  | "pop"
+  | "gospel"
+  | "alte"
+  | "other";
 
 export type Artist = {
   id: string;
@@ -23,6 +32,8 @@ export type Drop = {
   description: string | null;
   release_type: ReleaseType;
   status: DropStatus;
+  genre: Genre;
+  secondary_genre: Genre | null;
   min_price_kobo: number;
   artwork_path: string | null;
   window_start: string;

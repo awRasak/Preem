@@ -9,6 +9,11 @@ export function isDropLive(windowEnd: string | null): boolean {
   return new Date(windowEnd).getTime() > Date.now();
 }
 
+export function isEndingSoon(windowEnd: string | null, thresholdMs: number): boolean {
+  if (windowEnd === null) return false;
+  return new Date(windowEnd).getTime() - Date.now() <= thresholdMs;
+}
+
 export function formatTimeLeft(windowEnd: string): string {
   const ms = new Date(windowEnd).getTime() - Date.now();
   if (ms <= 0) return "Closed";

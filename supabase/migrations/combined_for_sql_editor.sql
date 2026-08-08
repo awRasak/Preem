@@ -343,3 +343,13 @@ create unique index purchases_drop_track_phone_success_idx
 alter table artists add column instagram_url text;
 alter table artists add column twitter_url text;
 alter table artists add column tiktok_url text;
+
+-- Per-drop genre tagging for the Explore page's filter chips.
+alter table drops add column genre text not null default 'other'
+  check (genre in ('afrobeats', 'hip_hop', 'rnb', 'amapiano', 'pop', 'gospel', 'alte', 'other'));
+
+create index drops_genre_idx on drops (genre);
+
+-- Optional secondary genre tag, alongside the existing required genre.
+alter table drops add column secondary_genre text
+  check (secondary_genre in ('afrobeats', 'hip_hop', 'rnb', 'amapiano', 'pop', 'gospel', 'alte', 'other'));

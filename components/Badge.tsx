@@ -18,7 +18,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-block rounded-full px-3 py-1 text-[11px] font-bold ${styles[status]}`}
+      className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-bold ${styles[status]}`}
     >
       {children}
     </span>

@@ -1,3 +1,5 @@
+import type { Genre } from "@/lib/types";
+
 export type ReleaseType = "single" | "ep" | "album";
 export type DropType = "early-access" | "exclusive";
 
@@ -17,18 +19,19 @@ export type WizardState = {
   title: string;
   releaseType: ReleaseType;
   dropType: DropType;
+  genre: Genre;
+  secondaryGenre: Genre | "";
   description: string;
   singleAudioFile: File | null;
   tracks: TrackDraft[];
   minPriceNaira: string;
-  windowHours: number;
+  releaseDate: string;
 };
 
-export const WINDOW_OPTIONS = [
-  { label: "24 hours", hours: 24 },
-  { label: "48 hours", hours: 48 },
-  { label: "72 hours", hours: 72 },
-];
+export function defaultReleaseDate(): string {
+  const d = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  return d.toISOString().slice(0, 10);
+}
 
 export function newTrackDraft(title = ""): TrackDraft {
   return {
@@ -49,10 +52,12 @@ export function initialWizardState(): WizardState {
     title: "",
     releaseType: "single",
     dropType: "early-access",
+    genre: "other",
+    secondaryGenre: "",
     description: "",
     singleAudioFile: null,
     tracks: [],
     minPriceNaira: "",
-    windowHours: 48,
+    releaseDate: defaultReleaseDate(),
   };
 }

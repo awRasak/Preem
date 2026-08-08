@@ -15,14 +15,39 @@
   --color-dot-yellow: #fbbf24;
   --color-dot-purple: #a855f7;
 
-  --font-sans: "Google Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-es-klarheit), "Google Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Google Sans Code", ui-monospace, SFMono-Regular, monospace;
+  --font-plakat: var(--font-es-klarheit-plakat), var(--font-sans);
 }
 
 body {
-  background: var(--color-bg);
+  background-color: var(--color-bg);
+  background-image: url("/background-gradient.jpg");
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--color-paper);
   font-family: var(--font-sans);
+}
+
+h1 {
+  font-family: var(--font-plakat);
+  font-weight: 800;
+}
+
+h2 {
+  font-family: var(--font-plakat);
+  font-weight: 700;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 /* Jagged gradient banner shape, from preem-design-system.html */

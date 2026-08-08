@@ -23,6 +23,14 @@ const STEP_TITLES: Record<Exclude<Step, "capture">, string> = {
   4: "Review & publish",
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// The browser client's cookie-based session can take a moment to settle
+// right after a fresh page load/login — the very first Supabase call fired
+// can transiently fail RLS auth even though the artist is genuinely
+// approved. One retry after a short delay clears this reliably.
 async function uploadFile(
   supabase: ReturnType<typeof createClient>,
   bucket: "audio" | "artwork",
@@ -31,8 +39,14 @@ async function uploadFile(
 ) {
   const ext = file.name.split(".").pop();
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file);
-  if (error) throw new Error(`Could not upload ${bucket === "audio" ? "track" : "artwork"} file.`);
+  const label = bucket === "audio" ? "track" : "artwork";
+
+  let { error } = await supabase.storage.from(bucket).upload(path, file);
+  if (error) {
+    await sleep(500);
+    ({ error } = await supabase.storage.from(bucket).upload(path, file));
+  }
+  if (error) throw new Error(`Could not upload ${label} file: ${error.message}`);
   return path;
 }
 
@@ -178,28 +192,47 @@ export default function CreateDropWizard() {
       const windowEnd =
         mode === "publish" && isExclusive
           ? null
-          : mode === "publish"
-            ? new Date(Date.now() + state.windowHours * 60 * 60 * 1000).toISOString()
+          : mode === "publish" && state.releaseDate
+            ? new Date(`${state.releaseDate}T23:59:59`).toISOString()
             : null;
 
-      const { data: drop, error: dropError } = await supabase
+      const dropInsert = {
+        artist_id: user.id,
+        title: state.title,
+        description: state.description || null,
+        release_type: state.releaseType,
+        genre: state.genre,
+        secondary_genre: state.secondaryGenre || null,
+        status: mode === "publish" ? "published" : "draft",
+        min_price_kobo: releaseMinPriceKobo,
+        artwork_path: artworkPublicUrl,
+        window_end: windowEnd,
+        is_exclusive: isExclusive,
+      };
+
+      let { data: drop, error: dropError } = await supabase
         .from("drops")
-        .insert({
-          artist_id: user.id,
-          title: state.title,
-          description: state.description || null,
-          release_type: state.releaseType,
-          status: mode === "publish" ? "published" : "draft",
-          min_price_kobo: releaseMinPriceKobo,
-          artwork_path: artworkPublicUrl,
-          window_end: windowEnd,
-          is_exclusive: isExclusive,
-        })
+        .insert(dropInsert)
         .select("id")
         .single();
 
+      // Same transient-session-race protection as uploadFile(): retry once
+      // if this was the very first Supabase call in the flow (no artwork).
+      if (dropError && !state.artworkFile) {
+        await sleep(500);
+        ({ data: drop, error: dropError } = await supabase
+          .from("drops")
+          .insert(dropInsert)
+          .select("id")
+          .single());
+      }
+
       if (dropError || !drop) {
-        throw new Error("Could not save the drop. Make sure your artist account is approved.");
+        throw new Error(
+          dropError?.message
+            ? `Could not save the drop: ${dropError.message}`
+            : "Could not save the drop.",
+        );
       }
 
       const trackRows = await buildTrackRows(supabase, user.id, releaseMinPriceKobo, mode === "publish");

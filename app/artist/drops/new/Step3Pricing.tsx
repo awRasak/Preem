@@ -1,7 +1,6 @@
 "use client";
 
 import { Field, Input } from "@/components/Field";
-import { WINDOW_OPTIONS } from "./types";
 import type { WizardState } from "./types";
 
 export function Step3Pricing({
@@ -29,20 +28,16 @@ export function Step3Pricing({
       </Field>
 
       {state.dropType === "early-access" && (
-        <Field label="Window">
-          <select
-            value={state.windowHours}
-            onChange={(e) => onChange({ windowHours: Number(e.target.value) })}
-            className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-paper focus:border-line-strong focus:outline-none"
-          >
-            {WINDOW_OPTIONS.map((o) => (
-              <option key={o.hours} value={o.hours}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+        <Field label="Public release date">
+          <Input
+            required
+            type="date"
+            min={new Date().toISOString().slice(0, 10)}
+            value={state.releaseDate}
+            onChange={(e) => onChange({ releaseDate: e.target.value })}
+          />
           <p className="mt-1.5 text-[11px] text-muted">
-            How long this stays exclusive to Preem before you can distribute it elsewhere.
+            When you plan to release this elsewhere. Preem stays exclusive to this drop until then.
           </p>
         </Field>
       )}

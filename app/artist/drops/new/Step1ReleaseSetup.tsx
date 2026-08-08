@@ -1,6 +1,7 @@
 "use client";
 
 import { Field, Textarea } from "@/components/Field";
+import { GENRES } from "@/lib/genres";
 import { newTrackDraft } from "./types";
 import type { DropType, ReleaseType, WizardState } from "./types";
 
@@ -67,6 +68,35 @@ export function Step1ReleaseSetup({
             </button>
           ))}
         </div>
+      </Field>
+
+      <Field label="Main Genre">
+        <select
+          value={state.genre}
+          onChange={(e) => onChange({ genre: e.target.value as WizardState["genre"] })}
+          className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-paper focus:border-line-strong focus:outline-none"
+        >
+          {GENRES.map((g) => (
+            <option key={g.value} value={g.value}>
+              {g.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <Field label="Secondary Genre (optional)">
+        <select
+          value={state.secondaryGenre}
+          onChange={(e) => onChange({ secondaryGenre: e.target.value as WizardState["secondaryGenre"] })}
+          className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-paper focus:border-line-strong focus:outline-none"
+        >
+          <option value="">None</option>
+          {GENRES.map((g) => (
+            <option key={g.value} value={g.value}>
+              {g.label}
+            </option>
+          ))}
+        </select>
       </Field>
 
       <Field label="Drop type">

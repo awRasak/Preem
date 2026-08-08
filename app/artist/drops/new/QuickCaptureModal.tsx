@@ -26,8 +26,10 @@ export function QuickCaptureModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-line-strong bg-surface p-6">
+    // Mobile: a plain full-screen step, no dark backdrop or floating card
+    // chrome. Desktop (sm+): the modal-over-backdrop treatment.
+    <div className="fixed inset-0 z-50 flex flex-col bg-bg px-5 py-6 sm:items-center sm:justify-center sm:bg-black/60 sm:p-4">
+      <div className="flex flex-1 flex-col sm:flex-none sm:w-full sm:max-w-sm sm:rounded-xl sm:border sm:border-line-strong sm:bg-surface sm:p-6">
         <h2 className="mb-4 text-lg font-bold">New drop</h2>
         <label className="relative mb-4 block aspect-square w-full cursor-pointer overflow-hidden rounded-xl bg-surface-2">
           <input
@@ -59,7 +61,7 @@ export function QuickCaptureModal({
         <p className="mb-6 text-center text-[11px] text-muted">
           3000×3000px · PNG, JPG, or WEBP
         </p>
-        <div className="flex gap-2">
+        <div className="mt-auto flex gap-2 sm:mt-0">
           <Button variant="outline" className="flex-1" onClick={onDiscard}>
             Discard
           </Button>

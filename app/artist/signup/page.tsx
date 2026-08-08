@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Nav } from "@/components/Nav";
+import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -54,7 +54,9 @@ export default function ArtistSignupPage() {
 
   return (
     <>
-      <Nav role="artist" />
+      <Nav role="artist">
+        <NavLink href="/">← Home</NavLink>
+      </Nav>
       <main className="mx-auto w-full max-w-sm flex-1 px-5 py-10">
         <h1 className="mb-6 text-2xl font-bold">Join Preem as an artist</h1>
 

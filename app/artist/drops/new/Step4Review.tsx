@@ -35,7 +35,11 @@ export function Step4Review({ state }: { state: WizardState }) {
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span>{state.dropType === "exclusive" ? "Exclusive — no expiry" : `Early access — ${state.windowHours}h window`}</span>
+        <span>
+          {state.dropType === "exclusive"
+            ? "Exclusive — no expiry"
+            : `Early access — public on ${state.releaseDate}`}
+        </span>
       </div>
     </div>
   );

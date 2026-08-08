@@ -43,7 +43,7 @@ export function PreviewCard({ state }: { state: WizardState }) {
         {state.dropType === "exclusive" ? (
           <Badge status="exclusive">EXCLUSIVE</Badge>
         ) : (
-          <span className="text-[11px] text-muted">{state.windowHours}h window</span>
+          <span className="text-[11px] text-muted">Public {state.releaseDate}</span>
         )}
       </div>
     </div>
