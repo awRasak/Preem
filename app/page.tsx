@@ -48,9 +48,18 @@ export default async function MarketplacePage() {
           Sign in
         </Button>
       </Nav>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 pb-28 pt-8 sm:px-8 sm:pb-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-28 pt-8 sm:px-8 sm:pb-8">
         {/* Hero */}
         <section className="relative px-6 py-16 text-center sm:py-24">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="hero-video-fade absolute inset-0 h-full w-full object-cover"
+          >
+            <source src="/video/hero-loop.mp4" type="video/mp4" />
+          </video>
           <div className="relative mx-auto max-w-lg">
             <div className="mb-4 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-accent">
               <span className="h-1.5 w-1.5 rounded-full bg-accent" />
@@ -92,9 +101,12 @@ export default async function MarketplacePage() {
             Nothing live yet — check back soon.
           </p>
         ) : (
-          <div className="-mx-5 flex gap-4 overflow-x-auto px-5 pb-2 sm:-mx-8 sm:px-8">
+          <div className="scroll-fade-x no-scrollbar -mx-5 flex gap-4 overflow-x-auto px-5 pb-2 pt-2 sm:-mx-8 sm:px-8">
             {previewDrops.map((drop) => (
-              <div key={drop.id} className="w-[70%] flex-shrink-0 sm:w-[calc((100%-2rem)/3)]">
+              <div
+                key={drop.id}
+                className="w-[70%] flex-shrink-0 min-[640px]:w-[calc((100%-1rem)/2)] min-[700px]:w-[calc((100%-2rem)/3)] min-[1244px]:w-[calc((100%-3rem)/4)]"
+              >
                 <DropCard drop={drop} />
               </div>
             ))}
@@ -132,7 +144,7 @@ export default async function MarketplacePage() {
           </div>
         </section>
 
-        {/* Marquee ticker — full-bleed via left-1/2 + w-screen, breaks out of this max-w container */}
+        {/* Marquee ticker — full-bleed via negative margins, breaks out of this max-w container */}
         <div className="mt-32">
           <MarqueeTicker />
         </div>
@@ -165,12 +177,12 @@ export default async function MarketplacePage() {
               in. No hidden fees stacked on top, no surprise deductions
               before payout.
             </p>
-            <p className="mb-5 text-xs text-muted/80">
+            <p className="mb-5 text-sm text-muted/80">
               Preem takes a 20% platform fee per sale. That&apos;s it.
             </p>
             <PaymentTrustRow align="start" />
           </div>
-          <div className="relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-2xl border border-line bg-surface-2">
+          <div className="relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-full border border-line-strong">
             <Image
               src={artworkFallback("pricing-split")}
               alt=""
@@ -189,38 +201,56 @@ export default async function MarketplacePage() {
           <h2 className="mb-8 max-w-lg text-2xl font-bold leading-tight sm:text-3xl">
             Pick what fits the release.
           </h2>
-          <div className="rounded-2xl border border-line bg-surface p-8">
+          <div className="card-inset-glow relative h-[420px] overflow-hidden rounded-2xl border border-line bg-card p-5 sm:h-[260px] sm:p-8">
             <Badge status="live">LIVE</Badge>
-            <p className="mt-3 text-lg font-bold">
+            <p className="mt-3 max-w-[220px] text-lg font-bold sm:max-w-[260px]">
               For music that&apos;s headed everywhere, eventually.
             </p>
-            <p className="mt-2 max-w-md text-sm text-muted">
+            <p className="mt-2 text-sm text-muted sm:max-w-sm">
               Give your community first access before the track hits
               Spotify, Audiomack, or wherever you release next. Pick the
               date. Preem counts down for your fans, and reminds you when
               it&apos;s time to go public.
             </p>
+            <div className="pointer-events-none absolute bottom-0 left-1/2 w-[286px] -translate-x-1/2 sm:left-auto sm:right-0 sm:w-[380px] sm:translate-x-0">
+              <Image
+                src="/icons/live-card.png"
+                alt=""
+                width={1191}
+                height={709}
+                className="h-auto w-full"
+              />
+            </div>
           </div>
         </section>
 
         <section className="mt-8">
-          <div className="rounded-2xl border border-line bg-surface p-8">
+          <div className="card-inset-glow relative h-[420px] overflow-hidden rounded-2xl border border-line bg-card p-5 sm:h-[260px] sm:p-8">
             <Badge status="exclusive">EXCLUSIVE</Badge>
-            <p className="mt-3 text-lg font-bold">
+            <p className="mt-3 max-w-md text-lg font-bold">
               For music that only exists here.
             </p>
-            <p className="mt-2 max-w-md text-sm text-muted">
+            <p className="mt-2 text-sm text-muted sm:max-w-md">
               No release date, no countdown, no other platform — ever. This
               is the drop for your realest supporters: something that will
               never exist anywhere but the place they bought it from you
               directly.
             </p>
+            <div className="pointer-events-none absolute bottom-0 left-1/2 w-[286px] -translate-x-1/2 sm:left-auto sm:right-0 sm:w-[380px] sm:translate-x-0">
+              <Image
+                src="/icons/exclusive-card.png"
+                alt=""
+                width={1135}
+                height={552}
+                className="h-auto w-full"
+              />
+            </div>
           </div>
         </section>
 
         {/* Trust split */}
         <section className="mt-32 grid items-center gap-10 sm:grid-cols-2">
-          <div className="relative order-2 mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-2xl border border-line bg-surface-2 sm:order-1">
+          <div className="relative order-2 mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-full border border-line-strong sm:order-1">
             <Image
               src={artworkFallback("trust-split")}
               alt=""
@@ -260,12 +290,7 @@ export default async function MarketplacePage() {
           <ArtistSpotlight />
         </section>
 
-        {/* Payment trust row */}
-        <section className="mt-32">
-          <PaymentTrustRow />
-        </section>
-
-        {/* Filmstrip gallery — full-bleed via left-1/2 + w-screen */}
+        {/* Filmstrip gallery — full-bleed via negative margins */}
         <div className="mt-32">
           <FilmstripGallery drops={filmstripDrops} />
         </div>
@@ -282,7 +307,7 @@ export default async function MarketplacePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="mt-32 rounded-[20px] border border-line bg-surface p-8 text-center sm:p-11">
+        <section className="card-inset-glow mt-32 rounded-[20px] border border-line bg-card p-8 text-center sm:p-11">
           <h2 className="mx-auto max-w-md text-2xl font-bold leading-tight sm:text-3xl">
             Your next drop could be live in the next ten minutes.
           </h2>
@@ -305,6 +330,15 @@ export default async function MarketplacePage() {
           </Link>
           <Link href="/artist/login" className="hover:text-paper">
             Sign In
+          </Link>
+          <Link href="/terms" className="hover:text-paper">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-paper">
+            Privacy
+          </Link>
+          <Link href="/help" className="hover:text-paper">
+            Help
           </Link>
         </footer>
       </main>

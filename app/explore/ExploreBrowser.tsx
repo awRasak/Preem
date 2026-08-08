@@ -92,10 +92,10 @@ export function ExploreBrowser({
       <div className="mb-8 flex flex-wrap gap-2">
         <button
           onClick={() => setGenre("all")}
-          className={`rounded-full border px-3.5 py-1.5 text-xs font-bold ${
+          className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition-all duration-150 ease-out hover:scale-[1.04] active:scale-95 ${
             genre === "all"
               ? "border-accent bg-surface-2 text-paper"
-              : "border-line text-muted"
+              : "border-line text-muted hover:border-line-strong hover:text-paper"
           }`}
         >
           All
@@ -104,10 +104,10 @@ export function ExploreBrowser({
           <button
             key={g.value}
             onClick={() => setGenre(g.value)}
-            className={`rounded-full border px-3.5 py-1.5 text-xs font-bold ${
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition-all duration-150 ease-out hover:scale-[1.04] active:scale-95 ${
               genre === g.value
                 ? "border-accent bg-surface-2 text-paper"
-                : "border-line text-muted"
+                : "border-line text-muted hover:border-line-strong hover:text-paper"
             }`}
           >
             {g.label}

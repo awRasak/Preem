@@ -6,7 +6,7 @@ const styles: Record<BadgeStatus, string> = {
   closed: "bg-surface-2 text-muted",
   exclusive:
     "bg-gradient-to-r from-[#FF6FA8] via-[#A855F7] to-[#FF7A3D] text-white",
-  price: "bg-accent/15 text-accent font-mono",
+  price: "bg-accent/15 text-accent-light font-mono",
 };
 
 export function Badge({

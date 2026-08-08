@@ -27,7 +27,7 @@ export function Tabs({
 
   return (
     <div className="rounded-xl border border-line bg-surface">
-      <div className="flex overflow-x-auto border-b border-line">
+      <div className="no-scrollbar flex overflow-x-auto border-b border-line">
         {tabs.map((t) => (
           <button
             key={t.id}

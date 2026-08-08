@@ -1,34 +1,64 @@
 import Image from "next/image";
+import Link from "next/link";
 import { artworkFallback } from "@/lib/placeholder";
 import type { Drop } from "@/lib/types";
 
-const MIN_ITEMS = 14;
+const MIN_ITEMS = 15;
+
+type Item = { drop: Drop; key: string };
+
+function Track({ items }: { items: Item[] }) {
+  return (
+    <div className="flex w-max flex-shrink-0 items-center gap-3">
+      {items.map(({ drop, key }) => (
+        <div
+          key={key}
+          className="relative h-[200px] w-[170px] flex-shrink-0 sm:h-[240px] sm:w-[210px]"
+        >
+          <Image
+            src={drop.artwork_path || artworkFallback(drop.id)}
+            alt={drop.title}
+            fill
+            className="rounded-lg object-cover"
+            sizes="210px"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function FilmstripGallery({ drops }: { drops: Drop[] }) {
   if (drops.length === 0) return null;
 
-  // Cycle the available artwork to always fill a scrollable row, even when
+  // Cycle the available artwork to always fill the marquee, even when
   // there are only a handful of real drops — the point of this section is
-  // to demonstrate horizontal motion, not to be a deduped gallery.
-  const items = Array.from({ length: Math.max(drops.length, MIN_ITEMS) }, (_, i) => ({
+  // to demonstrate motion, not to be a deduped gallery.
+  const count = Math.max(drops.length, MIN_ITEMS);
+  const items = Array.from({ length: count }, (_, i) => ({
     drop: drops[i % drops.length],
     key: `${drops[i % drops.length].id}-${i}`,
   }));
 
   return (
-    <div className="relative left-1/2 w-screen -translate-x-1/2 overflow-x-auto">
-      <div className="flex w-max">
-        {items.map(({ drop, key }) => (
-          <div key={key} className="relative h-[140px] w-[140px] flex-shrink-0 sm:h-[180px] sm:w-[180px]">
-            <Image
-              src={drop.artwork_path || artworkFallback(drop.id)}
-              alt={drop.title}
-              fill
-              className="object-cover"
-              sizes="180px"
-            />
-          </div>
-        ))}
+    <div className="scroll-fade-x marquee-hover-pause relative -mx-5 overflow-hidden py-14 sm:-mx-8">
+      <div className="marquee-track flex w-max" style={{ animation: "marquee-reverse 110s linear infinite" }}>
+        <Track items={items} />
+        <Track items={items} />
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Link
+          href="/artist/signup"
+          className="transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-95"
+        >
+          <Image
+            src="/icons/gallery-cta.png"
+            alt="Join 2k+ Artists"
+            width={684}
+            height={146}
+            className="h-auto w-[200px] sm:w-[260px]"
+          />
+        </Link>
       </div>
     </div>
   );

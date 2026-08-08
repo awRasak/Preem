@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Drop } from "@/lib/types";
-import { formatNaira, formatTimeLeft, isDropLive } from "@/lib/format";
+import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { Badge } from "./Badge";
 import { Avatar } from "./Avatar";
+import { TimeLeft } from "./TimeLeft";
 
 export function DropCard({ drop }: { drop: Drop }) {
   const live = isDropLive(drop.window_end);
@@ -12,7 +13,7 @@ export function DropCard({ drop }: { drop: Drop }) {
   return (
     <Link
       href={`/drop/${drop.id}`}
-      className="block rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
+      className="card-inset-glow block rounded-xl border border-line bg-card p-3 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-line-strong hover:shadow-xl hover:shadow-black/40"
     >
       <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-surface-2">
         <Image
@@ -42,12 +43,14 @@ export function DropCard({ drop }: { drop: Drop }) {
         {drop.artist?.stage_name ?? "Unknown artist"}
       </div>
       <div className="mb-2 truncate text-[15px] font-medium">{drop.title}</div>
-      <Badge status="price">Min. {formatNaira(drop.min_price_kobo)}</Badge>
-      {live && drop.window_end && (
-        <div className="mt-1 font-mono text-[11px] text-muted">
-          {formatTimeLeft(drop.window_end)}
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-2">
+        <Badge status="price">Min. {formatNaira(drop.min_price_kobo)}</Badge>
+        {live && drop.window_end && (
+          <div className="flex-shrink-0 font-mono text-[11px] text-muted">
+            <TimeLeft windowEnd={drop.window_end} />
+          </div>
+        )}
+      </div>
     </Link>
   );
 }

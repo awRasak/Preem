@@ -37,9 +37,14 @@ export function HomeFAQ() {
                 +
               </span>
             </button>
-            {open && (
-              <p className="px-5 pb-5 text-xs text-muted">{f.a}</p>
-            )}
+            <div
+              className="grid transition-all duration-300 ease-out"
+              style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+            >
+              <div className="overflow-hidden">
+                <p className="px-5 pb-5 text-sm text-muted">{f.a}</p>
+              </div>
+            </div>
           </div>
         );
       })}

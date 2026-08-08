@@ -200,7 +200,7 @@ export default async function DropPage({
         {moreFromArtist.length > 0 && (
           <div className="mt-10">
             <h2 className="mb-4 text-lg font-bold">More from {artistName}</h2>
-            <div className="-mx-5 flex gap-4 overflow-x-auto px-5 pb-2 sm:-mx-8 sm:px-8">
+            <div className="no-scrollbar -mx-5 flex gap-4 overflow-x-auto px-5 pb-2 pt-2 sm:-mx-8 sm:px-8">
               {moreFromArtist.map((d) => (
                 <div key={d.id} className="w-[160px] flex-shrink-0 sm:w-[190px]">
                   <DropCard drop={d} />
