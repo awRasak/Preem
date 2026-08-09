@@ -40,7 +40,7 @@ export default function HelpPage() {
         <p className={a}>
           Go to{" "}
           <Link href="/my-drops" className="text-paper underline">
-            My Drops
+            My Music Collections
           </Link>{" "}
           and enter the phone number you checked out with. You&apos;ll see
           everything you&apos;ve bought and can stream it from there —
@@ -50,7 +50,8 @@ export default function HelpPage() {
 
         <p className={q}>Can I download the tracks I buy?</p>
         <p className={a}>
-          By default, purchases are streaming-only through My Drops. Some
+          By default, purchases are streaming-only through My Music
+          Collections. Some
           artists enable downloads for their own tracks from their
           dashboard; if that&apos;s on, you&apos;ll see a download option
           next to the track.

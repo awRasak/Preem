@@ -73,6 +73,8 @@ export default async function ArtistProfilePage({
                   currentInstagramUrl={artist.instagram_url}
                   currentTwitterUrl={artist.twitter_url}
                   currentTiktokUrl={artist.tiktok_url}
+                  currentFacebookUrl={artist.facebook_url}
+                  currentSnapchatUrl={artist.snapchat_url}
                 />
               ),
             },

@@ -16,6 +16,8 @@ export function ProfileForm({
   currentInstagramUrl,
   currentTwitterUrl,
   currentTiktokUrl,
+  currentFacebookUrl,
+  currentSnapchatUrl,
 }: {
   artistId: string;
   stageName: string;
@@ -25,6 +27,8 @@ export function ProfileForm({
   currentInstagramUrl?: string | null;
   currentTwitterUrl?: string | null;
   currentTiktokUrl?: string | null;
+  currentFacebookUrl?: string | null;
+  currentSnapchatUrl?: string | null;
 }) {
   const router = useRouter();
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl);
@@ -33,6 +37,8 @@ export function ProfileForm({
   const [instagramUrl, setInstagramUrl] = useState(currentInstagramUrl ?? "");
   const [twitterUrl, setTwitterUrl] = useState(currentTwitterUrl ?? "");
   const [tiktokUrl, setTiktokUrl] = useState(currentTiktokUrl ?? "");
+  const [facebookUrl, setFacebookUrl] = useState(currentFacebookUrl ?? "");
+  const [snapchatUrl, setSnapchatUrl] = useState(currentSnapchatUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +85,8 @@ export function ProfileForm({
         instagram_url: instagramUrl || null,
         twitter_url: twitterUrl || null,
         tiktok_url: tiktokUrl || null,
+        facebook_url: facebookUrl || null,
+        snapchat_url: snapchatUrl || null,
       })
       .eq("id", artistId);
 
@@ -145,6 +153,22 @@ export function ProfileForm({
             value={tiktokUrl}
             onChange={(e) => setTiktokUrl(e.target.value)}
             placeholder="https://tiktok.com/@..."
+          />
+        </Field>
+        <Field label="Facebook (optional)">
+          <Input
+            type="url"
+            value={facebookUrl}
+            onChange={(e) => setFacebookUrl(e.target.value)}
+            placeholder="https://facebook.com/..."
+          />
+        </Field>
+        <Field label="Snapchat (optional)">
+          <Input
+            type="url"
+            value={snapchatUrl}
+            onChange={(e) => setSnapchatUrl(e.target.value)}
+            placeholder="https://snapchat.com/add/..."
           />
         </Field>
         {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}

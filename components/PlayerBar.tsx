@@ -13,8 +13,20 @@ function formatTime(seconds: number): string {
 }
 
 export function PlayerBar() {
-  const { track, playing, loading, currentTime, duration, error, toggle, seek } =
-    usePlayer();
+  const {
+    track,
+    playing,
+    loading,
+    currentTime,
+    duration,
+    error,
+    toggle,
+    seek,
+    next,
+    previous,
+    hasNext,
+    hasPrevious,
+  } = usePlayer();
 
   if (!track) return null;
 
@@ -41,13 +53,31 @@ export function PlayerBar() {
           </div>
         </div>
 
-        <button
-          onClick={toggle}
-          disabled={loading}
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
-        >
-          {loading ? "…" : playing ? "❚❚" : "▶"}
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <button
+            onClick={previous}
+            disabled={!hasPrevious || loading}
+            aria-label="Previous track"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-sm text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+          >
+            ⏮
+          </button>
+          <button
+            onClick={toggle}
+            disabled={loading}
+            className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
+          >
+            {loading ? "…" : playing ? "❚❚" : "▶"}
+          </button>
+          <button
+            onClick={next}
+            disabled={!hasNext || loading}
+            aria-label="Next track"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-sm text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+          >
+            ⏭
+          </button>
+        </div>
 
         <span className="hidden font-mono text-[11px] text-muted sm:inline">
           {formatTime(currentTime)}

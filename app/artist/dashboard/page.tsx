@@ -58,6 +58,12 @@ export default async function ArtistDashboardPage() {
     salesByDrop.set(p.drop_id, entry);
   }
 
+  const topDrops = (drops ?? [])
+    .map((drop) => ({ drop, sales: salesByDrop.get(drop.id) ?? { count: 0, revenueKobo: 0 } }))
+    .filter((d) => d.sales.count > 0)
+    .sort((a, b) => b.sales.revenueKobo - a.sales.revenueKobo)
+    .slice(0, 5);
+
   if (artist.approval_status !== "approved") {
     return (
       <ArtistShell
@@ -105,6 +111,41 @@ export default async function ArtistDashboardPage() {
           <StatBox icon="◐" value={String(buyerCount)} label="Buyers" />
           <StatBox icon="♪" value={String(liveDropCount)} label="Live drops" />
         </div>
+
+        {topDrops.length > 0 && (
+          <div className="mb-8">
+            <h2 className="mb-4 text-lg font-bold">Top drops</h2>
+            <div className="divide-y divide-line rounded-xl border border-line">
+              {topDrops.map(({ drop, sales }, i) => (
+                <a
+                  key={drop.id}
+                  href={`/artist/drops/${drop.id}`}
+                  className="flex items-center gap-3 p-4 hover:bg-surface-2"
+                >
+                  <span className="w-4 flex-shrink-0 text-sm font-bold text-muted">{i + 1}</span>
+                  <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                    <Image
+                      src={drop.artwork_path || artworkFallback(drop.id)}
+                      alt={drop.title}
+                      fill
+                      className="object-cover"
+                      sizes="44px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{drop.title}</div>
+                    <div className="mt-1 text-xs text-muted">
+                      {sales.count} sale{sales.count === 1 ? "" : "s"}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-sm font-bold text-accent">
+                    {formatNaira(sales.revenueKobo)}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <h2 className="mb-4 text-lg font-bold">Your drops</h2>
         <div className="divide-y divide-line rounded-xl border border-line">

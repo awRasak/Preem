@@ -5,9 +5,14 @@ import { useState } from "react";
 export function Tabs({
   tabs,
   defaultTabId,
+  unmountInactive,
 }: {
   tabs: { id: string; label: string; content: React.ReactNode }[];
   defaultTabId?: string;
+  // Unmounts inactive tabs instead of just hiding them with CSS. Needed for
+  // tabs holding embedded audio/video (e.g. DiscoverMore's platform embeds)
+  // so switching away actually stops playback instead of just hiding it.
+  unmountInactive?: boolean;
 }) {
   const [active, setActive] = useState(
     (defaultTabId && tabs.some((t) => t.id === defaultTabId) ? defaultTabId : tabs[0]?.id),
@@ -43,11 +48,13 @@ export function Tabs({
         ))}
       </div>
       <div className="p-5">
-        {tabs.map((t) => (
-          <div key={t.id} className={active === t.id ? "block" : "hidden"}>
-            {t.content}
-          </div>
-        ))}
+        {unmountInactive
+          ? tabs.find((t) => t.id === active)?.content
+          : tabs.map((t) => (
+              <div key={t.id} className={active === t.id ? "block" : "hidden"}>
+                {t.content}
+              </div>
+            ))}
       </div>
     </div>
   );

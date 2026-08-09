@@ -34,7 +34,7 @@ export default function TermsPage() {
           checkout and used afterward to look up and stream anything
           they&apos;ve bought, on the{" "}
           <a href="/my-drops" className="text-paper underline">
-            My Drops
+            My Music Collections
           </a>{" "}
           page. Keep the phone number you check out with — it&apos;s the only
           way to recover access if you switch devices.
@@ -70,7 +70,7 @@ export default function TermsPage() {
           purchase unlocks a digital file immediately, we don&apos;t offer
           refunds or exchanges for a change of mind. If a payment succeeded
           but you never got access — for example the track failed to unlock
-          on My Drops — contact us and we&apos;ll investigate and fix it.
+          on My Music Collections — contact us and we&apos;ll investigate and fix it.
         </p>
 
         <h2 className={h2}>4. Payments and payouts (for artists)</h2>

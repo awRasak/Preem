@@ -13,6 +13,7 @@ import { LyricsSection } from "./LyricsSection";
 import { PreviewButton } from "@/components/PreviewButton";
 import { DiscoverMore } from "@/components/DiscoverMore";
 import { genreLabel } from "@/lib/genres";
+import type { PlayerTrack } from "@/lib/player-context";
 import type { ArtistLink, Drop, DropTrack } from "@/lib/types";
 
 export const revalidate = 0;
@@ -61,6 +62,13 @@ export default async function DropPage({
     .order("track_number", { ascending: true });
   const tracks = (tracksData ?? []) as DropTrack[];
   const isBundle = drop.release_type !== "single" && tracks.length > 1;
+  const previewQueue: PlayerTrack[] = tracks.map((t) => ({
+    trackId: t.id,
+    title: t.title,
+    artistName,
+    artworkUrl: drop.artwork_path,
+    preview: { dropId: drop.id, trackId: t.id },
+  }));
 
   const { data: links } = await supabase
     .from("artist_links")
@@ -169,7 +177,7 @@ export default async function DropPage({
                 />
               ) : (
                 <p className="text-xs text-muted">
-                  Early access has closed. Buyers keep permanent access in My Drops.
+                  Early access has closed. Buyers keep permanent access in My Music Collections.
                 </p>
               )}
             </div>
@@ -206,6 +214,7 @@ export default async function DropPage({
                       title={track.title}
                       artistName={artistName}
                       artworkUrl={drop.artwork_path}
+                      queue={previewQueue}
                       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-line-strong text-xs"
                     />
                     {live && (

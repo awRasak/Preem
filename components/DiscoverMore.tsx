@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Tabs } from "./Tabs";
+import { usePlayer } from "@/lib/player-context";
 import type { ArtistLink } from "@/lib/types";
 
 const PLATFORM_LABEL: Record<ArtistLink["platform"], string> = {
@@ -78,7 +79,20 @@ export function DiscoverMore({
   links: ArtistLink[];
 }) {
   const [open, setOpen] = useState(false);
+  const { playing, toggle } = usePlayer();
   const deduped = dedupeByTitle(links);
+
+  // If a Preem track starts playing elsewhere on the page (its own preview
+  // button, or the player bar), stop rendering these platform embeds so
+  // they don't keep playing underneath it.
+  const showEmbeds = open && !playing;
+
+  function handleToggle() {
+    // Opening the embeds means the fan is about to listen elsewhere —
+    // pause Preem's own player first so the two don't overlap.
+    if (!open && playing) toggle();
+    setOpen((was) => !was);
+  }
 
   if (deduped.length === 0) return null;
 
@@ -106,15 +120,15 @@ export function DiscoverMore({
   return (
     <div className="mt-10">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         className="rounded-full border border-line-strong px-4 py-2 text-sm font-bold text-paper transition-colors hover:border-accent"
       >
-        {open ? "Hide" : "Discover more"} from {artistName}
+        {showEmbeds ? "Hide" : "Discover more"} from {artistName}
       </button>
 
-      {open && (
+      {showEmbeds && (
         <div className="mt-4">
-          <Tabs tabs={tabs} />
+          <Tabs tabs={tabs} unmountInactive />
         </div>
       )}
     </div>

@@ -32,7 +32,7 @@ export function PhoneLookupForm() {
 
   return (
     <div className="mx-auto w-full max-w-sm">
-      <h1 className="mb-2 text-2xl font-bold">My Drops</h1>
+      <h1 className="mb-2 text-2xl font-bold">My Music Collections</h1>
       <p className="mb-6 text-sm text-muted">
         Enter the phone number you used at checkout to see your library.
       </p>
@@ -48,7 +48,7 @@ export function PhoneLookupForm() {
         </Field>
         {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-          {loading ? "…" : "View my drops"}
+          {loading ? "…" : "View my music collections"}
         </Button>
       </form>
     </div>

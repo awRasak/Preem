@@ -31,7 +31,7 @@ export default function PrivacyPage() {
           buying a drop, you give us your name, phone number, and email
           address at checkout. You don&apos;t create a password or account —
           your phone number is your identity on Preem, used to look up your
-          purchases on My Drops.
+          purchases on My Music Collections.
         </p>
         <p className={p}>
           <strong className="text-paper">If you&apos;re an artist</strong>,
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
         <h2 className={h2}>2. How your phone number is used</h2>
         <p className={p}>
           After a successful purchase, entering the same phone number on My
-          Drops sets a signed browser cookie that proves it&apos;s you,
+          Music Collections sets a signed browser cookie that proves it&apos;s you,
           valid for 90 days, so you can come back and stream what you bought
           without re-entering it every time. The cookie only stores your
           phone number and an expiry — nothing else.
@@ -110,8 +110,8 @@ export default function PrivacyPage() {
 
         <h2 className={h2}>7. Your choices</h2>
         <p className={p}>
-          You can stop a browser from recognizing you on My Drops at any
-          time by clearing cookies — you&apos;ll just need to re-enter your
+          You can stop a browser from recognizing you on My Music
+          Collections at any time by clearing cookies — you&apos;ll just need to re-enter your
           phone number to see your purchases again. To ask what data we hold
           about a given phone number or email, or to request its deletion,
           contact us using the details below.

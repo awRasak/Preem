@@ -21,6 +21,8 @@ export type Artist = {
   instagram_url: string | null;
   twitter_url: string | null;
   tiktok_url: string | null;
+  facebook_url: string | null;
+  snapchat_url: string | null;
   approval_status: ApprovalStatus;
   thank_you_text: string | null;
   thank_you_media_url: string | null;

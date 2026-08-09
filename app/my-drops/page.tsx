@@ -6,7 +6,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PHONE_SESSION_COOKIE, verifyPhoneSessionCookieValue } from "@/lib/phone-session";
 import { PhoneLookupForm } from "./PhoneLookupForm";
 import { PlayerRow } from "./PlayerRow";
+import { ReportProblemButton } from "@/components/ReportProblemButton";
+import { formatNaira } from "@/lib/format";
+import type { PlayerTrack } from "@/lib/player-context";
 import type { Drop } from "@/lib/types";
+
+function formatPurchaseDate(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 const GHOST_DROPS: Drop[] = [
   {
@@ -62,6 +74,9 @@ export default async function MyDropsPage() {
         ) : (
           <MyDropsLibrary phone={phone} />
         )}
+        <div className="mt-10 text-center">
+          <ReportProblemButton defaultPhone={phone ?? ""} />
+        </div>
       </main>
     </>
   );
@@ -87,7 +102,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
 
   const { data: purchases } = await admin
     .from("purchases")
-    .select("drop_id, track_id, purchased_at")
+    .select("drop_id, track_id, purchased_at, amount_kobo")
     .eq("fan_phone", phone)
     .eq("status", "success")
     .order("purchased_at", { ascending: false });
@@ -95,7 +110,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
   if (!purchases || purchases.length === 0) {
     return (
       <div>
-        <h1 className="mb-6 text-2xl font-bold">My Drops</h1>
+        <h1 className="mb-6 text-2xl font-bold">My Music Collections</h1>
         <p className="mb-6 text-sm text-muted">
           Nothing here yet — buy access to a drop and it&apos;ll show up here permanently.
         </p>
@@ -111,6 +126,20 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
         </div>
       </div>
     );
+  }
+
+  // What a fan paid for each drop, and when — purchases is already sorted
+  // most-recent-first, so the first row seen per drop is its purchase date;
+  // amounts are summed since a drop can be bought as a bundle plus
+  // individual tracks across separate checkouts.
+  const purchaseSummaryByDrop = new Map<string, { totalKobo: number; purchasedAt: string | null }>();
+  for (const p of purchases) {
+    const entry = purchaseSummaryByDrop.get(p.drop_id);
+    if (entry) {
+      entry.totalKobo += p.amount_kobo;
+    } else {
+      purchaseSummaryByDrop.set(p.drop_id, { totalKobo: p.amount_kobo, purchasedAt: p.purchased_at });
+    }
   }
 
   const bundleDropIds = [...new Set(purchases.filter((p) => !p.track_id).map((p) => p.drop_id))];
@@ -158,15 +187,47 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
     list.sort((a, b) => a.track_number - b.track_number);
   }
 
+  const rows = dropIdsInOrder
+    .map((dropId) => {
+      const drop = dropById.get(dropId);
+      if (!drop) return null;
+      const artist = Array.isArray(drop.artist) ? drop.artist[0] : drop.artist;
+      const tracks = tracksByDrop.get(dropId) ?? [];
+      return { dropId, drop, artistName: artist?.stage_name ?? "", tracks };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
+  // The fan's whole library, in display order — lets Next/Previous on the
+  // player bar continue seamlessly across drops, not just within one.
+  const queue: PlayerTrack[] = rows.flatMap(({ dropId, drop, artistName, tracks }) => {
+    if (tracks.length <= 1) {
+      const track = tracks[0];
+      return [
+        {
+          trackId: track?.id ?? dropId,
+          title: track?.title ?? drop.title,
+          artistName,
+          artworkUrl: drop.artwork_path,
+        },
+      ];
+    }
+    return tracks.map((track) => ({
+      trackId: track.id,
+      title: track.title,
+      artistName,
+      artworkUrl: drop.artwork_path,
+    }));
+  });
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">My Drops</h1>
+      <h1 className="mb-6 text-2xl font-bold">My Music Collections</h1>
       <div>
-        {dropIdsInOrder.map((dropId) => {
-          const drop = dropById.get(dropId);
-          if (!drop) return null;
-          const artist = Array.isArray(drop.artist) ? drop.artist[0] : drop.artist;
-          const tracks = tracksByDrop.get(dropId) ?? [];
+        {rows.map(({ dropId, drop, artistName, tracks }) => {
+          const summary = purchaseSummaryByDrop.get(dropId);
+          const purchaseNote = summary
+            ? `${formatNaira(summary.totalKobo)} · ${formatPurchaseDate(summary.purchasedAt)}`
+            : "";
 
           if (tracks.length <= 1) {
             const track = tracks[0];
@@ -175,25 +236,31 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
                 key={dropId}
                 trackId={track?.id ?? dropId}
                 title={track?.title ?? drop.title}
-                artistName={artist?.stage_name ?? ""}
+                artistName={artistName}
                 artworkUrl={drop.artwork_path}
                 lyrics={track?.lyrics}
+                purchaseNote={purchaseNote}
+                queue={queue}
               />
             );
           }
 
           return (
             <div key={dropId} className="border-b border-line py-3 last:border-none">
-              <div className="mb-2 text-sm font-bold">{drop.title}</div>
+              <div className="mb-2 flex items-baseline justify-between gap-2">
+                <div className="text-sm font-bold">{drop.title}</div>
+                <div className="flex-shrink-0 text-[11px] text-muted">{purchaseNote}</div>
+              </div>
               <div className="pl-2">
                 {tracks.map((track) => (
                   <PlayerRow
                     key={track.id}
                     trackId={track.id}
                     title={track.title}
-                    artistName={artist?.stage_name ?? ""}
+                    artistName={artistName}
                     artworkUrl={drop.artwork_path}
                     lyrics={track.lyrics}
+                    queue={queue}
                   />
                 ))}
               </div>

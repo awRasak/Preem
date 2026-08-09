@@ -102,7 +102,7 @@ export function BuyButton({
               setStep("done");
             } else {
               setError(
-                "We received your payment but couldn't confirm it yet — check My Drops in a moment.",
+                "We received your payment but couldn't confirm it yet — check My Music Collections in a moment.",
               );
               setStep("error");
             }
@@ -130,7 +130,7 @@ export function BuyButton({
                 <p className="mb-4 text-sm text-muted">
                   You now have permanent streaming access to {title}. Open{" "}
                   <a href="/my-drops" className="text-paper underline">
-                    My Drops
+                    My Music Collections
                   </a>{" "}
                   and enter {fanPhone} to listen.
                 </p>

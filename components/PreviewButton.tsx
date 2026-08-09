@@ -1,6 +1,6 @@
 "use client";
 
-import { usePlayer } from "@/lib/player-context";
+import { usePlayer, type PlayerTrack } from "@/lib/player-context";
 
 export function PreviewButton({
   dropId,
@@ -8,6 +8,7 @@ export function PreviewButton({
   title,
   artistName,
   artworkUrl,
+  queue,
   className = "",
 }: {
   dropId: string;
@@ -15,6 +16,9 @@ export function PreviewButton({
   title: string;
   artistName: string;
   artworkUrl: string | null;
+  // Sibling tracks (e.g. the rest of an EP) so Next/Previous on the player
+  // bar can step through them. Omit for a standalone preview.
+  queue?: PlayerTrack[];
   className?: string;
 }) {
   const { track, playing, loading, play, toggle } = usePlayer();
@@ -27,13 +31,16 @@ export function PreviewButton({
     if (isCurrent) {
       toggle();
     } else {
-      play({
-        trackId: key,
-        title,
-        artistName,
-        artworkUrl,
-        preview: { dropId, trackId },
-      });
+      play(
+        {
+          trackId: key,
+          title,
+          artistName,
+          artworkUrl,
+          preview: { dropId, trackId },
+        },
+        queue,
+      );
     }
   }
 
