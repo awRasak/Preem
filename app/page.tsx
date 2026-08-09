@@ -144,7 +144,7 @@ export default async function MarketplacePage() {
               </p>
             </div>
           </div>
-          <div className="relative mx-auto aspect-square w-full max-w-[380px]">
+          <div className="relative mx-auto aspect-square w-full max-w-[517px]">
             <Image
               src="/icons/why-preem-exists.png"
               alt=""
