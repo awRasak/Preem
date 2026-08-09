@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Nav } from "@/components/Nav";
+import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 
@@ -43,7 +43,9 @@ export default function LoginPage() {
 
   return (
     <>
-      <Nav />
+      <Nav>
+        <NavLink href="/">← Home</NavLink>
+      </Nav>
       <main className="mx-auto w-full max-w-sm flex-1 px-5 py-10">
         <h1 className="mb-6 text-2xl font-bold">Sign in</h1>
         <form onSubmit={handleSubmit}>
@@ -78,6 +80,12 @@ export default function LoginPage() {
             New artist?{" "}
             <Link href="/artist/signup" className="text-paper underline">
               Sign up
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-xs text-muted">
+            Looking for your purchases?{" "}
+            <Link href="/my-drops" className="text-paper underline">
+              Sign in as a fan
             </Link>
           </p>
         </form>

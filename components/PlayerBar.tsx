@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { usePlayer } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
+import { PREVIEW_SECONDS } from "@/lib/preview";
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -12,17 +13,31 @@ function formatTime(seconds: number): string {
 }
 
 export function PlayerBar() {
-  const { track, playing, loading, currentTime, duration, error, toggle, seek } =
-    usePlayer();
+  const {
+    track,
+    playing,
+    loading,
+    currentTime,
+    duration,
+    error,
+    toggle,
+    seek,
+    next,
+    previous,
+    hasNext,
+    hasPrevious,
+  } = usePlayer();
 
   if (!track) return null;
+
+  const displayDuration = track.preview ? Math.min(duration || PREVIEW_SECONDS, PREVIEW_SECONDS) : duration;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur">
       <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
         <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
           <Image
-            src={track.artworkUrl || artworkFallback(track.dropId)}
+            src={track.artworkUrl || artworkFallback(track.trackId)}
             alt={track.title}
             fill
             className="object-cover"
@@ -32,16 +47,37 @@ export function PlayerBar() {
 
         <div className="min-w-0 flex-shrink-0 sm:w-40">
           <div className="truncate text-sm font-medium">{track.title}</div>
-          <div className="truncate text-xs text-muted">{track.artistName}</div>
+          <div className="truncate text-xs text-muted">
+            {track.artistName}
+            {track.preview && <span className="ml-1.5 text-accent">· Preview</span>}
+          </div>
         </div>
 
-        <button
-          onClick={toggle}
-          disabled={loading}
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
-        >
-          {loading ? "…" : playing ? "❚❚" : "▶"}
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <button
+            onClick={previous}
+            disabled={!hasPrevious || loading}
+            aria-label="Previous track"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-sm text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+          >
+            ⏮
+          </button>
+          <button
+            onClick={toggle}
+            disabled={loading}
+            className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
+          >
+            {loading ? "…" : playing ? "❚❚" : "▶"}
+          </button>
+          <button
+            onClick={next}
+            disabled={!hasNext || loading}
+            aria-label="Next track"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-sm text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+          >
+            ⏭
+          </button>
+        </div>
 
         <span className="hidden font-mono text-[11px] text-muted sm:inline">
           {formatTime(currentTime)}
@@ -50,15 +86,15 @@ export function PlayerBar() {
         <input
           type="range"
           min={0}
-          max={duration || 0}
+          max={displayDuration || 0}
           step={0.1}
-          value={currentTime}
+          value={Math.min(currentTime, displayDuration || currentTime)}
           onChange={(e) => seek(Number(e.target.value))}
           className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line-strong accent-accent"
         />
 
         <span className="hidden font-mono text-[11px] text-muted sm:inline">
-          {formatTime(duration)}
+          {formatTime(displayDuration)}
         </span>
 
         {error && (

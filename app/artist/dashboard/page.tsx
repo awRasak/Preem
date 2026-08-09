@@ -1,26 +1,15 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import { Nav, NavLink } from "@/components/Nav";
+import { ArtistShell } from "@/components/ArtistShell";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
-import { AccountMenu } from "@/components/AccountMenu";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
-import { DeleteDropButton } from "./DeleteDropButton";
-import { BankDetailsForm } from "./BankDetailsForm";
-import { ProfileForm } from "./ProfileForm";
-import { DiscoverLinksForm } from "./DiscoverLinksForm";
-import { Tabs } from "@/components/Tabs";
-import type { ArtistLink, Drop, Purchase } from "@/lib/types";
+import type { Drop, Purchase } from "@/lib/types";
 
-export default async function ArtistDashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const { tab } = await searchParams;
+export default async function ArtistDashboardPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -34,12 +23,6 @@ export default async function ArtistDashboardPage({
     .single();
 
   if (!artist) redirect("/artist/login");
-
-  const { data: links } = await supabase
-    .from("artist_links")
-    .select("*")
-    .eq("artist_id", user.id)
-    .order("created_at", { ascending: false });
 
   const { data: drops } = await supabase
     .from("drops")
@@ -63,8 +46,8 @@ export default async function ArtistDashboardPage({
     0,
   );
   const buyerCount = new Set(successPurchases.map((p) => p.fan_phone)).size;
-  const liveDropCount = (drops ?? []).filter((d) =>
-    isDropLive(d.window_end),
+  const liveDropCount = (drops ?? []).filter(
+    (d) => d.status === "published" && isDropLive(d.window_end),
   ).length;
 
   const salesByDrop = new Map<string, { count: number; revenueKobo: number }>();
@@ -75,19 +58,20 @@ export default async function ArtistDashboardPage({
     salesByDrop.set(p.drop_id, entry);
   }
 
-  const dropTitleById = new Map((drops ?? []).map((d) => [d.id, d.title]));
-  const listeners = [...successPurchases].sort(
-    (a, b) =>
-      new Date(b.purchased_at ?? 0).getTime() -
-      new Date(a.purchased_at ?? 0).getTime(),
-  );
+  const topDrops = (drops ?? [])
+    .map((drop) => ({ drop, sales: salesByDrop.get(drop.id) ?? { count: 0, revenueKobo: 0 } }))
+    .filter((d) => d.sales.count > 0)
+    .sort((a, b) => b.sales.revenueKobo - a.sales.revenueKobo)
+    .slice(0, 5);
 
   if (artist.approval_status !== "approved") {
     return (
-      <>
-        <Nav role="artist">
-          <NavLink href="/artist/login">Sign out</NavLink>
-        </Nav>
+      <ArtistShell
+        active="home"
+        artistName={artist.stage_name}
+        avatarUrl={artist.avatar_url ?? null}
+        artistId={user.id}
+      >
         <main className="mx-auto w-full max-w-lg flex-1 px-5 py-16 text-center">
           <h1 className="mb-4 text-2xl font-bold">
             {artist.approval_status === "pending"
@@ -103,35 +87,65 @@ export default async function ArtistDashboardPage({
             {artist.approval_status === "pending" ? "Pending admin approval" : "Not approved"}
           </Badge>
         </main>
-      </>
+      </ArtistShell>
     );
   }
 
   return (
-    <>
-      <Nav role="artist">
-        <Button href="/artist/drops/new" variant="primary">
-          + New drop
-        </Button>
-        <AccountMenu
-          name={artist.stage_name}
-          avatarUrl={artist.avatar_url ?? null}
-          seed={user.id}
-          items={[
-            { label: "View public profile", href: `/artist/${user.id}` },
-            { label: "Edit Profile", href: "/artist/dashboard?tab=profile#settings" },
-            { label: "Payout Bank Account", href: "/artist/dashboard?tab=payout#settings" },
-            { label: "Discover More", href: "/artist/dashboard?tab=discover#settings" },
-            { label: "Sign out", href: "/artist/login" },
-          ]}
-        />
-      </Nav>
+    <ArtistShell
+      active="home"
+      artistName={artist.stage_name}
+      avatarUrl={artist.avatar_url ?? null}
+      artistId={user.id}
+    >
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
-        <div className="mb-8 grid grid-cols-3 gap-3">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-bold">Home</h1>
+          <Button href="/artist/drops/new" variant="primary">
+            + New drop
+          </Button>
+        </div>
+
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatBox icon="₦" value={formatNaira(revenueKobo)} label="Revenue (80%)" />
           <StatBox icon="◐" value={String(buyerCount)} label="Buyers" />
           <StatBox icon="♪" value={String(liveDropCount)} label="Live drops" />
         </div>
+
+        {topDrops.length > 0 && (
+          <div className="mb-8">
+            <h2 className="mb-4 text-lg font-bold">Top drops</h2>
+            <div className="divide-y divide-line rounded-xl border border-line">
+              {topDrops.map(({ drop, sales }, i) => (
+                <a
+                  key={drop.id}
+                  href={`/artist/drops/${drop.id}`}
+                  className="flex items-center gap-3 p-4 hover:bg-surface-2"
+                >
+                  <span className="w-4 flex-shrink-0 text-sm font-bold text-muted">{i + 1}</span>
+                  <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                    <Image
+                      src={drop.artwork_path || artworkFallback(drop.id)}
+                      alt={drop.title}
+                      fill
+                      className="object-cover"
+                      sizes="44px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{drop.title}</div>
+                    <div className="mt-1 text-xs text-muted">
+                      {sales.count} sale{sales.count === 1 ? "" : "s"}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-sm font-bold text-accent">
+                    {formatNaira(sales.revenueKobo)}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <h2 className="mb-4 text-lg font-bold">Your drops</h2>
         <div className="divide-y divide-line rounded-xl border border-line">
@@ -142,7 +156,7 @@ export default async function ArtistDashboardPage({
           )}
           {(drops as Drop[] | null)?.map((drop) => {
             const sales = salesByDrop.get(drop.id) ?? { count: 0, revenueKobo: 0 };
-            const live = isDropLive(drop.window_end);
+            const live = drop.status === "published" && isDropLive(drop.window_end);
             return (
               <div
                 key={drop.id}
@@ -170,77 +184,21 @@ export default async function ArtistDashboardPage({
                   </div>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-2">
-                  {drop.is_exclusive ? (
+                  {drop.status === "draft" ? (
+                    <Badge status="pending">Draft</Badge>
+                  ) : drop.is_exclusive ? (
                     <Badge status="exclusive">Exclusive</Badge>
                   ) : live ? (
                     <Badge status="live">Live</Badge>
                   ) : (
                     <Badge status="closed">Released</Badge>
                   )}
-                  <DeleteDropButton dropId={drop.id} audioPath={drop.audio_file_path} />
                 </div>
               </div>
             );
           })}
         </div>
-
-        {listeners.length > 0 && (
-          <div className="mt-8">
-            <h2 className="mb-4 text-lg font-bold">Listeners ({listeners.length})</h2>
-            <div className="max-h-80 overflow-y-auto rounded-xl border border-line">
-              <div className="divide-y divide-line">
-                {listeners.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between gap-3 p-4 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{p.fan_name}</div>
-                      <div className="mt-0.5 truncate text-xs text-muted">
-                        {p.fan_phone} · {dropTitleById.get(p.drop_id) ?? "Deleted drop"}
-                      </div>
-                    </div>
-                    <span className="flex-shrink-0 font-mono text-accent">
-                      {formatNaira(p.amount_kobo)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div id="settings" className="mt-8 scroll-mt-20">
-          <Tabs
-            defaultTabId={tab}
-            tabs={[
-              {
-                id: "profile",
-                label: "Public Profile",
-                content: (
-                  <ProfileForm
-                    artistId={user.id}
-                    stageName={artist.stage_name}
-                    currentAvatarUrl={artist.avatar_url ?? null}
-                    currentBio={artist.bio}
-                    currentProfileLink={artist.profile_link}
-                  />
-                ),
-              },
-              {
-                id: "payout",
-                label: "Payout Bank Account",
-                content: <BankDetailsForm currentAccountName={artist.account_name} />,
-              },
-              {
-                id: "discover",
-                label: "Discover More",
-                content: <DiscoverLinksForm links={(links ?? []) as ArtistLink[]} />,
-              },
-            ]}
-          />
-        </div>
       </main>
-    </>
+    </ArtistShell>
   );
 }

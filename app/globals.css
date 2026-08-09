@@ -1,10 +1,12 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-bg: #17151d;
+  --color-bg: #0e0d12;
   --color-surface: #201d28;
   --color-surface-2: #2a2733;
+  --color-card: #1c1a24;
   --color-accent: #ff6b39;
+  --color-accent-light: #ffab8a;
   --color-accent-dim: #8c4222;
   --color-paper: #f5f4f7;
   --color-muted: #8b889a;
@@ -15,14 +17,174 @@
   --color-dot-yellow: #fbbf24;
   --color-dot-purple: #a855f7;
 
-  --font-sans: "Google Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-es-klarheit), "Google Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Google Sans Code", ui-monospace, SFMono-Regular, monospace;
+  --font-plakat: var(--font-es-klarheit-plakat), var(--font-sans);
 }
 
 body {
-  background: var(--color-bg);
+  background-color: var(--color-bg);
+  background-image: url("/background-gradient.jpg");
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--color-paper);
   font-family: var(--font-sans);
+}
+
+/* Laptop screens and up (15" MacBook Pro and larger) read better at the
+   same visual scale as 125% browser zoom — replicate that natively so
+   users don't have to zoom in themselves. */
+@media (min-width: 1280px) {
+  body {
+    zoom: 1.25;
+  }
+}
+
+h1 {
+  font-family: var(--font-plakat);
+  font-weight: 800;
+}
+
+h2 {
+  font-family: var(--font-plakat);
+  font-weight: 700;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes spin-x {
+  from {
+    transform: rotateX(0deg);
+  }
+  to {
+    transform: rotateX(360deg);
+  }
+}
+
+.spin-x-wrap {
+  perspective: 300px;
+}
+
+.spin-x {
+  animation: spin-x 2.4s linear infinite;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+}
+
+/* Card design system: dark inset glow so card edges blend into the black page background */
+.card-inset-glow {
+  box-shadow: inset 0 0 40px 6px rgba(0, 0, 0, 0.55);
+}
+
+/* Fades the edges of a horizontal-scroll row so items blend into the
+   background instead of being clipped by a hard edge. */
+.scroll-fade-x {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent);
+}
+
+/* Fades the hero video's edges to transparent so it dissolves into the page
+   background instead of reading as a hard-edged rectangle. */
+.hero-video-fade {
+  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+}
+
+/* Pauses a marquee's scroll animation while the pointer is over it, so text
+   or images can be read without chasing them. */
+.marquee-hover-pause:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Hides the native scrollbar on horizontal-scroll rows while keeping them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Liquid-glass CTA pill: dark tinted glass (frost 0, refraction 97) built
+   from the app's own surface tokens for contrast, a wide diagonal light
+   sheen (splay 100, light angle -45deg), and layered shadows for depth
+   (67). The backdrop-filter references #glass-refract (an SVG
+   feTurbulence + feDisplacementMap, defined inline next to the pill's
+   markup) to actually warp the artwork behind it instead of just
+   blurring it. Dispersion is a rainbow fringe along the top edge,
+   approximating the chromatic aberration real glass would split out. */
+.glass-pill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-surface-2) 75%, transparent),
+    color-mix(in srgb, var(--color-bg) 70%, transparent)
+  );
+  backdrop-filter: url(#glass-refract) blur(2px) saturate(180%) brightness(1.15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.35),
+    0 20px 45px rgba(0, 0, 0, 0.55),
+    0 2px 60px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 1px rgba(0, 0, 0, 0.5),
+    inset 16px 0 30px -16px rgba(255, 111, 168, 0.4),
+    inset -16px 0 30px -16px rgba(255, 122, 61, 0.4);
+}
+
+.glass-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    -45deg,
+    transparent 15%,
+    rgba(255, 255, 255, 0.16) 38%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.16) 62%,
+    transparent 85%
+  );
+  mix-blend-mode: overlay;
+}
+
+.glass-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 90, 90, 0.3),
+    rgba(255, 210, 90, 0.24) 20%,
+    rgba(120, 255, 170, 0.22) 40%,
+    rgba(110, 170, 255, 0.24) 60%,
+    rgba(200, 120, 255, 0.28) 80%,
+    rgba(255, 90, 160, 0.3)
+  );
+  mask-image: linear-gradient(to bottom, black, transparent 45%);
+  mix-blend-mode: color-dodge;
+  opacity: 0.55;
 }
 
 /* Jagged gradient banner shape, from preem-design-system.html */

@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
-import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
 import { ArtistApprovalRow } from "./ArtistApprovalRow";
-import { PayoutRow } from "./PayoutRow";
+import { PayoutsTable, type PayoutArtist } from "./PayoutsTable";
+import { TransactionsTable, type Transaction } from "./TransactionsTable";
+import { SupportRequestRow } from "./SupportRequestRow";
 
 export const revalidate = 0;
 
@@ -29,11 +30,17 @@ export default async function AdminPage() {
     .eq("approval_status", "pending")
     .order("created_at", { ascending: true });
 
+  const { data: openSupportRequests } = await supabase
+    .from("support_requests")
+    .select("id, fan_phone, fan_email, message, created_at, drops(title)")
+    .eq("status", "open")
+    .order("created_at", { ascending: true });
+
   const { data: recentPurchases } = await supabase
     .from("purchases")
     .select("fan_email, amount_kobo, paystack_ref, status, purchased_at, drops(title)")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(500);
 
   const { data: approvedArtists } = await supabase
     .from("artists")
@@ -69,6 +76,19 @@ export default async function AdminPage() {
     0,
   );
 
+  const transactions: Transaction[] = (recentPurchases ?? []).map((p) => {
+    type WithDrop = { title: string } | { title: string }[] | null;
+    const drop = p.drops as WithDrop;
+    const dropTitle = Array.isArray(drop) ? drop[0]?.title : drop?.title;
+    return {
+      fanEmail: p.fan_email,
+      dropTitle: dropTitle ?? "",
+      amountKobo: p.amount_kobo,
+      status: p.status,
+      paystackRef: p.paystack_ref,
+    };
+  });
+
   const balanceByArtist = new Map<string, number>();
   for (const p of unpaidPurchases ?? []) {
     type WithDrop = { amount_kobo: number; drops: { artist_id: string } | { artist_id: string }[] | null };
@@ -80,6 +100,13 @@ export default async function AdminPage() {
       (balanceByArtist.get(drop.artist_id) ?? 0) + Math.round(row.amount_kobo * 0.8),
     );
   }
+
+  const payoutArtists: PayoutArtist[] = (approvedArtists ?? []).map((a) => ({
+    artistId: a.id,
+    stageName: a.stage_name,
+    balanceKobo: balanceByArtist.get(a.id) ?? 0,
+    hasBankDetails: Boolean(a.bank_code && a.account_number && a.account_name),
+  }));
 
   return (
     <>
@@ -131,62 +158,41 @@ export default async function AdminPage() {
         </section>
 
         <section>
-          <h2 className="mb-4 text-lg font-bold">Transactions</h2>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-                <th className="pb-2 font-bold">Fan</th>
-                <th className="pb-2 font-bold">Drop</th>
-                <th className="pb-2 font-bold">Amount</th>
-                <th className="pb-2 font-bold">Status</th>
-                <th className="pb-2 font-bold">Ref</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(recentPurchases ?? []).map((p, i) => {
+          <h2 className="mb-4 text-lg font-bold">
+            Support requests ({openSupportRequests?.length ?? 0})
+          </h2>
+          {(openSupportRequests ?? []).length === 0 ? (
+            <p className="text-sm text-muted">No open support requests.</p>
+          ) : (
+            <div className="rounded-xl border border-line px-4">
+              {openSupportRequests?.map((r) => {
                 type WithDrop = { title: string } | { title: string }[] | null;
-                const drop = p.drops as WithDrop;
+                const drop = r.drops as WithDrop;
                 const dropTitle = Array.isArray(drop) ? drop[0]?.title : drop?.title;
                 return (
-                  <tr key={i} className="border-b border-line text-sm last:border-none">
-                    <td className="py-2.5 pr-4 text-muted">{p.fan_email}</td>
-                    <td className="py-2.5 pr-4">{dropTitle}</td>
-                    <td className="py-2.5 pr-4 font-mono">{formatNaira(p.amount_kobo)}</td>
-                    <td className="py-2.5 pr-4">
-                      <Badge status={p.status === "success" ? "live" : p.status === "pending" ? "pending" : "closed"}>
-                        {p.status}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 font-mono text-xs text-muted">{p.paystack_ref}</td>
-                  </tr>
+                  <SupportRequestRow
+                    key={r.id}
+                    id={r.id}
+                    fanPhone={r.fan_phone}
+                    fanEmail={r.fan_email}
+                    dropTitle={dropTitle ?? null}
+                    message={r.message}
+                    createdAt={r.created_at}
+                  />
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-lg font-bold">Transactions</h2>
+          <TransactionsTable transactions={transactions} />
         </section>
 
         <section>
           <h2 className="mb-4 text-lg font-bold">Payouts</h2>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-                <th className="pb-2 font-bold">Artist</th>
-                <th className="pb-2 font-bold">Owed (80%)</th>
-                <th className="pb-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(approvedArtists ?? []).map((a) => (
-                <PayoutRow
-                  key={a.id}
-                  artistId={a.id}
-                  stageName={a.stage_name}
-                  balanceKobo={balanceByArtist.get(a.id) ?? 0}
-                  hasBankDetails={Boolean(a.bank_code && a.account_number && a.account_name)}
-                />
-              ))}
-            </tbody>
-          </table>
+          <PayoutsTable artists={payoutArtists} />
         </section>
       </main>
     </>

@@ -4,7 +4,23 @@ import { Nav, NavLink } from "@/components/Nav";
 import { Avatar } from "@/components/Avatar";
 import { DropCard } from "@/components/DropCard";
 import { DiscoverMore } from "@/components/DiscoverMore";
+import {
+  FacebookIcon,
+  InstagramIcon,
+  SnapchatIcon,
+  TiktokIcon,
+  TwitterIcon,
+} from "@/components/SocialIcons";
+import { sanitizeBio } from "@/lib/format";
 import type { Artist, ArtistLink, Drop } from "@/lib/types";
+
+const SOCIAL_LINKS = [
+  { key: "twitter_url", label: "X / Twitter", Icon: TwitterIcon },
+  { key: "instagram_url", label: "Instagram", Icon: InstagramIcon },
+  { key: "snapchat_url", label: "Snapchat", Icon: SnapchatIcon },
+  { key: "tiktok_url", label: "TikTok", Icon: TiktokIcon },
+  { key: "facebook_url", label: "Facebook", Icon: FacebookIcon },
+] as const;
 
 export const revalidate = 0;
 
@@ -29,6 +45,7 @@ export default async function ArtistProfilePage({
     .from("drops")
     .select("*")
     .eq("artist_id", id)
+    .eq("status", "published")
     .order("created_at", { ascending: false });
 
   const { data: links } = await supabase
@@ -38,6 +55,12 @@ export default async function ArtistProfilePage({
     .order("created_at", { ascending: false });
 
   const joinedYear = new Date((artist as Artist).created_at).getFullYear();
+  const socialLinks = SOCIAL_LINKS.filter(({ key }) => (artist as Artist)[key]);
+  const bio = artist.bio ? sanitizeBio(artist.bio) : null;
+  // Past this length a bio runs several lines deep and pushes the Drops
+  // section — the actual reason someone lands on this page — far down the
+  // screen. Collapse it behind a fade that expands on hover instead.
+  const bioIsLong = (bio?.length ?? 0) > 180;
 
   return (
     <>
@@ -52,11 +75,36 @@ export default async function ArtistProfilePage({
             alt={artist.stage_name}
             size={96}
           />
-          <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">{artist.stage_name}</h1>
+          <div className="w-full min-w-0">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-between">
+              <h1 className="text-2xl font-bold sm:text-3xl">{artist.stage_name}</h1>
+              {socialLinks.length > 0 && (
+                <div className="flex items-center gap-3">
+                  {socialLinks.map(({ key, label, Icon }) => (
+                    <a
+                      key={key}
+                      href={(artist as Artist)[key]!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      title={label}
+                      className="text-muted transition-colors hover:text-paper"
+                    >
+                      <Icon className="h-5 w-5" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
             <p className="mt-1 text-xs text-muted">On Preem since {joinedYear}</p>
-            {artist.bio && (
-              <p className="mt-3 max-w-md text-sm text-paper/90">{artist.bio}</p>
+            {bio && (
+              bioIsLong ? (
+                <div className="relative mt-3 max-h-20 max-w-xl overflow-hidden [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)] transition-[max-height] duration-500 ease-out hover:max-h-[500px] hover:[mask-image:none]">
+                  <p className="whitespace-pre-line text-sm text-paper/90">{bio}</p>
+                </div>
+              ) : (
+                <p className="mt-3 max-w-xl whitespace-pre-line text-sm text-paper/90">{bio}</p>
+              )
             )}
             {artist.profile_link && (
               <a

@@ -19,8 +19,8 @@ const nextConfig: NextConfig = {
             },
           ]
         : []),
-      { protocol: "https" as const, hostname: "picsum.photos" },
-      { protocol: "https" as const, hostname: "api.dicebear.com" },
+      { protocol: "https" as const, hostname: "images.unsplash.com" },
+      { protocol: "https" as const, hostname: "i.pravatar.cc" },
     ],
   },
 };

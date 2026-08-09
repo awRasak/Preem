@@ -5,17 +5,21 @@ import { Badge } from "@/components/Badge";
 import { formatTimeLeft, isDropLive } from "@/lib/format";
 
 export function CountdownBadge({ windowEnd }: { windowEnd: string }) {
-  const [label, setLabel] = useState(() => formatTimeLeft(windowEnd));
-  const [live, setLive] = useState(() => isDropLive(windowEnd));
+  // Starts empty so the server render and the first client render match —
+  // formatTimeLeft/isDropLive are clock-dependent, so evaluating them during
+  // the initial render (even via a useState initializer) risks a value
+  // computed a tick apart on the server vs. the client, which trips a
+  // hydration mismatch. Filling in after mount avoids that entirely.
+  const [state, setState] = useState<{ live: boolean; label: string } | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLabel(formatTimeLeft(windowEnd));
-      setLive(isDropLive(windowEnd));
-    }, 1000);
+    const update = () => setState({ live: isDropLive(windowEnd), label: formatTimeLeft(windowEnd) });
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [windowEnd]);
 
-  if (!live) return <Badge status="closed">Released</Badge>;
-  return <Badge status="live">LIVE — {label}</Badge>;
+  if (!state) return null;
+  if (!state.live) return <Badge status="closed">Released</Badge>;
+  return <Badge status="live">LIVE — {state.label}</Badge>;
 }

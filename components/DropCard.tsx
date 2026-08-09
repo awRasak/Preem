@@ -1,10 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Drop } from "@/lib/types";
-import { formatNaira, formatTimeLeft, isDropLive } from "@/lib/format";
+import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { Badge } from "./Badge";
 import { Avatar } from "./Avatar";
+import { TimeLeft } from "./TimeLeft";
+import { PreviewButton } from "./PreviewButton";
 
 export function DropCard({ drop }: { drop: Drop }) {
   const live = isDropLive(drop.window_end);
@@ -12,7 +14,7 @@ export function DropCard({ drop }: { drop: Drop }) {
   return (
     <Link
       href={`/drop/${drop.id}`}
-      className="block rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
+      className="card-inset-glow block rounded-xl border border-line bg-card p-3 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-line-strong hover:shadow-xl hover:shadow-black/40"
     >
       <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-surface-2">
         <Image
@@ -21,6 +23,22 @@ export function DropCard({ drop }: { drop: Drop }) {
           fill
           className="object-cover"
           sizes="(max-width: 640px) 50vw, 25vw"
+        />
+        <div className="absolute right-2 top-2">
+          {drop.is_exclusive ? (
+            <Badge status="exclusive">EXCLUSIVE</Badge>
+          ) : live ? (
+            <Badge status="live">LIVE</Badge>
+          ) : (
+            <Badge status="closed">Closed</Badge>
+          )}
+        </div>
+        <PreviewButton
+          dropId={drop.id}
+          title={drop.title}
+          artistName={drop.artist?.stage_name ?? ""}
+          artworkUrl={drop.artwork_path}
+          className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white backdrop-blur-sm transition-transform hover:scale-110"
         />
       </div>
       <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">
@@ -33,23 +51,14 @@ export function DropCard({ drop }: { drop: Drop }) {
         {drop.artist?.stage_name ?? "Unknown artist"}
       </div>
       <div className="mb-2 truncate text-[15px] font-medium">{drop.title}</div>
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-sm text-accent">
-          {formatNaira(drop.price_kobo)}
-        </span>
-        {drop.is_exclusive ? (
-          <Badge status="exclusive">EXCLUSIVE</Badge>
-        ) : live ? (
-          <Badge status="live">LIVE</Badge>
-        ) : (
-          <Badge status="closed">Closed</Badge>
+      <div className="flex items-center justify-between gap-2">
+        <Badge status="price">Min. {formatNaira(drop.min_price_kobo)}</Badge>
+        {live && drop.window_end && (
+          <div className="flex-shrink-0 font-mono text-[11px] text-muted">
+            <TimeLeft windowEnd={drop.window_end} />
+          </div>
         )}
       </div>
-      {live && drop.window_end && (
-        <div className="mt-1 font-mono text-[11px] text-muted">
-          {formatTimeLeft(drop.window_end)}
-        </div>
-      )}
     </Link>
   );
 }

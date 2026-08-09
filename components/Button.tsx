@@ -17,7 +17,7 @@ type ButtonAsLink = CommonProps & {
 };
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none";
+  "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold font-plakat transition-all duration-150 ease-out hover:opacity-90 hover:scale-[1.03] active:scale-95 active:opacity-100 disabled:opacity-50 disabled:pointer-events-none disabled:hover:scale-100";
 
 const variants: Record<Variant, string> = {
   primary: "bg-accent text-[#1a0d05]",

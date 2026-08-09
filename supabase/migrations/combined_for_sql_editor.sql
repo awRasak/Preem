@@ -281,3 +281,137 @@ create policy "artist can delete own links"
   on artist_links for delete
   using (auth.uid() = artist_id);
 alter table drops add column collaborators text;
+
+-- Multi-track releases (Single/EP/Album) with pay-what-you-want pricing.
+-- Every drop always has >=1 row here, even Singles — keeps the access rule
+-- uniform instead of branching on release type.
+create table drop_tracks (
+  id uuid primary key default gen_random_uuid(),
+  drop_id uuid not null references drops (id) on delete cascade,
+  track_number integer not null,
+  title text not null,
+  audio_file_path text not null,
+  min_price_kobo integer not null check (min_price_kobo > 0),
+  collaborators text,
+  lyrics text,
+  created_at timestamptz not null default now()
+);
+
+create index drop_tracks_drop_id_idx on drop_tracks (drop_id);
+
+alter table drop_tracks enable row level security;
+
+create policy "public can read tracks"
+  on drop_tracks for select
+  using (true);
+
+create policy "artist can manage own tracks"
+  on drop_tracks for all
+  using (exists (
+    select 1 from drops where drops.id = drop_tracks.drop_id and drops.artist_id = auth.uid()
+  ));
+
+-- Backfill existing drops into drop_tracks before dropping the old columns.
+insert into drop_tracks (drop_id, track_number, title, audio_file_path, min_price_kobo, collaborators, lyrics)
+select id, 1, title, audio_file_path, price_kobo, collaborators, lyrics from drops;
+
+alter table drops drop column audio_file_path;
+alter table drops drop column lyrics;
+alter table drops drop column collaborators;
+alter table drops rename column price_kobo to min_price_kobo;
+alter table drops add column release_type text not null default 'single'
+  check (release_type in ('single', 'ep', 'album'));
+alter table drops add column status text not null default 'published'
+  check (status in ('draft', 'published'));
+
+-- Per-track purchases. track_id = NULL means "bought the whole release".
+alter table purchases add column track_id uuid references drop_tracks (id) on delete cascade;
+create index purchases_track_id_idx on purchases (track_id);
+
+-- Access rule (PRD §8, extended): a fan can stream track X if they have a
+-- success purchase on that drop with track_id = X OR track_id IS NULL (bundle).
+-- The old (drop_id, fan_phone) unique index blocked buying more than one
+-- track per drop at all, so replace it with a coalesced expression index —
+-- Postgres treats distinct NULLs as non-equal, which would otherwise let a
+-- fan "successfully" buy the same bundle twice.
+drop index purchases_drop_phone_success_idx;
+create unique index purchases_drop_track_phone_success_idx
+  on purchases (drop_id, coalesce(track_id, '00000000-0000-0000-0000-000000000000'::uuid), fan_phone)
+  where status = 'success';
+
+-- Social links on the public artist profile (task: social media links).
+alter table artists add column instagram_url text;
+alter table artists add column twitter_url text;
+alter table artists add column tiktok_url text;
+
+-- Per-drop genre tagging for the Explore page's filter chips.
+alter table drops add column genre text not null default 'other'
+  check (genre in ('afrobeats', 'hip_hop', 'rnb', 'amapiano', 'pop', 'gospel', 'alte', 'other'));
+
+create index drops_genre_idx on drops (genre);
+
+-- Optional secondary genre tag, alongside the existing required genre.
+alter table drops add column secondary_genre text
+  check (secondary_genre in ('afrobeats', 'hip_hop', 'rnb', 'amapiano', 'pop', 'gospel', 'alte', 'other'));
+
+-- Post-purchase thank-you from the artist: shown to a fan right after they
+-- buy. An artist can set a short text note and/or one image/video — either
+-- alone or together.
+alter table artists add column thank_you_text text;
+alter table artists add column thank_you_media_url text;
+alter table artists add column thank_you_media_type text
+  check (thank_you_media_type in ('image', 'video'));
+
+-- thankyou bucket: public read (shown to any fan post-purchase), same
+-- artist-scoped write convention as the artwork bucket.
+insert into storage.buckets (id, name, public)
+values ('thankyou', 'thankyou', true)
+on conflict (id) do nothing;
+
+create policy "public can read thankyou"
+  on storage.objects for select
+  using (bucket_id = 'thankyou');
+
+create policy "artist can upload own thankyou"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'thankyou'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "artist can delete own thankyou"
+  on storage.objects for delete
+  using (
+    bucket_id = 'thankyou'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Lets a fan flag a problem (e.g. "paid but didn't get access") without an
+-- account — surfaced to admins on the dashboard, resolved by hand for now.
+create table support_requests (
+  id uuid primary key default gen_random_uuid(),
+  fan_phone text not null,
+  fan_email text,
+  drop_id uuid references drops (id) on delete set null,
+  message text not null,
+  status text not null default 'open' check (status in ('open', 'resolved')),
+  created_at timestamptz not null default now()
+);
+
+create index support_requests_status_idx on support_requests (status);
+
+alter table support_requests enable row level security;
+
+-- No anon/public policy at all — fans reach this table only via a
+-- service-role API route, same as purchases.
+create policy "admin can read support requests"
+  on support_requests for select
+  using (is_admin());
+
+create policy "admin can update support requests"
+  on support_requests for update
+  using (is_admin());
+
+-- Round out artist social links with Facebook and Snapchat.
+alter table artists add column facebook_url text;
+alter table artists add column snapchat_url text;

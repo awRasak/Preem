@@ -2,31 +2,39 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { usePlayer } from "@/lib/player-context";
+import { usePlayer, type PlayerTrack } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
 
 export function PlayerRow({
-  dropId,
+  trackId,
   title,
   artistName,
   artworkUrl,
   lyrics,
+  purchaseNote,
+  queue,
 }: {
-  dropId: string;
+  trackId: string;
   title: string;
   artistName: string;
   artworkUrl: string | null;
   lyrics?: string | null;
+  // e.g. "₦500 · Aug 8, 2026" — shown for standalone tracks; omitted for
+  // tracks inside a bundle group, where the parent shows it once instead.
+  purchaseNote?: string;
+  // The fan's full library in display order, so Next/Previous on the player
+  // bar continue across drops.
+  queue?: PlayerTrack[];
 }) {
   const { track, playing, loading, play, toggle } = usePlayer();
-  const isCurrent = track?.dropId === dropId;
+  const isCurrent = track?.trackId === trackId;
   const [showLyrics, setShowLyrics] = useState(false);
 
   function handleClick() {
     if (isCurrent) {
       toggle();
     } else {
-      play({ dropId, title, artistName, artworkUrl });
+      play({ trackId, title, artistName, artworkUrl }, queue);
     }
   }
 
@@ -35,7 +43,7 @@ export function PlayerRow({
       <div className="flex items-center gap-3.5">
         <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-[10px] bg-surface-2">
           <Image
-            src={artworkUrl || artworkFallback(dropId)}
+            src={artworkUrl || artworkFallback(trackId)}
             alt={title}
             fill
             className="object-cover"
@@ -43,7 +51,10 @@ export function PlayerRow({
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{title}</div>
-          <div className="mt-0.5 truncate text-xs text-muted">{artistName}</div>
+          <div className="mt-0.5 truncate text-xs text-muted">
+            {artistName}
+            {purchaseNote && ` · ${purchaseNote}`}
+          </div>
         </div>
         {lyrics && (
           <button

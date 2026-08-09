@@ -1,12 +1,10 @@
 import { redirect, notFound } from "next/navigation";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
-import { Badge } from "@/components/Badge";
 import { DistributionGuidance } from "@/components/DistributionGuidance";
 import { formatNaira, isDropLive } from "@/lib/format";
-import { artworkFallback } from "@/lib/placeholder";
-import { OwnerControls } from "./OwnerControls";
+import { DropHeaderEditable } from "./DropHeaderEditable";
+import type { Drop, DropTrack } from "@/lib/types";
 
 export default async function ArtistDropDetailPage({
   params,
@@ -33,14 +31,23 @@ export default async function ArtistDropDetailPage({
     ? drop.artist[0]?.stage_name
     : drop.artist?.stage_name;
 
+  const { data: tracksData } = await supabase
+    .from("drop_tracks")
+    .select("*")
+    .eq("drop_id", id)
+    .order("track_number", { ascending: true });
+  const tracks = (tracksData ?? []) as DropTrack[];
+
   const { data: buyers } = await supabase
     .from("purchases")
-    .select("fan_name, fan_phone, amount_kobo, purchased_at")
+    .select("fan_name, fan_phone, amount_kobo, purchased_at, track_id")
     .eq("drop_id", id)
     .eq("status", "success")
     .order("purchased_at", { ascending: false });
 
   const live = isDropLive(drop.window_end);
+  const isBundle = drop.release_type !== "single" && tracks.length > 1;
+  const trackTitleById = new Map(tracks.map((t) => [t.id, t.title]));
 
   return (
     <>
@@ -48,55 +55,12 @@ export default async function ArtistDropDetailPage({
         <NavLink href="/artist/dashboard">← Dashboard</NavLink>
       </Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-8 sm:px-8">
-        <div className="mb-4 flex items-start gap-4">
-          <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-surface-2">
-            <Image
-              src={drop.artwork_path || artworkFallback(drop.id)}
-              alt={drop.title}
-              fill
-              className="object-cover"
-              sizes="96px"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-bold">{drop.title}</h1>
-              {drop.is_exclusive ? (
-                <Badge status="exclusive">Exclusive</Badge>
-              ) : live ? (
-                <Badge status="live">Live</Badge>
-              ) : (
-                <Badge status="closed">Released</Badge>
-              )}
-            </div>
-            <div className="mb-3 font-mono text-sm text-accent">
-              {formatNaira(drop.price_kobo)}
-            </div>
-            <OwnerControls
-              dropId={drop.id}
-              title={drop.title}
-              artistName={artistName ?? ""}
-              artworkUrl={drop.artwork_path}
-            />
-          </div>
-        </div>
-
-        {drop.collaborators && (
-          <p className="mb-2 text-xs text-muted">{drop.collaborators}</p>
-        )}
-        {drop.description && (
-          <p className="mb-4 text-sm text-muted">{drop.description}</p>
-        )}
-        {drop.lyrics && (
-          <details className="mb-8">
-            <summary className="cursor-pointer text-xs font-bold text-paper underline">
-              Lyrics
-            </summary>
-            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-paper/90">
-              {drop.lyrics}
-            </p>
-          </details>
-        )}
+        <DropHeaderEditable
+          drop={drop as Drop}
+          tracks={tracks}
+          artistName={artistName ?? ""}
+          hasSales={(buyers?.length ?? 0) > 0}
+        />
 
         {!live && (
           <div className="mb-8">
@@ -113,7 +77,15 @@ export default async function ArtistDropDetailPage({
             <div key={i} className="flex items-center justify-between p-4 text-sm">
               <div>
                 <div className="font-medium">{b.fan_name}</div>
-                <div className="text-xs text-muted">{b.fan_phone}</div>
+                <div className="text-xs text-muted">
+                  {b.fan_phone}
+                  {isBundle && (
+                    <>
+                      {" · "}
+                      {b.track_id ? (trackTitleById.get(b.track_id) ?? "Deleted track") : "Full release"}
+                    </>
+                  )}
+                </div>
               </div>
               <span className="font-mono text-accent">
                 {formatNaira(b.amount_kobo)}
