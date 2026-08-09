@@ -278,7 +278,7 @@ export default function CreateDropWizard() {
         <p className="mb-6 text-xs font-bold uppercase tracking-wide text-muted">
           Step {step} of 4 · {STEP_TITLES[step]}
         </p>
-        <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
+        <div className={`grid gap-8 ${step === 4 ? "" : "lg:grid-cols-[1fr_280px]"}`}>
           <div>
             {step === 1 && <Step1ReleaseSetup state={state} onChange={patch} />}
             {step === 2 && <Step2TrackDetails state={state} onChange={patch} />}
@@ -286,11 +286,13 @@ export default function CreateDropWizard() {
             {step === 4 && <Step4Review state={state} />}
             {error && <p className="mt-4 text-sm text-[#ff6b6b]">{error}</p>}
           </div>
-          <div className="hidden lg:block">
-            <div className="sticky top-8">
-              <PreviewCard state={state} />
+          {step !== 4 && (
+            <div className="hidden lg:block">
+              <div className="sticky top-8">
+                <PreviewCard state={state} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
 

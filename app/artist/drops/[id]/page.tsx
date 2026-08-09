@@ -1,14 +1,10 @@
 import { redirect, notFound } from "next/navigation";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Nav, NavLink } from "@/components/Nav";
-import { Badge } from "@/components/Badge";
 import { DistributionGuidance } from "@/components/DistributionGuidance";
 import { formatNaira, isDropLive } from "@/lib/format";
-import { artworkFallback } from "@/lib/placeholder";
-import { OwnerControls } from "./OwnerControls";
-import { LyricsSection } from "@/app/drop/[id]/LyricsSection";
-import type { DropTrack } from "@/lib/types";
+import { DropHeaderEditable } from "./DropHeaderEditable";
+import type { Drop, DropTrack } from "@/lib/types";
 
 export default async function ArtistDropDetailPage({
   params,
@@ -59,85 +55,12 @@ export default async function ArtistDropDetailPage({
         <NavLink href="/artist/dashboard">← Dashboard</NavLink>
       </Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-8 sm:px-8">
-        <div className="mb-4 flex items-start gap-4">
-          <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-surface-2">
-            <Image
-              src={drop.artwork_path || artworkFallback(drop.id)}
-              alt={drop.title}
-              fill
-              className="object-cover"
-              sizes="96px"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-bold">{drop.title}</h1>
-              {drop.status === "draft" ? (
-                <Badge status="pending">Draft</Badge>
-              ) : drop.is_exclusive ? (
-                <Badge status="exclusive">Exclusive</Badge>
-              ) : live ? (
-                <Badge status="live">Live</Badge>
-              ) : (
-                <Badge status="closed">Released</Badge>
-              )}
-            </div>
-            <div className="mb-3 flex items-center gap-2">
-              <Badge status="price">Min. Price {formatNaira(drop.min_price_kobo)}</Badge>
-              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                {drop.release_type} · {tracks.length} track{tracks.length === 1 ? "" : "s"}
-              </span>
-            </div>
-            {!isBundle && tracks[0] && (
-              <OwnerControls
-                trackId={tracks[0].id}
-                title={tracks[0].title}
-                artistName={artistName ?? ""}
-                artworkUrl={drop.artwork_path}
-              />
-            )}
-          </div>
-        </div>
-
-        {drop.description && (
-          <p className="mb-4 text-sm text-muted">{drop.description}</p>
-        )}
-        {!isBundle && tracks[0]?.collaborators && (
-          <p className="mb-2 text-xs text-muted">{tracks[0].collaborators}</p>
-        )}
-        {!isBundle && tracks[0]?.lyrics && <LyricsSection lyrics={tracks[0].lyrics} />}
-
-        {isBundle && (
-          <div className="mb-8">
-            <h2 className="mb-3 text-lg font-bold">Tracks</h2>
-            <div className="divide-y divide-line rounded-xl border border-line">
-              {tracks.map((track) => (
-                <div key={track.id} className="flex flex-col gap-2 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium">
-                        {track.track_number}. {track.title}
-                      </div>
-                      {track.collaborators && (
-                        <div className="mt-0.5 text-xs text-muted">{track.collaborators}</div>
-                      )}
-                    </div>
-                    <div className="flex flex-shrink-0 items-center gap-3">
-                      <Badge status="price">Min. {formatNaira(track.min_price_kobo)}</Badge>
-                      <OwnerControls
-                        trackId={track.id}
-                        title={track.title}
-                        artistName={artistName ?? ""}
-                        artworkUrl={drop.artwork_path}
-                      />
-                    </div>
-                  </div>
-                  {track.lyrics && <LyricsSection lyrics={track.lyrics} />}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <DropHeaderEditable
+          drop={drop as Drop}
+          tracks={tracks}
+          artistName={artistName ?? ""}
+          hasSales={(buyers?.length ?? 0) > 0}
+        />
 
         {!live && (
           <div className="mb-8">

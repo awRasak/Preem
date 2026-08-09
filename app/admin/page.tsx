@@ -4,7 +4,7 @@ import { Nav, NavLink } from "@/components/Nav";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
 import { ArtistApprovalRow } from "./ArtistApprovalRow";
-import { PayoutRow } from "./PayoutRow";
+import { PayoutsTable, type PayoutArtist } from "./PayoutsTable";
 import { TransactionsTable, type Transaction } from "./TransactionsTable";
 
 export const revalidate = 0;
@@ -94,6 +94,13 @@ export default async function AdminPage() {
     );
   }
 
+  const payoutArtists: PayoutArtist[] = (approvedArtists ?? []).map((a) => ({
+    artistId: a.id,
+    stageName: a.stage_name,
+    balanceKobo: balanceByArtist.get(a.id) ?? 0,
+    hasBankDetails: Boolean(a.bank_code && a.account_number && a.account_name),
+  }));
+
   return (
     <>
       <Nav role="admin">
@@ -150,26 +157,7 @@ export default async function AdminPage() {
 
         <section>
           <h2 className="mb-4 text-lg font-bold">Payouts</h2>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-                <th className="pb-2 font-bold">Artist</th>
-                <th className="pb-2 font-bold">Owed (80%)</th>
-                <th className="pb-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(approvedArtists ?? []).map((a) => (
-                <PayoutRow
-                  key={a.id}
-                  artistId={a.id}
-                  stageName={a.stage_name}
-                  balanceKobo={balanceByArtist.get(a.id) ?? 0}
-                  hasBankDetails={Boolean(a.bank_code && a.account_number && a.account_name)}
-                />
-              ))}
-            </tbody>
-          </table>
+          <PayoutsTable artists={payoutArtists} />
         </section>
       </main>
     </>

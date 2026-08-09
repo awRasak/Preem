@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { usePlayer } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
+import { PREVIEW_SECONDS } from "@/lib/preview";
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -16,6 +17,8 @@ export function PlayerBar() {
     usePlayer();
 
   if (!track) return null;
+
+  const displayDuration = track.preview ? Math.min(duration || PREVIEW_SECONDS, PREVIEW_SECONDS) : duration;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur">
@@ -32,7 +35,10 @@ export function PlayerBar() {
 
         <div className="min-w-0 flex-shrink-0 sm:w-40">
           <div className="truncate text-sm font-medium">{track.title}</div>
-          <div className="truncate text-xs text-muted">{track.artistName}</div>
+          <div className="truncate text-xs text-muted">
+            {track.artistName}
+            {track.preview && <span className="ml-1.5 text-accent">· Preview</span>}
+          </div>
         </div>
 
         <button
@@ -50,15 +56,15 @@ export function PlayerBar() {
         <input
           type="range"
           min={0}
-          max={duration || 0}
+          max={displayDuration || 0}
           step={0.1}
-          value={currentTime}
+          value={Math.min(currentTime, displayDuration || currentTime)}
           onChange={(e) => seek(Number(e.target.value))}
           className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line-strong accent-accent"
         />
 
         <span className="hidden font-mono text-[11px] text-muted sm:inline">
-          {formatTime(duration)}
+          {formatTime(displayDuration)}
         </span>
 
         {error && (

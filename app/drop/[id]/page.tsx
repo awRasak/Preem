@@ -10,6 +10,7 @@ import { artworkFallback } from "@/lib/placeholder";
 import { CountdownBadge } from "./CountdownBadge";
 import { BuyButton } from "./BuyButton";
 import { LyricsSection } from "./LyricsSection";
+import { PreviewButton } from "@/components/PreviewButton";
 import { DiscoverMore } from "@/components/DiscoverMore";
 import { genreLabel } from "@/lib/genres";
 import type { ArtistLink, Drop, DropTrack } from "@/lib/types";
@@ -26,7 +27,9 @@ export default async function DropPage({
 
   const { data } = await supabase
     .from("drops")
-    .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
+    .select(
+      "*, artist:artists(id, stage_name, avatar_url, approval_status, thank_you_text, thank_you_media_url, thank_you_media_type)",
+    )
     .eq("id", id)
     .eq("status", "published")
     .single();
@@ -38,6 +41,9 @@ export default async function DropPage({
           stage_name: string;
           avatar_url: string | null;
           approval_status: string;
+          thank_you_text: string | null;
+          thank_you_media_url: string | null;
+          thank_you_media_type: "image" | "video" | null;
         } | null;
       })
     | null;
@@ -138,6 +144,16 @@ export default async function DropPage({
             )}
             <div className="mt-6 flex items-center gap-4">
               <Badge status="price">Min. Price {formatNaira(drop.min_price_kobo)}</Badge>
+              {!isBundle && tracks[0] && (
+                <PreviewButton
+                  dropId={drop.id}
+                  trackId={tracks[0].id}
+                  title={drop.title}
+                  artistName={artistName}
+                  artworkUrl={drop.artwork_path}
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-line-strong text-sm"
+                />
+              )}
               {live ? (
                 <BuyButton
                   dropId={drop.id}
@@ -146,6 +162,10 @@ export default async function DropPage({
                   title={drop.title}
                   isExclusive={drop.is_exclusive}
                   label={isBundle ? "Buy full release" : "Buy access"}
+                  artistName={artistName}
+                  thankYouText={drop.artist?.thank_you_text}
+                  thankYouMediaUrl={drop.artist?.thank_you_media_url}
+                  thankYouMediaType={drop.artist?.thank_you_media_type}
                 />
               ) : (
                 <p className="text-xs text-muted">
@@ -180,6 +200,14 @@ export default async function DropPage({
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-3">
                     <Badge status="price">Min. {formatNaira(track.min_price_kobo)}</Badge>
+                    <PreviewButton
+                      dropId={drop.id}
+                      trackId={track.id}
+                      title={track.title}
+                      artistName={artistName}
+                      artworkUrl={drop.artwork_path}
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-line-strong text-xs"
+                    />
                     {live && (
                       <BuyButton
                         dropId={drop.id}
@@ -188,6 +216,10 @@ export default async function DropPage({
                         title={track.title}
                         isExclusive={drop.is_exclusive}
                         label="Buy track"
+                        artistName={artistName}
+                        thankYouText={drop.artist?.thank_you_text}
+                        thankYouMediaUrl={drop.artist?.thank_you_media_url}
+                        thankYouMediaType={drop.artist?.thank_you_media_type}
                       />
                     )}
                   </div>
@@ -202,7 +234,7 @@ export default async function DropPage({
             <h2 className="mb-4 text-lg font-bold">More from {artistName}</h2>
             <div className="no-scrollbar -mx-5 flex gap-4 overflow-x-auto px-5 pb-2 pt-2 sm:-mx-8 sm:px-8">
               {moreFromArtist.map((d) => (
-                <div key={d.id} className="w-[160px] flex-shrink-0 sm:w-[190px]">
+                <div key={d.id} className="w-[200px] flex-shrink-0 sm:w-[240px]">
                   <DropCard drop={d} />
                 </div>
               ))}

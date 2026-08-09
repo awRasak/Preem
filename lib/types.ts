@@ -22,6 +22,9 @@ export type Artist = {
   twitter_url: string | null;
   tiktok_url: string | null;
   approval_status: ApprovalStatus;
+  thank_you_text: string | null;
+  thank_you_media_url: string | null;
+  thank_you_media_type: "image" | "video" | null;
   created_at: string;
 };
 

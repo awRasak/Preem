@@ -8,12 +8,18 @@ import {
   useRef,
   useState,
 } from "react";
+import { PREVIEW_SECONDS } from "@/lib/preview";
 
 export type PlayerTrack = {
   trackId: string;
   title: string;
   artistName: string;
   artworkUrl: string | null;
+  // Presence means: fetch from the public preview endpoint (unauthenticated,
+  // capped to PREVIEW_SECONDS) instead of the purchase/owner-gated stream
+  // endpoint. `trackId` here narrows to a specific track within the drop —
+  // omitted, the server picks the drop's first track.
+  preview?: { dropId: string; trackId?: string };
 };
 
 type PlayerContextValue = {
@@ -39,11 +45,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState(false);
 
+  // The mount-once effect below registers its listeners a single time, so it
+  // reads the latest track through this ref rather than closing over stale state.
+  const trackRef = useRef<PlayerTrack | null>(null);
+  useEffect(() => {
+    trackRef.current = track;
+  }, [track]);
+
   useEffect(() => {
     const audio = new Audio();
     audioRef.current = audio;
 
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      if (trackRef.current?.preview && audio.currentTime >= PREVIEW_SECONDS) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
     const onDuration = () => setDuration(audio.duration || 0);
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
@@ -85,10 +104,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setTrack(nextTrack);
       try {
-        const res = await fetch(`/api/stream/${nextTrack.trackId}`);
+        const url = nextTrack.preview
+          ? `/api/preview/${nextTrack.preview.dropId}${
+              nextTrack.preview.trackId ? `?track=${nextTrack.preview.trackId}` : ""
+            }`
+          : `/api/stream/${nextTrack.trackId}`;
+        const res = await fetch(url);
         if (!res.ok) throw new Error("stream failed");
-        const { url } = await res.json();
-        audio.src = url;
+        const { url: signedUrl } = await res.json();
+        audio.src = signedUrl;
         await audio.play();
       } catch {
         setError(true);
@@ -112,8 +136,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const seek = useCallback((time: number) => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = time;
-    setCurrentTime(time);
+    const clamped = trackRef.current?.preview ? Math.min(time, PREVIEW_SECONDS) : time;
+    audio.currentTime = clamped;
+    setCurrentTime(clamped);
   }, []);
 
   return (

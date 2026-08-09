@@ -123,6 +123,70 @@ h2 {
   display: none;
 }
 
+/* Liquid-glass CTA pill: dark tinted glass (frost 0, refraction 97) built
+   from the app's own surface tokens for contrast, a wide diagonal light
+   sheen (splay 100, light angle -45deg), and layered shadows for depth
+   (67). The backdrop-filter references #glass-refract (an SVG
+   feTurbulence + feDisplacementMap, defined inline next to the pill's
+   markup) to actually warp the artwork behind it instead of just
+   blurring it. Dispersion is a rainbow fringe along the top edge,
+   approximating the chromatic aberration real glass would split out. */
+.glass-pill {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-surface-2) 75%, transparent),
+    color-mix(in srgb, var(--color-bg) 70%, transparent)
+  );
+  backdrop-filter: url(#glass-refract) blur(2px) saturate(180%) brightness(1.15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.35),
+    0 20px 45px rgba(0, 0, 0, 0.55),
+    0 2px 60px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 1px rgba(0, 0, 0, 0.5),
+    inset 16px 0 30px -16px rgba(255, 111, 168, 0.4),
+    inset -16px 0 30px -16px rgba(255, 122, 61, 0.4);
+}
+
+.glass-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    -45deg,
+    transparent 15%,
+    rgba(255, 255, 255, 0.16) 38%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.16) 62%,
+    transparent 85%
+  );
+  mix-blend-mode: overlay;
+}
+
+.glass-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 90, 90, 0.3),
+    rgba(255, 210, 90, 0.24) 20%,
+    rgba(120, 255, 170, 0.22) 40%,
+    rgba(110, 170, 255, 0.24) 60%,
+    rgba(200, 120, 255, 0.28) 80%,
+    rgba(255, 90, 160, 0.3)
+  );
+  mask-image: linear-gradient(to bottom, black, transparent 45%);
+  mix-blend-mode: color-dodge;
+  opacity: 0.55;
+}
+
 /* Jagged gradient banner shape, from preem-design-system.html */
 .jag-shape {
   background: linear-gradient(135deg, #ff6fa8 0%, #a855f7 45%, #ff7a3d 100%);

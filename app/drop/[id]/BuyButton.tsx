@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Script from "next/script";
+import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { Field, Input } from "@/components/Field";
@@ -31,6 +32,10 @@ export function BuyButton({
   title,
   isExclusive,
   label = "Buy access",
+  artistName,
+  thankYouText,
+  thankYouMediaUrl,
+  thankYouMediaType,
 }: {
   dropId: string;
   trackId?: string;
@@ -38,6 +43,10 @@ export function BuyButton({
   title: string;
   isExclusive?: boolean;
   label?: string;
+  artistName?: string;
+  thankYouText?: string | null;
+  thankYouMediaUrl?: string | null;
+  thankYouMediaType?: "image" | "video" | null;
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
@@ -125,6 +134,34 @@ export function BuyButton({
                   </a>{" "}
                   and enter {fanPhone} to listen.
                 </p>
+                {(thankYouText || thankYouMediaUrl) && (
+                  <div className="mb-4 rounded-lg border border-line-strong bg-surface-2 p-4 text-left">
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted">
+                      A note from {artistName}
+                    </p>
+                    {thankYouMediaUrl &&
+                      (thankYouMediaType === "video" ? (
+                        <video
+                          src={thankYouMediaUrl}
+                          controls
+                          className="mb-3 w-full rounded-lg"
+                        />
+                      ) : (
+                        <div className="relative mb-3 aspect-square w-full overflow-hidden rounded-lg">
+                          <Image
+                            src={thankYouMediaUrl}
+                            alt={`${artistName} thank-you`}
+                            fill
+                            className="object-cover"
+                            sizes="320px"
+                          />
+                        </div>
+                      ))}
+                    {thankYouText && (
+                      <p className="whitespace-pre-wrap text-sm">{thankYouText}</p>
+                    )}
+                  </div>
+                )}
                 <Button
                   variant="primary"
                   className="w-full"

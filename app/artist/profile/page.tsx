@@ -6,6 +6,7 @@ import { Tabs } from "@/components/Tabs";
 import { ProfileForm } from "../dashboard/ProfileForm";
 import { BankDetailsForm } from "../dashboard/BankDetailsForm";
 import { DiscoverLinksForm } from "../dashboard/DiscoverLinksForm";
+import { ThankYouForm } from "../dashboard/ThankYouForm";
 import type { ArtistLink } from "@/lib/types";
 
 export default async function ArtistProfilePage({
@@ -84,6 +85,18 @@ export default async function ArtistProfilePage({
               id: "discover",
               label: "Discover More",
               content: <DiscoverLinksForm links={(links ?? []) as ArtistLink[]} />,
+            },
+            {
+              id: "thankyou",
+              label: "Thank You",
+              content: (
+                <ThankYouForm
+                  artistId={user.id}
+                  currentText={artist.thank_you_text}
+                  currentMediaUrl={artist.thank_you_media_url}
+                  currentMediaType={artist.thank_you_media_type}
+                />
+              ),
             },
           ]}
         />

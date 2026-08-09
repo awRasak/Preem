@@ -6,6 +6,7 @@ import { artworkFallback } from "@/lib/placeholder";
 import { Badge } from "./Badge";
 import { Avatar } from "./Avatar";
 import { TimeLeft } from "./TimeLeft";
+import { PreviewButton } from "./PreviewButton";
 
 export function DropCard({ drop }: { drop: Drop }) {
   const live = isDropLive(drop.window_end);
@@ -32,6 +33,13 @@ export function DropCard({ drop }: { drop: Drop }) {
             <Badge status="closed">Closed</Badge>
           )}
         </div>
+        <PreviewButton
+          dropId={drop.id}
+          title={drop.title}
+          artistName={drop.artist?.stage_name ?? ""}
+          artworkUrl={drop.artwork_path}
+          className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white backdrop-blur-sm transition-transform hover:scale-110"
+        />
       </div>
       <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">
         <Avatar

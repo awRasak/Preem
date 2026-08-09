@@ -46,18 +46,18 @@ export function FilmstripGallery({ drops }: { drops: Drop[] }) {
         <Track items={items} />
         <Track items={items} />
       </div>
+      <svg width="0" height="0" className="absolute">
+        <filter id="glass-refract" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.009 0.025" numOctaves="2" seed="7" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="26" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         <Link
           href="/artist/signup"
-          className="transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-95"
+          className="glass-pill inline-flex items-center justify-center rounded-full px-8 py-4 text-lg font-medium text-paper transition-transform duration-150 ease-out hover:scale-[1.04] active:scale-95 sm:px-10 sm:py-5 sm:text-xl"
         >
-          <Image
-            src="/icons/gallery-cta.png"
-            alt="Join 2k+ Artists"
-            width={684}
-            height={146}
-            className="h-auto w-[200px] sm:w-[260px]"
-          />
+          Join <span className="mx-1.5 font-extrabold text-accent">2k+</span> Artists
         </Link>
       </div>
     </div>

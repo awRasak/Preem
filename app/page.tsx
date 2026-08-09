@@ -119,28 +119,39 @@ export default async function MarketplacePage() {
         </div>
 
         {/* Why Preem exists */}
-        <section className="mt-32">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-accent">
-            Why Preem exists
-          </p>
-          <h2 className="mb-5 max-w-lg text-2xl font-bold leading-tight sm:text-3xl">
-            Your fans want to support you directly. Most platforms won&apos;t let
-            them.
-          </h2>
-          <div className="max-w-2xl space-y-4 text-sm text-muted">
-            <p>
-              Streaming pays a fraction of what your music is actually worth to
-              the people who love it most. And the platforms built to fix that —
-              sell directly, get paid daily, keep the relationship — weren&apos;t
-              built for artists paying and getting paid in naira. Cards decline.
-              Currencies aren&apos;t supported. Fans give up before they ever get
-              to send you money.
+        <section className="mt-32 grid items-center gap-10 sm:grid-cols-2">
+          <div>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-accent">
+              Why Preem exists
             </p>
-            <p>
-              Preem is built the other way around: naira first, your fans&apos;
-              actual payment methods first — card, bank transfer, USSD — so the
-              sale that should&apos;ve happened, happens.
-            </p>
+            <h2 className="mb-5 max-w-lg text-2xl font-bold leading-tight sm:text-3xl">
+              Your fans want to support you directly. Most platforms won&apos;t let
+              them.
+            </h2>
+            <div className="max-w-2xl space-y-4 text-sm text-muted">
+              <p>
+                Streaming pays a fraction of what your music is actually worth to
+                the people who love it most. And the platforms built to fix that —
+                sell directly, get paid daily, keep the relationship — weren&apos;t
+                built for artists paying and getting paid in naira. Cards decline.
+                Currencies aren&apos;t supported. Fans give up before they ever get
+                to send you money.
+              </p>
+              <p>
+                Preem is built the other way around: naira first, your fans&apos;
+                actual payment methods first — card, bank transfer, USSD — so the
+                sale that should&apos;ve happened, happens.
+              </p>
+            </div>
+          </div>
+          <div className="relative mx-auto aspect-square w-full max-w-[380px]">
+            <Image
+              src="/icons/why-preem-exists.png"
+              alt=""
+              fill
+              className="object-contain"
+              sizes="380px"
+            />
           </div>
         </section>
 
