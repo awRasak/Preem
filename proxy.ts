@@ -73,5 +73,11 @@ export const config = {
     "/artist/listeners/:path*",
     "/artist/profile/:path*",
     "/admin/:path*",
+    // Fans now get real Supabase Auth sessions too (post-purchase email
+    // OTP) -- these routes don't gate on role, but still need to run
+    // through here so an expiring access token gets refreshed and the new
+    // cookie written back, same as the artist/admin routes above.
+    "/drop/:path*",
+    "/my-drops",
   ],
 };

@@ -3,6 +3,7 @@ import { Nav } from "@/components/Nav";
 import { Button } from "@/components/Button";
 import { DropCard } from "@/components/DropCard";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { PHONE_SESSION_COOKIE, verifyPhoneSessionCookieValue } from "@/lib/phone-session";
 import { PhoneLookupForm } from "./PhoneLookupForm";
 import { PlayerRow } from "./PlayerRow";
@@ -65,11 +66,18 @@ export default async function MyDropsPage() {
     cookieStore.get(PHONE_SESSION_COOKIE)?.value,
   );
 
+  const supabase = await createClient();
+  const {
+    data: { user: fan },
+  } = await supabase.auth.getUser();
+
   return (
     <>
       <Nav role="fan" />
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 sm:px-8">
-        {!phone ? (
+        {fan ? (
+          <MyDropsLibrary userId={fan.id} />
+        ) : !phone ? (
           <PhoneLookupForm />
         ) : (
           <MyDropsLibrary phone={phone} />
@@ -97,15 +105,24 @@ type TrackInfo = {
   lyrics: string | null;
 };
 
-async function MyDropsLibrary({ phone }: { phone: string }) {
+async function MyDropsLibrary({
+  phone,
+  userId,
+}: {
+  phone?: string;
+  userId?: string;
+}) {
   const admin = createAdminClient();
 
-  const { data: purchases } = await admin
+  let purchasesQuery = admin
     .from("purchases")
     .select("drop_id, track_id, purchased_at, amount_kobo")
-    .eq("fan_phone", phone)
     .eq("status", "success")
     .order("purchased_at", { ascending: false });
+  purchasesQuery = userId
+    ? purchasesQuery.eq("fan_user_id", userId)
+    : purchasesQuery.eq("fan_phone", phone!);
+  const { data: purchases } = await purchasesQuery;
 
   if (!purchases || purchases.length === 0) {
     return (
