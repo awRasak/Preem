@@ -7,6 +7,7 @@ export function ShareDropButton({ dropId, title }: { dropId: string; title?: str
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Only ever read once the dropdown is open, which requires a prior client
   // click — window is always available by then, so no hydration concern.
@@ -31,9 +32,15 @@ export function ShareDropButton({ dropId, title }: { dropId: string; title?: str
   }, [open]);
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard permission denied — fall back to selecting the text so the
+      // user can still copy it manually (Cmd/Ctrl+C).
+      inputRef.current?.select();
+    }
   }
 
   const shareText = title ? `Check out "${title}" on Preem` : "Check this out on Preem";
@@ -72,6 +79,7 @@ export function ShareDropButton({ dropId, title }: { dropId: string; title?: str
           </p>
           <div className="mb-3 flex items-center gap-2">
             <input
+              ref={inputRef}
               readOnly
               value={url}
               onFocus={(e) => e.currentTarget.select()}
