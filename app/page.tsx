@@ -359,7 +359,7 @@ export default async function MarketplacePage() {
           Sign in
         </Button>
         <Link
-          href="/my-drops"
+          href="/fans"
           className="mt-2 block text-center text-xs text-muted underline"
         >
           Sign in as a fan instead

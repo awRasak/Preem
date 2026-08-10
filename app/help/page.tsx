@@ -39,7 +39,7 @@ export default function HelpPage() {
         <p className={q}>How do I listen to what I&apos;ve bought?</p>
         <p className={a}>
           Go to{" "}
-          <Link href="/my-drops" className="text-paper underline">
+          <Link href="/fans" className="text-paper underline">
             My Music Collections
           </Link>{" "}
           and enter the phone number you checked out with. You&apos;ll see

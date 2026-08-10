@@ -181,7 +181,9 @@ export function DropHeaderEditable({
               </span>
             </div>
             <div className="mb-3 flex items-center gap-2">
-              {drop.status === "published" && <ShareDropButton dropId={drop.id} />}
+              {drop.status === "published" && (
+                <ShareDropButton dropId={drop.id} title={drop.title} />
+              )}
               <Button variant="outline" onClick={startEdit} className="!px-4 !py-2 text-xs">
                 Edit
               </Button>

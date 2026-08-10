@@ -33,7 +33,7 @@ export default function TermsPage() {
           identity on Preem is their phone number: it&apos;s collected at
           checkout and used afterward to look up and stream anything
           they&apos;ve bought, on the{" "}
-          <a href="/my-drops" className="text-paper underline">
+          <a href="/fans" className="text-paper underline">
             My Music Collections
           </a>{" "}
           page. Keep the phone number you check out with — it&apos;s the only

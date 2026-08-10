@@ -47,7 +47,7 @@ export async function sendReceiptEmail({
         </table>
         <p style="color: #555;">
           Stream it anytime at
-          <a href="${appUrl}/my-drops" style="color: #1a1a1a;">My Music Collections</a>
+          <a href="${appUrl}/fans" style="color: #1a1a1a;">My Music Collections</a>
           — enter the phone number you checked out with.
         </p>
         <p style="color: #aaa; font-size: 12px; margin-top: 32px;">No refunds once access is granted. Questions? Reply to this email.</p>

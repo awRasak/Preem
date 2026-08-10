@@ -75,7 +75,7 @@ export function BuyButton({
 
   if (owned) {
     return (
-      <Button href="/my-drops" variant="primary">
+      <Button href="/fans" variant="primary">
         Listen now
       </Button>
     );
@@ -226,7 +226,7 @@ export function BuyButton({
                     <>
                       You now have permanent streaming access to {title} — saved to your
                       account. Find it anytime in{" "}
-                      <a href="/my-drops" className="text-paper underline">
+                      <a href="/fans" className="text-paper underline">
                         My Music Collections
                       </a>
                       .
@@ -234,7 +234,7 @@ export function BuyButton({
                   ) : (
                     <>
                       You now have permanent streaming access to {title}. Open{" "}
-                      <a href="/my-drops" className="text-paper underline">
+                      <a href="/fans" className="text-paper underline">
                         My Music Collections
                       </a>{" "}
                       and enter {fanPhone} to listen.

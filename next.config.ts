@@ -5,6 +5,12 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : undefined;
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      // Old receipt emails and bookmarks used /my-drops before the rename.
+      { source: "/my-drops", destination: "/fans", permanent: true },
+    ];
+  },
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",

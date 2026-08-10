@@ -78,6 +78,6 @@ export const config = {
     // through here so an expiring access token gets refreshed and the new
     // cookie written back, same as the artist/admin routes above.
     "/drop/:path*",
-    "/my-drops",
+    "/fans",
   ],
 };
