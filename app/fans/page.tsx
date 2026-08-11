@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { Nav } from "@/components/Nav";
 import { Button } from "@/components/Button";
+import { SignOutButton } from "@/components/SignOutButton";
 import { DropCard } from "@/components/DropCard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -73,7 +74,7 @@ export default async function MyDropsPage() {
 
   return (
     <>
-      <Nav role="fan" />
+      <Nav role="fan">{(fan || phone) && <SignOutButton redirectTo="/fans" />}</Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 sm:px-8">
         {fan ? (
           <MyDropsLibrary userId={fan.id} />
@@ -94,7 +95,7 @@ type DropInfo = {
   id: string;
   title: string;
   artwork_path: string | null;
-  artist: { stage_name: string } | { stage_name: string }[] | null;
+  artist: { id: string; stage_name: string } | { id: string; stage_name: string }[] | null;
 };
 
 type TrackInfo = {
@@ -165,7 +166,7 @@ async function MyDropsLibrary({
 
   const { data: dropsData } = await admin
     .from("drops")
-    .select("id, title, artwork_path, artist:artists(stage_name)")
+    .select("id, title, artwork_path, artist:artists(id, stage_name)")
     .in("id", dropIdsInOrder);
   const dropById = new Map((dropsData as DropInfo[] | null ?? []).map((d) => [d.id, d]));
 
@@ -210,13 +211,13 @@ async function MyDropsLibrary({
       if (!drop) return null;
       const artist = Array.isArray(drop.artist) ? drop.artist[0] : drop.artist;
       const tracks = tracksByDrop.get(dropId) ?? [];
-      return { dropId, drop, artistName: artist?.stage_name ?? "", tracks };
+      return { dropId, drop, artistName: artist?.stage_name ?? "", artistId: artist?.id ?? "", tracks };
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 
   // The fan's whole library, in display order — lets Next/Previous on the
   // player bar continue seamlessly across drops, not just within one.
-  const queue: PlayerTrack[] = rows.flatMap(({ dropId, drop, artistName, tracks }) => {
+  const queue: PlayerTrack[] = rows.flatMap(({ dropId, drop, artistName, artistId, tracks }) => {
     if (tracks.length <= 1) {
       const track = tracks[0];
       return [
@@ -224,6 +225,7 @@ async function MyDropsLibrary({
           trackId: track?.id ?? dropId,
           title: track?.title ?? drop.title,
           artistName,
+          artistId,
           artworkUrl: drop.artwork_path,
         },
       ];
@@ -232,6 +234,7 @@ async function MyDropsLibrary({
       trackId: track.id,
       title: track.title,
       artistName,
+      artistId,
       artworkUrl: drop.artwork_path,
     }));
   });
@@ -240,7 +243,7 @@ async function MyDropsLibrary({
     <div>
       <h1 className="mb-6 text-2xl font-bold">My Music Collections</h1>
       <div>
-        {rows.map(({ dropId, drop, artistName, tracks }) => {
+        {rows.map(({ dropId, drop, artistName, artistId, tracks }) => {
           const summary = purchaseSummaryByDrop.get(dropId);
           const purchaseNote = summary
             ? `${formatNaira(summary.totalKobo)} · ${formatPurchaseDate(summary.purchasedAt)}`
@@ -251,9 +254,11 @@ async function MyDropsLibrary({
             return (
               <PlayerRow
                 key={dropId}
+                dropId={dropId}
                 trackId={track?.id ?? dropId}
                 title={track?.title ?? drop.title}
                 artistName={artistName}
+                artistId={artistId}
                 artworkUrl={drop.artwork_path}
                 lyrics={track?.lyrics}
                 purchaseNote={purchaseNote}
@@ -272,9 +277,11 @@ async function MyDropsLibrary({
                 {tracks.map((track) => (
                   <PlayerRow
                     key={track.id}
+                    dropId={dropId}
                     trackId={track.id}
                     title={track.title}
                     artistName={artistName}
+                    artistId={artistId}
                     artworkUrl={drop.artwork_path}
                     lyrics={track.lyrics}
                     queue={queue}

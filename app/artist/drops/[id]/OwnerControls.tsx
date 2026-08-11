@@ -8,12 +8,16 @@ export function OwnerControls({
   trackId,
   title,
   artistName,
+  artistId,
   artworkUrl,
+  showDownload = true,
 }: {
   trackId: string;
   title: string;
   artistName: string;
+  artistId: string;
   artworkUrl: string | null;
+  showDownload?: boolean;
 }) {
   const { track, playing, loading, play, toggle } = usePlayer();
   const [downloading, setDownloading] = useState(false);
@@ -23,7 +27,7 @@ export function OwnerControls({
     if (isCurrent) {
       toggle();
     } else {
-      play({ trackId, title, artistName, artworkUrl });
+      play({ trackId, title, artistName, artistId, artworkUrl });
     }
   }
 
@@ -50,14 +54,16 @@ export function OwnerControls({
             ? "❚❚ Pause"
             : "▶ Preview"}
       </Button>
-      <Button
-        variant="outline"
-        onClick={handleDownload}
-        disabled={downloading}
-        className="!px-4 !py-2 text-xs"
-      >
-        {downloading ? "…" : "Download"}
-      </Button>
+      {showDownload && (
+        <Button
+          variant="outline"
+          onClick={handleDownload}
+          disabled={downloading}
+          className="!px-4 !py-2 text-xs"
+        >
+          {downloading ? "…" : "Download"}
+        </Button>
+      )}
     </div>
   );
 }

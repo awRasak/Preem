@@ -7,6 +7,7 @@ export function PreviewButton({
   trackId,
   title,
   artistName,
+  artistId,
   artworkUrl,
   queue,
   className = "",
@@ -15,6 +16,7 @@ export function PreviewButton({
   trackId?: string;
   title: string;
   artistName: string;
+  artistId: string;
   artworkUrl: string | null;
   // Sibling tracks (e.g. the rest of an EP) so Next/Previous on the player
   // bar can step through them. Omit for a standalone preview.
@@ -36,6 +38,7 @@ export function PreviewButton({
           trackId: key,
           title,
           artistName,
+          artistId,
           artworkUrl,
           preview: { dropId, trackId },
         },

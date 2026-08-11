@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { usePlayer } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
 import { PREVIEW_SECONDS } from "@/lib/preview";
@@ -26,6 +27,10 @@ export function PlayerBar() {
     previous,
     hasNext,
     hasPrevious,
+    repeatMode,
+    cycleRepeat,
+    shuffle,
+    toggleShuffle,
   } = usePlayer();
 
   if (!track) return null;
@@ -48,12 +53,24 @@ export function PlayerBar() {
         <div className="min-w-0 flex-shrink-0 sm:w-40">
           <div className="truncate text-sm font-medium">{track.title}</div>
           <div className="truncate text-xs text-muted">
-            {track.artistName}
+            <Link href={`/artist/${track.artistId}`} className="hover:text-paper hover:underline">
+              {track.artistName}
+            </Link>
             {track.preview && <span className="ml-1.5 text-accent">· Preview</span>}
           </div>
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-1">
+          <button
+            onClick={toggleShuffle}
+            aria-label={shuffle ? "Disable shuffle" : "Enable shuffle"}
+            aria-pressed={shuffle}
+            className={`hidden h-8 w-8 items-center justify-center rounded-full text-sm hover:text-paper sm:flex ${
+              shuffle ? "text-accent" : "text-muted"
+            }`}
+          >
+            🔀
+          </button>
           <button
             onClick={previous}
             disabled={!hasPrevious || loading}
@@ -76,6 +93,21 @@ export function PlayerBar() {
             className="flex h-8 w-8 items-center justify-center rounded-full text-sm text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
           >
             ⏭
+          </button>
+          <button
+            onClick={cycleRepeat}
+            aria-label={`Repeat: ${repeatMode}`}
+            aria-pressed={repeatMode !== "off"}
+            className={`relative hidden h-8 w-8 items-center justify-center rounded-full text-sm hover:text-paper sm:flex ${
+              repeatMode !== "off" ? "text-accent" : "text-muted"
+            }`}
+          >
+            🔁
+            {repeatMode === "one" && (
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[8px] font-bold text-[#1a0d05]">
+                1
+              </span>
+            )}
           </button>
         </div>
 

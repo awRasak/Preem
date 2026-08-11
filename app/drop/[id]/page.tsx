@@ -87,6 +87,7 @@ export default async function DropPage({
     trackId: t.id,
     title: t.title,
     artistName,
+    artistId,
     artworkUrl: drop.artwork_path,
     preview: { dropId: drop.id, trackId: t.id },
   }));
@@ -151,6 +152,7 @@ export default async function DropPage({
                 trackId={tracks[0].id}
                 title={drop.title}
                 artistName={artistName}
+                artistId={artistId}
                 artworkUrl={drop.artwork_path}
                 className="absolute bottom-3 left-3 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-base text-white backdrop-blur-sm transition-transform hover:scale-110"
               />
@@ -235,6 +237,7 @@ export default async function DropPage({
                       trackId={track.id}
                       title={track.title}
                       artistName={artistName}
+                      artistId={artistId}
                       artworkUrl={drop.artwork_path}
                       queue={previewQueue}
                       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-line-strong text-xs"

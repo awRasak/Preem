@@ -37,6 +37,7 @@ export function DropCard({ drop }: { drop: Drop }) {
           dropId={drop.id}
           title={drop.title}
           artistName={drop.artist?.stage_name ?? ""}
+          artistId={drop.artist?.id ?? drop.artist_id}
           artworkUrl={drop.artwork_path}
           className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white backdrop-blur-sm transition-transform hover:scale-110"
         />
