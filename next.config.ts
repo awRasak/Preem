@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
         : []),
       { protocol: "https" as const, hostname: "images.unsplash.com" },
       { protocol: "https" as const, hostname: "i.pravatar.cc" },
+      // Thumbnail CDNs for the oEmbed-derived artist avatar (lib/oembed.ts) --
+      // verified against real Spotify/Audiomack oEmbed responses. Boomplay's
+      // oEmbed support is unconfirmed and fails soft with no avatar_url set,
+      // so no pattern is added for it until it's known to work.
+      { protocol: "https" as const, hostname: "*.spotifycdn.com" },
+      { protocol: "https" as const, hostname: "i.audiomack.com" },
     ],
   },
 };
