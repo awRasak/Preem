@@ -209,3 +209,32 @@ h2 {
     84.2% 35.8%
   );
 }
+
+/* Approval-celebration confetti: a burst of falling rects, no canvas/JS
+   animation library -- each piece is a plain span with randomized
+   position/color/timing set inline by the component, this just drives the
+   fall + spin + fade. */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}

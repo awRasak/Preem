@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { ArtistShell } from "@/components/ArtistShell";
+import { ApprovalCelebration } from "./ApprovalCelebration";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
@@ -98,6 +99,7 @@ export default async function ArtistDashboardPage() {
       avatarUrl={artist.avatar_url ?? null}
       artistId={user.id}
     >
+      {!artist.approval_seen && <ApprovalCelebration />}
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-xl font-bold">Home</h1>

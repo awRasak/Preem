@@ -55,3 +55,47 @@ export async function sendReceiptEmail({
     `,
   });
 }
+
+export async function sendNewArtistSignupEmail({
+  to,
+  stageName,
+  email,
+  profileLink,
+}: {
+  to: string[];
+  stageName: string;
+  email: string;
+  profileLink: string | null;
+}) {
+  if (!resend || to.length === 0) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng";
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `New artist signup: ${stageName}`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="margin-bottom: 4px;">New artist waiting for approval</h2>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777;">Stage name</td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${stageName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777;">Email</td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #777;">Profile link</td>
+            <td style="padding: 8px 0; text-align: right;">${profileLink ?? "— none —"}</td>
+          </tr>
+        </table>
+        <p style="color: #555;">
+          Review it in the <a href="${appUrl}/admin" style="color: #1a1a1a;">admin dashboard</a>.
+        </p>
+      </div>
+    `,
+  });
+}

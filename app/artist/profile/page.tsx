@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ArtistShell } from "@/components/ArtistShell";
+import { SignOutButton } from "@/components/SignOutButton";
 import { Tabs } from "@/components/Tabs";
 import { ProfileForm } from "../dashboard/ProfileForm";
 import { BankDetailsForm } from "../dashboard/BankDetailsForm";
@@ -50,12 +51,8 @@ export default async function ArtistProfilePage({
           >
             View public profile →
           </Link>
-          <Link
-            href="/artist/login"
-            className="mb-4 inline-block text-xs font-bold text-muted underline hover:text-paper"
-          >
-            Sign out
-          </Link>
+          <SignOutButton className="mb-4 inline-block text-xs font-bold text-muted underline hover:text-paper" />
+
         </div>
         <Tabs
           defaultTabId={tab}

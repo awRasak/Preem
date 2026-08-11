@@ -428,3 +428,8 @@ create index purchases_fan_user_id_idx on purchases (fan_user_id);
 create policy "fan can read own purchases"
   on purchases for select
   using (auth.uid() = fan_user_id);
+
+-- Tracks whether the artist has already been shown the one-time
+-- "you're approved" celebration on the dashboard, so it fires exactly once
+-- per approval rather than on every load after approval_status flips.
+alter table artists add column approval_seen boolean not null default false;
