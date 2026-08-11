@@ -158,7 +158,7 @@ export function PhoneLookupForm() {
           setMode("email");
         }}
       >
-        Signed in with email at checkout? Sign in instead
+        Have an account? Sign in with email
       </button>
     </div>
   );
