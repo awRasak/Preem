@@ -96,9 +96,8 @@ export default function ArtistSignupPage() {
                 placeholder="At least 8 characters"
               />
             </Field>
-            <Field label="Link to your music (Spotify, Audiomack, etc.)">
+            <Field label="Link to your music (Spotify, Audiomack, etc.) — optional">
               <Input
-                required
                 type="url"
                 value={profileLink}
                 onChange={(e) => setProfileLink(e.target.value)}
@@ -123,6 +122,12 @@ export default function ArtistSignupPage() {
               Already have an account?{" "}
               <Link href="/artist/login" className="text-paper underline">
                 Sign in
+              </Link>
+            </p>
+            <p className="mt-2 text-center text-xs text-muted">
+              Just here to support artists?{" "}
+              <Link href="/fans" className="text-paper underline">
+                Sign in as a fan
               </Link>
             </p>
           </form>

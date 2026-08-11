@@ -55,6 +55,27 @@ export default async function DropPage({
   const artistId = drop.artist?.id ?? drop.artist_id;
   const artistName = drop.artist?.stage_name ?? "";
 
+  // Signed-in fan (via post-purchase email OTP) already owning this drop —
+  // checked so "Buy access" can become "Listen now" instead of asking them
+  // to pay again. RLS scopes this to the signed-in fan's own rows.
+  const {
+    data: { user: fan },
+  } = await supabase.auth.getUser();
+  let ownsBundle = false;
+  const ownedTrackIds = new Set<string>();
+  if (fan) {
+    const { data: owned } = await supabase
+      .from("purchases")
+      .select("track_id")
+      .eq("drop_id", drop.id)
+      .eq("fan_user_id", fan.id)
+      .eq("status", "success");
+    for (const o of owned ?? []) {
+      if (o.track_id) ownedTrackIds.add(o.track_id);
+      else ownsBundle = true;
+    }
+  }
+
   const { data: tracksData } = await supabase
     .from("drop_tracks")
     .select("*")
@@ -66,6 +87,7 @@ export default async function DropPage({
     trackId: t.id,
     title: t.title,
     artistName,
+    artistId,
     artworkUrl: drop.artwork_path,
     preview: { dropId: drop.id, trackId: t.id },
   }));
@@ -124,6 +146,17 @@ export default async function DropPage({
               className="object-cover"
               sizes="240px"
             />
+            {!isBundle && tracks[0] && (
+              <PreviewButton
+                dropId={drop.id}
+                trackId={tracks[0].id}
+                title={drop.title}
+                artistName={artistName}
+                artistId={artistId}
+                artworkUrl={drop.artwork_path}
+                className="absolute bottom-3 left-3 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-base text-white backdrop-blur-sm transition-transform hover:scale-110"
+              />
+            )}
           </div>
           <div className="flex-1">
             <h1 className="mb-3 text-2xl font-bold sm:text-3xl">{drop.title}</h1>
@@ -152,16 +185,6 @@ export default async function DropPage({
             )}
             <div className="mt-6 flex items-center gap-4">
               <Badge status="price">Min. Price {formatNaira(drop.min_price_kobo)}</Badge>
-              {!isBundle && tracks[0] && (
-                <PreviewButton
-                  dropId={drop.id}
-                  trackId={tracks[0].id}
-                  title={drop.title}
-                  artistName={artistName}
-                  artworkUrl={drop.artwork_path}
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-line-strong text-sm"
-                />
-              )}
               {live ? (
                 <BuyButton
                   dropId={drop.id}
@@ -174,6 +197,7 @@ export default async function DropPage({
                   thankYouText={drop.artist?.thank_you_text}
                   thankYouMediaUrl={drop.artist?.thank_you_media_url}
                   thankYouMediaType={drop.artist?.thank_you_media_type}
+                  owned={isBundle ? ownsBundle : ownsBundle || (!!tracks[0] && ownedTrackIds.has(tracks[0].id))}
                 />
               ) : (
                 <p className="text-xs text-muted">
@@ -213,6 +237,7 @@ export default async function DropPage({
                       trackId={track.id}
                       title={track.title}
                       artistName={artistName}
+                      artistId={artistId}
                       artworkUrl={drop.artwork_path}
                       queue={previewQueue}
                       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-line-strong text-xs"
@@ -229,6 +254,7 @@ export default async function DropPage({
                         thankYouText={drop.artist?.thank_you_text}
                         thankYouMediaUrl={drop.artist?.thank_you_media_url}
                         thankYouMediaType={drop.artist?.thank_you_media_type}
+                        owned={ownsBundle || ownedTrackIds.has(track.id)}
                       />
                     )}
                   </div>

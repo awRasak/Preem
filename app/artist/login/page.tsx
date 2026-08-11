@@ -84,7 +84,7 @@ export default function LoginPage() {
           </p>
           <p className="mt-2 text-center text-xs text-muted">
             Looking for your purchases?{" "}
-            <Link href="/my-drops" className="text-paper underline">
+            <Link href="/fans" className="text-paper underline">
               Sign in as a fan
             </Link>
           </p>

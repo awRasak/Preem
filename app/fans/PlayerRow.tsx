@@ -2,81 +2,90 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePlayer, type PlayerTrack } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
+import { TrackDetailModal } from "./TrackDetailModal";
 
 export function PlayerRow({
+  dropId,
   trackId,
   title,
   artistName,
+  artistId,
   artworkUrl,
   lyrics,
   purchaseNote,
   queue,
 }: {
+  dropId: string;
   trackId: string;
   title: string;
   artistName: string;
+  artistId: string;
   artworkUrl: string | null;
   lyrics?: string | null;
-  // e.g. "₦500 · Aug 8, 2026" — shown for standalone tracks; omitted for
-  // tracks inside a bundle group, where the parent shows it once instead.
   purchaseNote?: string;
-  // The fan's full library in display order, so Next/Previous on the player
-  // bar continue across drops.
   queue?: PlayerTrack[];
 }) {
   const { track, playing, loading, play, toggle } = usePlayer();
   const isCurrent = track?.trackId === trackId;
-  const [showLyrics, setShowLyrics] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
-  function handleClick() {
+  function handlePlayToggle(e: React.MouseEvent) {
+    e.stopPropagation();
     if (isCurrent) {
       toggle();
     } else {
-      play({ trackId, title, artistName, artworkUrl }, queue);
+      play({ trackId, title, artistName, artistId, artworkUrl }, queue);
     }
   }
 
   return (
-    <div className="border-b border-line py-3 last:border-none">
-      <div className="flex items-center gap-3.5">
+    <>
+      <div
+        onClick={() => setShowModal(true)}
+        className="flex cursor-pointer items-center gap-3.5 border-b border-line py-3 last:border-none"
+      >
         <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-[10px] bg-surface-2">
-          <Image
-            src={artworkUrl || artworkFallback(trackId)}
-            alt={title}
-            fill
-            className="object-cover"
-          />
+          <Image src={artworkUrl || artworkFallback(trackId)} alt={title} fill className="object-cover" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{title}</div>
           <div className="mt-0.5 truncate text-xs text-muted">
-            {artistName}
+            <Link
+              href={`/artist/${artistId}`}
+              onClick={(e) => e.stopPropagation()}
+              className="hover:text-paper hover:underline"
+            >
+              {artistName}
+            </Link>
             {purchaseNote && ` · ${purchaseNote}`}
           </div>
         </div>
-        {lyrics && (
-          <button
-            onClick={() => setShowLyrics((v) => !v)}
-            className="flex-shrink-0 text-[11px] font-bold text-muted underline hover:text-paper"
-          >
-            Lyrics
-          </button>
-        )}
         <button
-          onClick={handleClick}
+          onClick={handlePlayToggle}
           disabled={isCurrent && loading}
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
         >
           {isCurrent && loading ? "…" : isCurrent && playing ? "❚❚" : "▶"}
         </button>
       </div>
-      {showLyrics && lyrics && (
-        <p className="ml-[59px] mt-3 whitespace-pre-line text-sm leading-relaxed text-paper/90">
-          {lyrics}
-        </p>
+
+      {showModal && (
+        <TrackDetailModal
+          trackId={trackId}
+          dropId={dropId}
+          title={title}
+          artistName={artistName}
+          artistId={artistId}
+          artworkUrl={artworkUrl}
+          lyrics={lyrics}
+          purchaseNote={purchaseNote}
+          queue={queue}
+          onClose={() => setShowModal(false)}
+        />
       )}
-    </div>
+    </>
   );
 }

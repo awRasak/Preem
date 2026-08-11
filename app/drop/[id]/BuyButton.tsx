@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { Field, Input } from "@/components/Field";
 import { formatNaira } from "@/lib/format";
+import { createClient } from "@/lib/supabase/client";
 
 declare global {
   interface Window {
@@ -23,7 +24,14 @@ declare global {
   }
 }
 
-type Step = "closed" | "form" | "submitting" | "verifying" | "done" | "error";
+type Step =
+  | "closed"
+  | "form"
+  | "submitting"
+  | "verifying"
+  | "otp"
+  | "done"
+  | "error";
 
 export function BuyButton({
   dropId,
@@ -36,6 +44,7 @@ export function BuyButton({
   thankYouText,
   thankYouMediaUrl,
   thankYouMediaType,
+  owned = false,
 }: {
   dropId: string;
   trackId?: string;
@@ -47,6 +56,9 @@ export function BuyButton({
   thankYouText?: string | null;
   thankYouMediaUrl?: string | null;
   thankYouMediaType?: "image" | "video" | null;
+  // Signed-in fan already owns this drop/track (checked server-side) — show
+  // a way to listen instead of asking them to pay again.
+  owned?: boolean;
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
@@ -55,6 +67,19 @@ export function BuyButton({
   const [fanEmail, setFanEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
+  const [reference, setReference] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+
+  if (owned) {
+    return (
+      <Button href="/fans" variant="primary">
+        Listen now
+      </Button>
+    );
+  }
 
   const amountKobo = Math.round(Number(amountNaira) * 100);
   const amountValid = Number.isFinite(amountKobo) && amountKobo >= minPriceKobo;
@@ -95,11 +120,19 @@ export function BuyButton({
       onClose: () => setStep("form"),
       callback: (transaction) => {
         setStep("verifying");
+        setReference(transaction.reference);
         fetch(`/api/checkout/verify?reference=${encodeURIComponent(transaction.reference)}`)
           .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
           .then(({ ok, verifyBody }) => {
             if (ok && verifyBody.status === "success") {
-              setStep("done");
+              setStep("otp");
+              // Fire-and-forget: sends the code, creating the fan's account
+              // if this is their first purchase. Entering it is optional —
+              // "Skip for now" below falls back to today's phone lookup.
+              createClient().auth.signInWithOtp({
+                email: fanEmail,
+                options: { shouldCreateUser: true },
+              });
             } else {
               setError(
                 "We received your payment but couldn't confirm it yet — check My Music Collections in a moment.",
@@ -109,6 +142,30 @@ export function BuyButton({
           });
       },
     }).openIframe();
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setOtpError(null);
+    setOtpSubmitting(true);
+    const { error: verifyError } = await createClient().auth.verifyOtp({
+      email: fanEmail,
+      token: otpCode,
+      type: "email",
+    });
+    if (verifyError) {
+      setOtpError("That code didn't work — check it and try again.");
+      setOtpSubmitting(false);
+      return;
+    }
+    await fetch("/api/checkout/link-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference }),
+    });
+    setSignedIn(true);
+    setOtpSubmitting(false);
+    setStep("done");
   }
 
   return (
@@ -124,15 +181,65 @@ export function BuyButton({
       {step !== "closed" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-xs rounded-xl border border-line-strong bg-surface p-6">
-            {step === "done" ? (
+            {step === "otp" ? (
+              <form onSubmit={handleVerifyOtp} className="text-center">
+                <h3 className="mb-2 text-lg font-bold">Save your access</h3>
+                <p className="mb-4 text-sm text-muted">
+                  We sent a 6-digit code to {fanEmail}. Enter it to save {title} to
+                  an account, so you can find it on any device without re-buying.
+                </p>
+                <Field label="Code">
+                  <Input
+                    required
+                    inputMode="numeric"
+                    autoFocus
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="123456"
+                  />
+                </Field>
+                {otpError && <p className="mb-3 text-sm text-[#ff6b6b]">{otpError}</p>}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setStep("done")}
+                  >
+                    Skip for now
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="flex-1"
+                    disabled={otpSubmitting}
+                  >
+                    {otpSubmitting ? "…" : "Confirm"}
+                  </Button>
+                </div>
+              </form>
+            ) : step === "done" ? (
               <div className="text-center">
                 <h3 className="mb-2 text-lg font-bold">You&apos;re in!</h3>
                 <p className="mb-4 text-sm text-muted">
-                  You now have permanent streaming access to {title}. Open{" "}
-                  <a href="/my-drops" className="text-paper underline">
-                    My Music Collections
-                  </a>{" "}
-                  and enter {fanPhone} to listen.
+                  {signedIn ? (
+                    <>
+                      You now have permanent streaming access to {title} — saved to your
+                      account. Find it anytime in{" "}
+                      <a href="/fans" className="text-paper underline">
+                        My Music Collections
+                      </a>
+                      .
+                    </>
+                  ) : (
+                    <>
+                      You now have permanent streaming access to {title}. Open{" "}
+                      <a href="/fans" className="text-paper underline">
+                        My Music Collections
+                      </a>{" "}
+                      and enter {fanPhone} to listen.
+                    </>
+                  )}
                 </p>
                 {(thankYouText || thankYouMediaUrl) && (
                   <div className="mb-4 rounded-lg border border-line-strong bg-surface-2 p-4 text-left">

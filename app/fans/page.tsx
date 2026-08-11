@@ -1,8 +1,10 @@
 import { cookies } from "next/headers";
 import { Nav } from "@/components/Nav";
 import { Button } from "@/components/Button";
+import { SignOutButton } from "@/components/SignOutButton";
 import { DropCard } from "@/components/DropCard";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { PHONE_SESSION_COOKIE, verifyPhoneSessionCookieValue } from "@/lib/phone-session";
 import { PhoneLookupForm } from "./PhoneLookupForm";
 import { PlayerRow } from "./PlayerRow";
@@ -65,11 +67,18 @@ export default async function MyDropsPage() {
     cookieStore.get(PHONE_SESSION_COOKIE)?.value,
   );
 
+  const supabase = await createClient();
+  const {
+    data: { user: fan },
+  } = await supabase.auth.getUser();
+
   return (
     <>
-      <Nav role="fan" />
+      <Nav role="fan">{(fan || phone) && <SignOutButton redirectTo="/fans" />}</Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 sm:px-8">
-        {!phone ? (
+        {fan ? (
+          <MyDropsLibrary userId={fan.id} />
+        ) : !phone ? (
           <PhoneLookupForm />
         ) : (
           <MyDropsLibrary phone={phone} />
@@ -86,7 +95,7 @@ type DropInfo = {
   id: string;
   title: string;
   artwork_path: string | null;
-  artist: { stage_name: string } | { stage_name: string }[] | null;
+  artist: { id: string; stage_name: string } | { id: string; stage_name: string }[] | null;
 };
 
 type TrackInfo = {
@@ -97,15 +106,24 @@ type TrackInfo = {
   lyrics: string | null;
 };
 
-async function MyDropsLibrary({ phone }: { phone: string }) {
+async function MyDropsLibrary({
+  phone,
+  userId,
+}: {
+  phone?: string;
+  userId?: string;
+}) {
   const admin = createAdminClient();
 
-  const { data: purchases } = await admin
+  let purchasesQuery = admin
     .from("purchases")
     .select("drop_id, track_id, purchased_at, amount_kobo")
-    .eq("fan_phone", phone)
     .eq("status", "success")
     .order("purchased_at", { ascending: false });
+  purchasesQuery = userId
+    ? purchasesQuery.eq("fan_user_id", userId)
+    : purchasesQuery.eq("fan_phone", phone!);
+  const { data: purchases } = await purchasesQuery;
 
   if (!purchases || purchases.length === 0) {
     return (
@@ -148,7 +166,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
 
   const { data: dropsData } = await admin
     .from("drops")
-    .select("id, title, artwork_path, artist:artists(stage_name)")
+    .select("id, title, artwork_path, artist:artists(id, stage_name)")
     .in("id", dropIdsInOrder);
   const dropById = new Map((dropsData as DropInfo[] | null ?? []).map((d) => [d.id, d]));
 
@@ -193,13 +211,13 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
       if (!drop) return null;
       const artist = Array.isArray(drop.artist) ? drop.artist[0] : drop.artist;
       const tracks = tracksByDrop.get(dropId) ?? [];
-      return { dropId, drop, artistName: artist?.stage_name ?? "", tracks };
+      return { dropId, drop, artistName: artist?.stage_name ?? "", artistId: artist?.id ?? "", tracks };
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 
   // The fan's whole library, in display order — lets Next/Previous on the
   // player bar continue seamlessly across drops, not just within one.
-  const queue: PlayerTrack[] = rows.flatMap(({ dropId, drop, artistName, tracks }) => {
+  const queue: PlayerTrack[] = rows.flatMap(({ dropId, drop, artistName, artistId, tracks }) => {
     if (tracks.length <= 1) {
       const track = tracks[0];
       return [
@@ -207,6 +225,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
           trackId: track?.id ?? dropId,
           title: track?.title ?? drop.title,
           artistName,
+          artistId,
           artworkUrl: drop.artwork_path,
         },
       ];
@@ -215,6 +234,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
       trackId: track.id,
       title: track.title,
       artistName,
+      artistId,
       artworkUrl: drop.artwork_path,
     }));
   });
@@ -223,7 +243,7 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
     <div>
       <h1 className="mb-6 text-2xl font-bold">My Music Collections</h1>
       <div>
-        {rows.map(({ dropId, drop, artistName, tracks }) => {
+        {rows.map(({ dropId, drop, artistName, artistId, tracks }) => {
           const summary = purchaseSummaryByDrop.get(dropId);
           const purchaseNote = summary
             ? `${formatNaira(summary.totalKobo)} · ${formatPurchaseDate(summary.purchasedAt)}`
@@ -234,9 +254,11 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
             return (
               <PlayerRow
                 key={dropId}
+                dropId={dropId}
                 trackId={track?.id ?? dropId}
                 title={track?.title ?? drop.title}
                 artistName={artistName}
+                artistId={artistId}
                 artworkUrl={drop.artwork_path}
                 lyrics={track?.lyrics}
                 purchaseNote={purchaseNote}
@@ -255,9 +277,11 @@ async function MyDropsLibrary({ phone }: { phone: string }) {
                 {tracks.map((track) => (
                   <PlayerRow
                     key={track.id}
+                    dropId={dropId}
                     trackId={track.id}
                     title={track.title}
                     artistName={artistName}
+                    artistId={artistId}
                     artworkUrl={drop.artwork_path}
                     lyrics={track.lyrics}
                     queue={queue}

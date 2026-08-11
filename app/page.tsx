@@ -39,13 +39,41 @@ export default async function MarketplacePage() {
   const previewDrops = drops.slice(0, 8);
   const filmstripDrops = drops.slice(0, 10);
 
+  // The marketing header never checked who's signed in, so an already
+  // authenticated artist or fan always saw a generic "Sign in" button here
+  // — indistinguishable from actually being logged out, even though the
+  // session was untouched (confirmed: navigating away and back still showed
+  // them signed in). Reflect the real session instead.
+  const {
+    data: { user: sessionUser },
+  } = await supabase.auth.getUser();
+  let accountHref = "/artist/login";
+  let accountLabel = "Sign in";
+  if (sessionUser) {
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", sessionUser.id)
+      .maybeSingle();
+    if (roleRow?.role === "admin") {
+      accountHref = "/admin";
+      accountLabel = "Admin";
+    } else if (roleRow?.role === "artist") {
+      accountHref = "/artist/dashboard";
+      accountLabel = "Dashboard";
+    } else {
+      accountHref = "/fans";
+      accountLabel = "My Music Collections";
+    }
+  }
+
   return (
     <>
       <Nav>
         <NavLink href="/explore">Explore</NavLink>
-        <NavLink href="/artist/signup">For artists</NavLink>
-        <Button href="/artist/login" variant="outline">
-          Sign in
+        {!sessionUser && <NavLink href="/artist/signup">For artists</NavLink>}
+        <Button href={accountHref} variant="outline">
+          {accountLabel}
         </Button>
       </Nav>
       <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-28 pt-8 sm:px-8 sm:pb-8">
@@ -355,15 +383,17 @@ export default async function MarketplacePage() {
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 p-4 backdrop-blur sm:hidden">
-        <Button href="/artist/login" variant="primary" className="w-full">
-          Sign in
+        <Button href={accountHref} variant="primary" className="w-full">
+          {accountLabel}
         </Button>
-        <Link
-          href="/my-drops"
-          className="mt-2 block text-center text-xs text-muted underline"
-        >
-          Sign in as a fan instead
-        </Link>
+        {!sessionUser && (
+          <Link
+            href="/fans"
+            className="mt-2 block text-center text-xs text-muted underline"
+          >
+            Sign in as a fan instead
+          </Link>
+        )}
       </div>
     </>
   );

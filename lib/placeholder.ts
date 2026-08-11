@@ -34,7 +34,3 @@ export function artworkFallback(seed: string, size = 600): string {
   const photo = UNSPLASH_MUSIC_PHOTOS[hashSeed(seed) % UNSPLASH_MUSIC_PHOTOS.length];
   return `https://images.unsplash.com/photo-${photo}?w=${size}&h=${size}&fit=crop&q=80`;
 }
-
-export function avatarFallback(seed: string): string {
-  return `https://i.pravatar.cc/300?u=${encodeURIComponent(seed)}`;
-}

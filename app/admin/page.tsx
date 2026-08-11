@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Nav, NavLink } from "@/components/Nav";
+import { Nav } from "@/components/Nav";
+import { SignOutButton } from "@/components/SignOutButton";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
 import { ArtistApprovalRow } from "./ArtistApprovalRow";
@@ -111,7 +112,7 @@ export default async function AdminPage() {
   return (
     <>
       <Nav role="admin">
-        <NavLink href="/artist/login">Sign out</NavLink>
+        <SignOutButton />
       </Nav>
       <main className="mx-auto w-full max-w-4xl flex-1 space-y-12 px-5 py-8 sm:px-8">
         <section>

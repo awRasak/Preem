@@ -14,6 +14,7 @@ export type PlayerTrack = {
   trackId: string;
   title: string;
   artistName: string;
+  artistId: string;
   artworkUrl: string | null;
   // Presence means: fetch from the public preview endpoint (unauthenticated,
   // capped to PREVIEW_SECONDS) instead of the purchase/owner-gated stream
@@ -21,6 +22,8 @@ export type PlayerTrack = {
   // omitted, the server picks the drop's first track.
   preview?: { dropId: string; trackId?: string };
 };
+
+export type RepeatMode = "off" | "all" | "one";
 
 type PlayerContextValue = {
   track: PlayerTrack | null;
@@ -40,6 +43,10 @@ type PlayerContextValue = {
   previous: () => void;
   hasNext: boolean;
   hasPrevious: boolean;
+  repeatMode: RepeatMode;
+  cycleRepeat: () => void;
+  shuffle: boolean;
+  toggleShuffle: () => void;
 };
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -53,18 +60,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
+  const [shuffle, setShuffle] = useState(false);
 
   // The mount-once effect below registers its listeners a single time, so it
   // reads the latest track/queue through these refs rather than closing over
   // stale state.
   const trackRef = useRef<PlayerTrack | null>(null);
   const queueRef = useRef<PlayerTrack[]>([]);
+  const repeatModeRef = useRef<RepeatMode>("off");
+  const shuffleRef = useRef(false);
   useEffect(() => {
     trackRef.current = track;
   }, [track]);
   useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
+  useEffect(() => {
+    repeatModeRef.current = repeatMode;
+  }, [repeatMode]);
+  useEffect(() => {
+    shuffleRef.current = shuffle;
+  }, [shuffle]);
 
   // Guards against a slower, superseded fetch (e.g. rapid next-clicking)
   // overwriting the audio src after a newer one already resolved.
@@ -102,15 +119,32 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Moves within the active queue by `direction`; returns whether it moved —
-  // false at either end, or with no active queue.
+  // false at either end (unless repeat-all wraps around), or with no active
+  // queue. Shuffle only affects forward steps — Previous always walks back
+  // through actual queue order, which is the more predictable behavior.
   const step = useCallback(
     (direction: 1 | -1) => {
       const q = queueRef.current;
       const current = trackRef.current;
       if (!current || q.length === 0) return false;
       const idx = q.findIndex((t) => t.trackId === current.trackId);
-      const nextIdx = idx + direction;
-      if (idx === -1 || nextIdx < 0 || nextIdx >= q.length) return false;
+      if (idx === -1) return false;
+
+      if (direction === 1 && shuffleRef.current && q.length > 1) {
+        let nextIdx = idx;
+        while (nextIdx === idx) nextIdx = Math.floor(Math.random() * q.length);
+        loadAndPlay(q[nextIdx]);
+        return true;
+      }
+
+      let nextIdx = idx + direction;
+      if (nextIdx < 0 || nextIdx >= q.length) {
+        if (repeatModeRef.current === "all" && q.length > 0) {
+          nextIdx = direction === 1 ? 0 : q.length - 1;
+        } else {
+          return false;
+        }
+      }
       loadAndPlay(q[nextIdx]);
       return true;
     },
@@ -134,6 +168,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const onPause = () => setPlaying(false);
     const onEnded = () => {
       setPlaying(false);
+      if (repeatModeRef.current === "one") {
+        audio.currentTime = 0;
+        audio.play();
+        return;
+      }
       step(1);
     };
     const onError = () => {
@@ -198,9 +237,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     step(-1);
   }, [step]);
 
+  const cycleRepeat = useCallback(() => {
+    setRepeatMode((m) => (m === "off" ? "all" : m === "all" ? "one" : "off"));
+  }, []);
+
+  const toggleShuffle = useCallback(() => {
+    setShuffle((v) => !v);
+  }, []);
+
   const currentIndex = queue.findIndex((t) => t.trackId === track?.trackId);
-  const hasNext = currentIndex !== -1 && currentIndex < queue.length - 1;
-  const hasPrevious = currentIndex > 0;
+  const canWrap = repeatMode === "all" && queue.length > 1;
+  const hasNext =
+    currentIndex !== -1 && (currentIndex < queue.length - 1 || canWrap || (shuffle && queue.length > 1));
+  const hasPrevious = currentIndex > 0 || canWrap;
 
   return (
     <PlayerContext.Provider
@@ -219,6 +268,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         previous,
         hasNext,
         hasPrevious,
+        repeatMode,
+        cycleRepeat,
+        shuffle,
+        toggleShuffle,
       }}
     >
       {children}

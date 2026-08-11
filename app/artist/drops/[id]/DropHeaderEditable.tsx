@@ -151,7 +151,14 @@ export function DropHeaderEditable({
   if (!editing) {
     return (
       <>
-        <div className="mb-4 flex items-start gap-4">
+        <div className="relative mb-4 flex items-start gap-4">
+          <Button
+            variant="outline"
+            onClick={startEdit}
+            className="absolute right-0 top-0 !px-4 !py-2 text-xs"
+          >
+            Edit
+          </Button>
           <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-surface-2">
             <Image
               src={drop.artwork_path || artworkFallback(drop.id)}
@@ -161,7 +168,7 @@ export function DropHeaderEditable({
               sizes="96px"
             />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pr-20">
             <div className="mb-2 flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold">{drop.title}</h1>
               {drop.status === "draft" ? (
@@ -180,17 +187,17 @@ export function DropHeaderEditable({
                 {drop.release_type} · {tracks.length} track{tracks.length === 1 ? "" : "s"}
               </span>
             </div>
-            <div className="mb-3 flex items-center gap-2">
-              {drop.status === "published" && <ShareDropButton dropId={drop.id} />}
-              <Button variant="outline" onClick={startEdit} className="!px-4 !py-2 text-xs">
-                Edit
-              </Button>
-            </div>
+            {drop.status === "published" && (
+              <div className="mb-3">
+                <ShareDropButton dropId={drop.id} title={drop.title} />
+              </div>
+            )}
             {!isBundle && tracks[0] && (
               <OwnerControls
                 trackId={tracks[0].id}
                 title={tracks[0].title}
                 artistName={artistName}
+                artistId={drop.artist_id}
                 artworkUrl={drop.artwork_path}
               />
             )}
@@ -210,27 +217,24 @@ export function DropHeaderEditable({
             <h2 className="mb-3 text-lg font-bold">Tracks</h2>
             <div className="divide-y divide-line rounded-xl border border-line">
               {tracks.map((track) => (
-                <div key={track.id} className="flex flex-col gap-2 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium">
-                        {track.track_number}. {track.title}
-                      </div>
-                      {track.collaborators && (
-                        <div className="mt-0.5 text-xs text-muted">{track.collaborators}</div>
-                      )}
+                <div key={track.id} className="flex items-center gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">
+                      {track.track_number}. {track.title}
                     </div>
-                    <div className="flex flex-shrink-0 items-center gap-3">
-                      <Badge status="price">Min. {formatNaira(track.min_price_kobo)}</Badge>
-                      <OwnerControls
-                        trackId={track.id}
-                        title={track.title}
-                        artistName={artistName}
-                        artworkUrl={drop.artwork_path}
-                      />
-                    </div>
+                    {track.collaborators && (
+                      <div className="mt-0.5 truncate text-xs text-muted">{track.collaborators}</div>
+                    )}
                   </div>
-                  {track.lyrics && <LyricsSection lyrics={track.lyrics} />}
+                  <Badge status="price">Min. {formatNaira(track.min_price_kobo)}</Badge>
+                  <OwnerControls
+                    trackId={track.id}
+                    title={track.title}
+                    artistName={artistName}
+                    artistId={drop.artist_id}
+                    artworkUrl={drop.artwork_path}
+                    showDownload={false}
+                  />
                 </div>
               ))}
             </div>
