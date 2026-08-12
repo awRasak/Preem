@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDropLive } from "@/lib/format";
+import { getPlatformSettings } from "@/lib/platform-settings";
 
 const schema = z.object({
   dropId: z.string().uuid(),
@@ -13,6 +14,7 @@ const schema = z.object({
     .trim()
     .regex(/^[0-9+][0-9\s-]{6,19}$/, "Enter a valid phone number"),
   fanEmail: z.string().trim().email(),
+  gateway: z.enum(["paystack", "monipay"]).default("paystack"),
 });
 
 const RATE_LIMIT_WINDOW_MINUTES = 10;
@@ -23,9 +25,18 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { dropId, trackId, amountKobo, fanName, fanPhone, fanEmail } = parsed.data;
+  const { dropId, trackId, amountKobo, fanName, fanPhone, fanEmail, gateway } = parsed.data;
 
   const supabase = createAdminClient();
+
+  const settings = await getPlatformSettings(supabase);
+  const gatewayEnabled = gateway === "paystack" ? settings.paystackEnabled : settings.monipayEnabled;
+  if (!gatewayEnabled) {
+    return NextResponse.json(
+      { error: "That payment method isn't available right now." },
+      { status: 400 },
+    );
+  }
 
   const { data: drop } = await supabase
     .from("drops")
@@ -90,6 +101,7 @@ export async function POST(req: Request) {
     amount_kobo: amountKobo,
     paystack_ref: reference,
     status: "pending",
+    gateway,
   });
 
   if (insertError) {
@@ -102,6 +114,10 @@ export async function POST(req: Request) {
   return NextResponse.json({
     reference,
     amountKobo,
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+    gateway,
+    publicKey:
+      gateway === "monipay"
+        ? process.env.NEXT_PUBLIC_MONIPAY_PUBLIC_KEY
+        : process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
   });
 }

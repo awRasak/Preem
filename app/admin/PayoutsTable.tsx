@@ -49,7 +49,7 @@ export function PayoutsTable({ artists }: { artists: PayoutArtist[] }) {
           <thead>
             <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
               <th className="pb-2 font-bold">Artist</th>
-              <th className="pb-2 font-bold">Owed (80%)</th>
+              <th className="pb-2 font-bold">Owed</th>
               <th className="pb-2"></th>
             </tr>
           </thead>

@@ -8,13 +8,19 @@ import { Button } from "@/components/Button";
 export function PlatformSettingsForm({
   dropCommissionBps,
   giftCommissionBps,
+  paystackEnabled,
+  monipayEnabled,
 }: {
   dropCommissionBps: number;
   giftCommissionBps: number;
+  paystackEnabled: boolean;
+  monipayEnabled: boolean;
 }) {
   const router = useRouter();
   const [dropPercent, setDropPercent] = useState(String(dropCommissionBps / 100));
   const [giftPercent, setGiftPercent] = useState(String(giftCommissionBps / 100));
+  const [paystackOn, setPaystackOn] = useState(paystackEnabled);
+  const [monipayOn, setMonipayOn] = useState(monipayEnabled);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,6 +29,10 @@ export function PlatformSettingsForm({
     e.preventDefault();
     setError(null);
     setSaved(false);
+    if (!paystackOn && !monipayOn) {
+      setError("At least one payment gateway must stay on.");
+      return;
+    }
     setLoading(true);
     const res = await fetch("/api/admin/platform-settings", {
       method: "PATCH",
@@ -30,6 +40,8 @@ export function PlatformSettingsForm({
       body: JSON.stringify({
         dropCommissionBps: Math.round(Number(dropPercent) * 100),
         giftCommissionBps: Math.round(Number(giftPercent) * 100),
+        paystackEnabled: paystackOn,
+        monipayEnabled: monipayOn,
       }),
     });
     setLoading(false);
@@ -70,6 +82,29 @@ export function PlatformSettingsForm({
           onChange={(e) => setGiftPercent(e.target.value)}
         />
       </Field>
+
+      <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
+        Checkout payment methods
+      </p>
+      <label className="mb-2 flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={paystackOn}
+          onChange={(e) => setPaystackOn(e.target.checked)}
+          className="h-4 w-4 accent-accent"
+        />
+        Paystack
+      </label>
+      <label className="mb-4 flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={monipayOn}
+          onChange={(e) => setMonipayOn(e.target.checked)}
+          className="h-4 w-4 accent-accent"
+        />
+        Monipay
+      </label>
+
       {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
       <Button type="submit" variant="primary" disabled={loading}>
         {loading ? "…" : saved ? "Saved ✓" : "Save"}

@@ -229,6 +229,8 @@ export default async function AdminPage() {
           <PlatformSettingsForm
             dropCommissionBps={settings.dropCommissionBps}
             giftCommissionBps={settings.giftCommissionBps}
+            paystackEnabled={settings.paystackEnabled}
+            monipayEnabled={settings.monipayEnabled}
           />
         </section>
       </main>

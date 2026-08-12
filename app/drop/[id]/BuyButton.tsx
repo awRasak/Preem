@@ -21,8 +21,27 @@ declare global {
         callback?: (transaction: { reference: string }) => void;
       }) => { openIframe: () => void };
     };
+    Monipay: new () => {
+      checkout: (options: {
+        key: string;
+        email: string;
+        amount: number;
+        reference?: string;
+        onLoad?: () => void;
+        onSuccess?: (data: { status: string }) => void;
+        onCancel?: () => void;
+        onError?: (error: unknown) => void;
+      }) => void;
+    };
   }
 }
+
+type Gateway = "paystack" | "monipay";
+
+const GATEWAY_LABELS: Record<Gateway, string> = {
+  paystack: "Paystack",
+  monipay: "Monipay",
+};
 
 type Step =
   | "closed"
@@ -45,6 +64,7 @@ export function BuyButton({
   thankYouMediaUrl,
   thankYouMediaType,
   owned = false,
+  enabledGateways = ["paystack"],
 }: {
   dropId: string;
   trackId?: string;
@@ -59,14 +79,19 @@ export function BuyButton({
   // Signed-in fan already owns this drop/track (checked server-side) — show
   // a way to listen instead of asking them to pay again.
   owned?: boolean;
+  // Which gateways are currently switched on (admin-configurable). A
+  // selector only shows when there's an actual choice to make.
+  enabledGateways?: Gateway[];
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
   const [fanName, setFanName] = useState("");
   const [fanPhone, setFanPhone] = useState("");
   const [fanEmail, setFanEmail] = useState("");
+  const [gateway, setGateway] = useState<Gateway>(enabledGateways[0] ?? "paystack");
   const [error, setError] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
+  const [monipayReady, setMonipayReady] = useState(false);
   const [reference, setReference] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -84,6 +109,30 @@ export function BuyButton({
   const amountKobo = Math.round(Number(amountNaira) * 100);
   const amountValid = Number.isFinite(amountKobo) && amountKobo >= minPriceKobo;
 
+  function afterPaymentSuccess(paidReference: string) {
+    setStep("verifying");
+    setReference(paidReference);
+    fetch(`/api/checkout/verify?reference=${encodeURIComponent(paidReference)}`)
+      .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
+      .then(({ ok, verifyBody }) => {
+        if (ok && verifyBody.status === "success") {
+          setStep("otp");
+          // Fire-and-forget: sends the code, creating the fan's account if
+          // this is their first purchase. Entering it is optional — "Skip
+          // for now" below falls back to today's phone lookup.
+          createClient().auth.signInWithOtp({
+            email: fanEmail,
+            options: { shouldCreateUser: true },
+          });
+        } else {
+          setError(
+            "We received your payment but couldn't confirm it yet — check My Music Collections in a moment.",
+          );
+          setStep("error");
+        }
+      });
+  }
+
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -96,13 +145,34 @@ export function BuyButton({
     const res = await fetch("/api/checkout/initialize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dropId, trackId, amountKobo, fanName, fanPhone, fanEmail }),
+      body: JSON.stringify({ dropId, trackId, amountKobo, fanName, fanPhone, fanEmail, gateway }),
     });
     const body = await res.json();
 
     if (!res.ok) {
       setError(body.error ?? "Something went wrong.");
       setStep("form");
+      return;
+    }
+
+    if (gateway === "monipay") {
+      if (!monipayReady || !window.Monipay) {
+        setError("Payment popup is still loading — try again in a second.");
+        setStep("form");
+        return;
+      }
+      new window.Monipay().checkout({
+        key: body.publicKey,
+        email: fanEmail,
+        amount: body.amountKobo,
+        reference: body.reference,
+        onCancel: () => setStep("form"),
+        onError: () => {
+          setError("Payment failed to load — try again.");
+          setStep("form");
+        },
+        onSuccess: () => afterPaymentSuccess(body.reference),
+      });
       return;
     }
 
@@ -118,29 +188,7 @@ export function BuyButton({
       amount: body.amountKobo,
       ref: body.reference,
       onClose: () => setStep("form"),
-      callback: (transaction) => {
-        setStep("verifying");
-        setReference(transaction.reference);
-        fetch(`/api/checkout/verify?reference=${encodeURIComponent(transaction.reference)}`)
-          .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
-          .then(({ ok, verifyBody }) => {
-            if (ok && verifyBody.status === "success") {
-              setStep("otp");
-              // Fire-and-forget: sends the code, creating the fan's account
-              // if this is their first purchase. Entering it is optional —
-              // "Skip for now" below falls back to today's phone lookup.
-              createClient().auth.signInWithOtp({
-                email: fanEmail,
-                options: { shouldCreateUser: true },
-              });
-            } else {
-              setError(
-                "We received your payment but couldn't confirm it yet — check My Music Collections in a moment.",
-              );
-              setStep("error");
-            }
-          });
-      },
+      callback: (transaction) => afterPaymentSuccess(transaction.reference),
     }).openIframe();
   }
 
@@ -174,6 +222,12 @@ export function BuyButton({
         src="https://js.paystack.co/v1/inline.js"
         onLoad={() => setScriptReady(true)}
       />
+      {enabledGateways.includes("monipay") && (
+        <Script
+          src="https://js.monipay.ng/v2/inline.js"
+          onLoad={() => setMonipayReady(true)}
+        />
+      )}
       <Button variant="primary" onClick={() => setStep("form")}>
         {label}
       </Button>
@@ -302,6 +356,26 @@ export function BuyButton({
                     onChange={(e) => setAmountNaira(e.target.value)}
                   />
                 </Field>
+                {enabledGateways.length > 1 && (
+                  <Field label="Pay with">
+                    <div className="flex gap-2">
+                      {enabledGateways.map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setGateway(g)}
+                          className={`flex-1 rounded-lg border py-2 text-xs font-bold transition-colors ${
+                            gateway === g
+                              ? "border-accent bg-accent/10 text-accent"
+                              : "border-line-strong text-muted hover:text-paper"
+                          }`}
+                        >
+                          {GATEWAY_LABELS[g]}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                )}
                 <Field label="Name">
                   <Input
                     required
@@ -319,7 +393,7 @@ export function BuyButton({
                     placeholder="080..."
                   />
                 </Field>
-                <Field label="Email (for your Paystack receipt)">
+                <Field label="Email (for your receipt)">
                   <Input
                     required
                     type="email"

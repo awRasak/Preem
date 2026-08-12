@@ -13,6 +13,7 @@ import { LyricsSection } from "./LyricsSection";
 import { PreviewButton } from "@/components/PreviewButton";
 import { DiscoverMore } from "@/components/DiscoverMore";
 import { genreLabel } from "@/lib/genres";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import type { PlayerTrack } from "@/lib/player-context";
 import type { ArtistLink, Drop, DropTrack } from "@/lib/types";
 
@@ -54,6 +55,12 @@ export default async function DropPage({
   const live = isDropLive(drop.window_end);
   const artistId = drop.artist?.id ?? drop.artist_id;
   const artistName = drop.artist?.stage_name ?? "";
+
+  const platformSettings = await getPlatformSettings(supabase);
+  const enabledGateways: ("paystack" | "monipay")[] = [
+    ...(platformSettings.paystackEnabled ? (["paystack"] as const) : []),
+    ...(platformSettings.monipayEnabled ? (["monipay"] as const) : []),
+  ];
 
   // Signed-in fan (via post-purchase email OTP) already owning this drop —
   // checked so "Buy access" can become "Listen now" instead of asking them
@@ -199,6 +206,7 @@ export default async function DropPage({
                   thankYouMediaUrl={drop.artist?.thank_you_media_url}
                   thankYouMediaType={drop.artist?.thank_you_media_type}
                   owned={isBundle ? ownsBundle : ownsBundle || (!!tracks[0] && ownedTrackIds.has(tracks[0].id))}
+                  enabledGateways={enabledGateways}
                 />
               ) : (
                 <p className="text-xs text-muted">
@@ -256,6 +264,7 @@ export default async function DropPage({
                         thankYouMediaUrl={drop.artist?.thank_you_media_url}
                         thankYouMediaType={drop.artist?.thank_you_media_type}
                         owned={ownsBundle || ownedTrackIds.has(track.id)}
+                        enabledGateways={enabledGateways}
                       />
                     )}
                   </div>

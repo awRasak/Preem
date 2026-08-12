@@ -3,10 +3,16 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const schema = z.object({
-  dropCommissionBps: z.number().int().min(0).max(10000),
-  giftCommissionBps: z.number().int().min(0).max(10000),
-});
+const schema = z
+  .object({
+    dropCommissionBps: z.number().int().min(0).max(10000),
+    giftCommissionBps: z.number().int().min(0).max(10000),
+    paystackEnabled: z.boolean(),
+    monipayEnabled: z.boolean(),
+  })
+  .refine((v) => v.paystackEnabled || v.monipayEnabled, {
+    message: "At least one payment gateway must stay on.",
+  });
 
 export async function PATCH(req: Request) {
   const admin = await requireAdmin();
@@ -16,7 +22,10 @@ export async function PATCH(req: Request) {
 
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid input" },
+      { status: 400 },
+    );
   }
 
   const supabase = createAdminClient();
@@ -25,6 +34,8 @@ export async function PATCH(req: Request) {
     .update({
       drop_commission_bps: parsed.data.dropCommissionBps,
       gift_commission_bps: parsed.data.giftCommissionBps,
+      paystack_enabled: parsed.data.paystackEnabled,
+      monipay_enabled: parsed.data.monipayEnabled,
       updated_at: new Date().toISOString(),
     })
     .eq("id", true);
