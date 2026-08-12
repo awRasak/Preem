@@ -31,3 +31,43 @@ export async function verifyTransaction(reference: string): Promise<{
 }> {
   return monipayFetch(`/transaction/verify/${encodeURIComponent(reference)}`);
 }
+
+// Bank codes are the standard NIBSS/CBN interbank codes (Monipay's own docs
+// example uses "058" for GTBank, same as Paystack's) -- reusing an artist's
+// existing bank_code/account_number here is safe, and Monipay verifies the
+// account itself server-side before creating the recipient regardless.
+export async function createTransferRecipient(params: {
+  name: string;
+  accountNumber: string;
+  bankCode: string;
+}): Promise<{ recipient_code: string }> {
+  return monipayFetch("/transferrecipient", {
+    method: "POST",
+    body: JSON.stringify({
+      type: "nuban",
+      name: params.name,
+      account_number: params.accountNumber,
+      bank_code: params.bankCode,
+      currency: "NGN",
+    }),
+  });
+}
+
+export async function initiateTransfer(params: {
+  amountKobo: number;
+  recipientCode: string;
+  reason: string;
+  reference: string;
+}): Promise<{ transfer_code: string; status: string }> {
+  return monipayFetch("/transfer", {
+    method: "POST",
+    body: JSON.stringify({
+      source: "balance",
+      amount: params.amountKobo,
+      recipient: params.recipientCode,
+      reason: params.reason,
+      reference: params.reference,
+      currency: "NGN",
+    }),
+  });
+}

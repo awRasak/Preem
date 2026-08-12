@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createTransferRecipient, initiateTransfer } from "@/lib/paystack";
+import * as paystack from "@/lib/paystack";
+import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
 
 const schema = z.object({ artistId: z.string().uuid() });
+
+type Gateway = "paystack" | "monipay";
 
 export async function POST(req: Request) {
   const admin = await requireAdmin();
@@ -48,7 +51,7 @@ export async function POST(req: Request) {
   const { data: unpaidPurchases } = dropIds.length
     ? await supabase
         .from("purchases")
-        .select("id, amount_kobo")
+        .select("id, amount_kobo, gateway")
         .in("drop_id", dropIds)
         .eq("status", "success")
         .eq("paid_out", false)
@@ -62,39 +65,54 @@ export async function POST(req: Request) {
     .eq("paid_out", false);
 
   const purchases = unpaidPurchases ?? [];
+  // Gifts only ever go through Paystack today (checkout gateway choice
+  // applies to drop purchases only) -- folded into the Paystack bucket.
   const gifts = unpaidGifts ?? [];
-  const amountKobo =
-    purchases.reduce(
+
+  const paystackPurchases = purchases.filter((p) => (p.gateway ?? "paystack") === "paystack");
+  const monipayPurchases = purchases.filter((p) => p.gateway === "monipay");
+
+  const paystackAmountKobo =
+    paystackPurchases.reduce(
       (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
       0,
     ) +
-    gifts.reduce(
-      (sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps),
-      0,
-    );
+    gifts.reduce((sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps), 0);
+  const monipayAmountKobo = monipayPurchases.reduce(
+    (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
+    0,
+  );
 
-  if (amountKobo <= 0) {
+  if (paystackAmountKobo <= 0 && monipayAmountKobo <= 0) {
     return NextResponse.json({ error: "Nothing to pay out." }, { status: 400 });
   }
 
-  let recipientCode = artist.paystack_recipient_code as string | null;
+  const results: { gateway: Gateway; amountKobo: number }[] = [];
 
-  try {
+  async function payOutVia(
+    gateway: Gateway,
+    amountKobo: number,
+    purchaseIds: string[],
+    includeGifts: boolean,
+  ) {
+    if (amountKobo <= 0) return;
+
+    const client = gateway === "monipay" ? monipay : paystack;
+    const recipientColumn = gateway === "monipay" ? "monipay_recipient_code" : "paystack_recipient_code";
+    let recipientCode = artist[recipientColumn] as string | null;
+
     if (!recipientCode) {
-      const recipient = await createTransferRecipient({
+      const recipient = await client.createTransferRecipient({
         name: artist.account_name,
         accountNumber: artist.account_number,
         bankCode: artist.bank_code,
       });
       recipientCode = recipient.recipient_code;
-      await supabase
-        .from("artists")
-        .update({ paystack_recipient_code: recipientCode })
-        .eq("id", artistId);
+      await supabase.from("artists").update({ [recipientColumn]: recipientCode }).eq("id", artistId);
     }
 
     const reference = `payout_${crypto.randomUUID()}`;
-    const transfer = await initiateTransfer({
+    const transfer = await client.initiateTransfer({
       amountKobo,
       recipientCode,
       reason: "Preem weekly payout",
@@ -104,21 +122,16 @@ export async function POST(req: Request) {
     await supabase.from("payouts").insert({
       artist_id: artistId,
       amount_kobo: amountKobo,
-      paystack_transfer_ref: transfer.reference,
+      paystack_transfer_ref: reference,
       status: transfer.status === "success" ? "success" : "pending",
       payout_week: new Date().toISOString().slice(0, 10),
+      gateway,
     });
 
-    if (purchases.length > 0) {
-      await supabase
-        .from("purchases")
-        .update({ paid_out: true })
-        .in(
-          "id",
-          purchases.map((p) => p.id),
-        );
+    if (purchaseIds.length > 0) {
+      await supabase.from("purchases").update({ paid_out: true }).in("id", purchaseIds);
     }
-    if (gifts.length > 0) {
+    if (includeGifts && gifts.length > 0) {
       await supabase
         .from("gifts")
         .update({ paid_out: true })
@@ -128,8 +141,32 @@ export async function POST(req: Request) {
         );
     }
 
-    return NextResponse.json({ ok: true, amountKobo });
+    results.push({ gateway, amountKobo });
+  }
+
+  try {
+    await payOutVia(
+      "paystack",
+      paystackAmountKobo,
+      paystackPurchases.map((p) => p.id),
+      true,
+    );
+    await payOutVia(
+      "monipay",
+      monipayAmountKobo,
+      monipayPurchases.map((p) => p.id),
+      false,
+    );
+
+    return NextResponse.json({
+      ok: true,
+      amountKobo: results.reduce((sum, r) => sum + r.amountKobo, 0),
+      results,
+    });
   } catch (err) {
+    // Whichever transfers already succeeded above are already recorded and
+    // marked paid_out -- only the failing gateway's leg is reported, so a
+    // retry naturally skips what's already been paid.
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Transfer failed" },
       { status: 502 },
