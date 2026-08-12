@@ -4,6 +4,7 @@ import { Nav, NavLink } from "@/components/Nav";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { DropCard } from "@/components/DropCard";
+import { EarningsComparison } from "@/components/EarningsComparison";
 import { FeatureCarousel } from "@/components/FeatureCarousel";
 import { HowItWorksSteps } from "@/components/HowItWorksSteps";
 import { MarqueeTicker } from "@/components/MarqueeTicker";
@@ -182,6 +183,11 @@ export default async function MarketplacePage() {
             />
           </div>
         </section>
+
+        {/* Earnings comparison */}
+        <div className="mt-32">
+          <EarningsComparison />
+        </div>
 
         {/* Marquee ticker — full-bleed via negative margins, breaks out of this max-w container */}
         <div className="mt-32">
