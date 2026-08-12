@@ -41,6 +41,9 @@ export function DropCard({ drop }: { drop: Drop }) {
           artworkUrl={drop.artwork_path}
           className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white backdrop-blur-sm transition-transform hover:scale-110"
         />
+        <div className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[11px] font-bold text-white backdrop-blur-sm">
+          Min. {formatNaira(drop.min_price_kobo)}
+        </div>
       </div>
       <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">
         <Avatar
@@ -51,15 +54,12 @@ export function DropCard({ drop }: { drop: Drop }) {
         />
         {drop.artist?.stage_name ?? "Unknown artist"}
       </div>
-      <div className="mb-2 truncate text-[15px] font-medium">{drop.title}</div>
-      <div className="flex items-center justify-between gap-2">
-        <Badge status="price">Min. {formatNaira(drop.min_price_kobo)}</Badge>
-        {live && drop.window_end && (
-          <div className="flex-shrink-0 font-mono text-[11px] text-muted">
-            <TimeLeft windowEnd={drop.window_end} />
-          </div>
-        )}
-      </div>
+      <div className="truncate text-[15px] font-medium">{drop.title}</div>
+      {live && drop.window_end && (
+        <div className="mt-2 font-mono text-[11px] text-muted">
+          <TimeLeft windowEnd={drop.window_end} />
+        </div>
+      )}
     </Link>
   );
 }

@@ -187,19 +187,21 @@ export function DropHeaderEditable({
                 {drop.release_type} · {tracks.length} track{tracks.length === 1 ? "" : "s"}
               </span>
             </div>
-            {drop.status === "published" && (
-              <div className="mb-3">
-                <ShareDropButton dropId={drop.id} title={drop.title} />
+            {(drop.status === "published" || (!isBundle && tracks[0])) && (
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {drop.status === "published" && (
+                  <ShareDropButton dropId={drop.id} title={drop.title} />
+                )}
+                {!isBundle && tracks[0] && (
+                  <OwnerControls
+                    trackId={tracks[0].id}
+                    title={tracks[0].title}
+                    artistName={artistName}
+                    artistId={drop.artist_id}
+                    artworkUrl={drop.artwork_path}
+                  />
+                )}
               </div>
-            )}
-            {!isBundle && tracks[0] && (
-              <OwnerControls
-                trackId={tracks[0].id}
-                title={tracks[0].title}
-                artistName={artistName}
-                artistId={drop.artist_id}
-                artworkUrl={drop.artwork_path}
-              />
             )}
           </div>
         </div>

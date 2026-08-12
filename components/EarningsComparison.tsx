@@ -1,7 +1,7 @@
 import { Button } from "@/components/Button";
 
 const ROWS: { label: string; streaming: string; preem: string }[] = [
-  { label: "Price per sale", streaming: "≈₦4–₦6 / stream avg.", preem: "You set it — never zero" },
+  { label: "Sell one track at ₦1,000", streaming: "≈167–250 streams", preem: "1 sale" },
   { label: "Revenue you keep", streaming: "Depends on your deal", preem: "80%" },
   { label: "Payout schedule", streaming: "Monthly to quarterly", preem: "Weekly" },
   { label: "Payment methods", streaming: "Platform-dependent", preem: "Card · Bank · USSD" },
@@ -30,7 +30,7 @@ export function EarningsComparison() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line">
-        <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-3 border-b border-line-strong bg-surface px-4 py-3 text-[10.5px] font-bold uppercase tracking-wide text-muted sm:px-6">
+        <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-3 border-b border-line-strong px-4 py-3 text-[10.5px] font-bold uppercase tracking-wide text-muted sm:px-6">
           <span />
           <span>Streaming</span>
           <span className="text-accent">On Preem</span>
@@ -47,11 +47,10 @@ export function EarningsComparison() {
             </div>
           ))}
         </div>
-        <p className="border-t border-line bg-surface px-4 py-3 text-[10.5px] leading-relaxed text-muted sm:px-6">
-          Streaming rate reflects commonly reported industry averages across
-          major DSPs (~$0.003–0.004/stream), converted at ~₦1,380/$ — your
-          actual payout depends on your distributor, label terms, and the
-          exchange rate at time of payment.
+        <p className="border-t border-line px-4 py-3 text-[10.5px] leading-relaxed text-muted sm:px-6">
+          Based on a per-stream rate of ≈₦4–₦6, reflecting commonly reported
+          industry averages across major DSPs — your actual payout depends
+          on your distributor and label terms.
         </p>
       </div>
     </section>

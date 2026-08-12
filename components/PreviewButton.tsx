@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayer, type PlayerTrack } from "@/lib/player-context";
+import { PauseIcon, PlayIcon } from "@/components/Icons";
 
 export function PreviewButton({
   dropId,
@@ -11,6 +12,7 @@ export function PreviewButton({
   artworkUrl,
   queue,
   className = "",
+  iconClassName = "h-4 w-4",
 }: {
   dropId: string;
   trackId?: string;
@@ -22,6 +24,7 @@ export function PreviewButton({
   // bar can step through them. Omit for a standalone preview.
   queue?: PlayerTrack[];
   className?: string;
+  iconClassName?: string;
 }) {
   const { track, playing, loading, play, toggle } = usePlayer();
   const key = trackId ?? dropId;
@@ -54,7 +57,13 @@ export function PreviewButton({
       aria-label={isCurrent && playing ? "Pause preview" : "Play 15-second preview"}
       className={className}
     >
-      {isCurrent && loading ? "…" : isCurrent && playing ? "❚❚" : "▶"}
+      {isCurrent && loading ? (
+        <span className="text-xs">…</span>
+      ) : isCurrent && playing ? (
+        <PauseIcon className={iconClassName} />
+      ) : (
+        <PlayIcon className={iconClassName} />
+      )}
     </button>
   );
 }

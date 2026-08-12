@@ -154,7 +154,8 @@ export default async function DropPage({
                 artistName={artistName}
                 artistId={artistId}
                 artworkUrl={drop.artwork_path}
-                className="absolute bottom-3 left-3 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-base text-white backdrop-blur-sm transition-transform hover:scale-110"
+                className="absolute bottom-3 left-3 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-sm transition-transform hover:scale-110"
+                iconClassName="h-5 w-5"
               />
             )}
           </div>

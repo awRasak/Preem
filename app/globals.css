@@ -31,14 +31,22 @@ body {
   background-attachment: fixed;
   color: var(--color-paper);
   font-family: var(--font-sans);
+  /* Full-bleed sections break out of the max-w-6xl column with 100vw,
+     which on some browsers is a hair wider than the visible viewport once
+     a scrollbar is factored in -- clip that sliver instead of letting it
+     add a horizontal scrollbar to the whole page. */
+  overflow-x: hidden;
 }
 
-/* Laptop screens and up (15" MacBook Pro and larger) read better at the
-   same visual scale as 125% browser zoom — replicate that natively so
-   users don't have to zoom in themselves. */
+/* Laptop screens and up (15" MacBook Pro and larger) read better at a
+   slightly larger visual scale than 100% -- was tuned to 125%, but on a
+   15" MacBook's wide viewport that ran a bit big (manually zooming the
+   browser out to 90% on top of it read better, i.e. an effective ~112.5%
+   overall). Baking that in directly so it's correct at the browser's
+   default 100% zoom. */
 @media (min-width: 1280px) {
   body {
-    zoom: 1.25;
+    zoom: 1.125;
   }
 }
 
@@ -70,25 +78,6 @@ h2 {
   }
 }
 
-@keyframes spin-x {
-  from {
-    transform: rotateX(0deg);
-  }
-  to {
-    transform: rotateX(360deg);
-  }
-}
-
-.spin-x-wrap {
-  perspective: 300px;
-}
-
-.spin-x {
-  animation: spin-x 2.4s linear infinite;
-  transform-style: preserve-3d;
-  backface-visibility: visible;
-}
-
 /* Card design system: dark inset glow so card edges blend into the black page background */
 .card-inset-glow {
   box-shadow: inset 0 0 40px 6px rgba(0, 0, 0, 0.55);
@@ -97,8 +86,8 @@ h2 {
 /* Fades the edges of a horizontal-scroll row so items blend into the
    background instead of being clipped by a hard edge. */
 .scroll-fade-x {
-  -webkit-mask-image: linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent);
-  mask-image: linear-gradient(to right, transparent, black 96px, black calc(100% - 96px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 160px, black calc(100% - 160px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 160px, black calc(100% - 160px), transparent);
 }
 
 /* Fades the hero video's edges to transparent so it dissolves into the page

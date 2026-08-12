@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 
 const CONFETTI_COLORS = [
@@ -14,6 +15,7 @@ const CONFETTI_COLORS = [
 type ConfettiPiece = { id: number; left: number; color: string; delay: number; duration: number };
 
 export function ApprovalCelebration() {
+  const router = useRouter();
   const [stage, setStage] = useState<"congrats" | "first-drop" | null>("congrats");
   const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
 
@@ -33,8 +35,16 @@ export function ApprovalCelebration() {
         duration: 2.2 + Math.random() * 1.4,
       })),
     );
-    fetch("/api/artist/mark-approval-seen", { method: "POST" }).catch(() => {});
-  }, []);
+    // Marks the approval as seen server-side so this never shows again on a
+    // later visit -- refresh once it lands so the dashboard's own
+    // server-fetched `artist.approval_seen` is immediately in sync too,
+    // not just this modal's local state.
+    fetch("/api/artist/mark-approval-seen", { method: "POST" })
+      .then((res) => {
+        if (res.ok) router.refresh();
+      })
+      .catch(() => {});
+  }, [router]);
 
   if (!stage) return null;
 
