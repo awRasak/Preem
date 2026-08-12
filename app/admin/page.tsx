@@ -4,10 +4,12 @@ import { Nav } from "@/components/Nav";
 import { SignOutButton } from "@/components/SignOutButton";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
+import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
 import { ArtistApprovalRow } from "./ArtistApprovalRow";
 import { PayoutsTable, type PayoutArtist } from "./PayoutsTable";
 import { TransactionsTable, type Transaction } from "./TransactionsTable";
 import { SupportRequestRow } from "./SupportRequestRow";
+import { PlatformSettingsForm } from "./PlatformSettingsForm";
 
 export const revalidate = 0;
 
@@ -48,9 +50,17 @@ export default async function AdminPage() {
     .select("id, stage_name, bank_code, account_number, account_name")
     .eq("approval_status", "approved");
 
+  const settings = await getPlatformSettings(supabase);
+
   const { data: unpaidPurchases } = await supabase
     .from("purchases")
     .select("amount_kobo, drops(artist_id)")
+    .eq("status", "success")
+    .eq("paid_out", false);
+
+  const { data: unpaidGifts } = await supabase
+    .from("gifts")
+    .select("artist_id, amount_kobo")
     .eq("status", "success")
     .eq("paid_out", false);
 
@@ -68,14 +78,24 @@ export default async function AdminPage() {
     .select("fan_phone, amount_kobo")
     .eq("status", "success");
 
+  const { data: allSuccessGifts } = await supabase
+    .from("gifts")
+    .select("amount_kobo")
+    .eq("status", "success");
+
   const totalListeners = new Set(
     (allSuccessPurchases ?? []).map((p) => p.fan_phone),
   ).size;
   const totalSales = (allSuccessPurchases ?? []).length;
-  const platformRevenueKobo = (allSuccessPurchases ?? []).reduce(
-    (sum, p) => sum + Math.round(p.amount_kobo * 0.2),
-    0,
-  );
+  const platformRevenueKobo =
+    (allSuccessPurchases ?? []).reduce(
+      (sum, p) => sum + (p.amount_kobo - applyCommission(p.amount_kobo, settings.dropCommissionBps)),
+      0,
+    ) +
+    (allSuccessGifts ?? []).reduce(
+      (sum, g) => sum + (g.amount_kobo - applyCommission(g.amount_kobo, settings.giftCommissionBps)),
+      0,
+    );
 
   const transactions: Transaction[] = (recentPurchases ?? []).map((p) => {
     type WithDrop = { title: string } | { title: string }[] | null;
@@ -98,7 +118,15 @@ export default async function AdminPage() {
     if (!drop) continue;
     balanceByArtist.set(
       drop.artist_id,
-      (balanceByArtist.get(drop.artist_id) ?? 0) + Math.round(row.amount_kobo * 0.8),
+      (balanceByArtist.get(drop.artist_id) ?? 0) +
+        applyCommission(row.amount_kobo, settings.dropCommissionBps),
+    );
+  }
+  for (const g of unpaidGifts ?? []) {
+    balanceByArtist.set(
+      g.artist_id,
+      (balanceByArtist.get(g.artist_id) ?? 0) +
+        applyCommission(g.amount_kobo, settings.giftCommissionBps),
     );
   }
 
@@ -194,6 +222,14 @@ export default async function AdminPage() {
         <section>
           <h2 className="mb-4 text-lg font-bold">Payouts</h2>
           <PayoutsTable artists={payoutArtists} />
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-lg font-bold">Platform fees</h2>
+          <PlatformSettingsForm
+            dropCommissionBps={settings.dropCommissionBps}
+            giftCommissionBps={settings.giftCommissionBps}
+          />
         </section>
       </main>
     </>

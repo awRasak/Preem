@@ -8,6 +8,8 @@ import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
+import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
+import { GiftRow } from "./GiftRow";
 import type { Drop, Purchase } from "@/lib/types";
 
 export default async function ArtistDashboardPage() {
@@ -25,6 +27,8 @@ export default async function ArtistDashboardPage() {
 
   if (!artist) redirect("/artist/login");
 
+  const settings = await getPlatformSettings(supabase);
+
   const { data: drops } = await supabase
     .from("drops")
     .select("*")
@@ -41,9 +45,17 @@ export default async function ArtistDashboardPage() {
         .eq("status", "success")
     : { data: [] as Purchase[] };
 
+  const { data: gifts } = await supabase
+    .from("gifts")
+    .select("*")
+    .eq("artist_id", user.id)
+    .eq("status", "success")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
   const successPurchases = purchases ?? [];
   const revenueKobo = successPurchases.reduce(
-    (sum, p) => sum + Math.round(p.amount_kobo * 0.8),
+    (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
     0,
   );
   const buyerCount = new Set(successPurchases.map((p) => p.fan_phone)).size;
@@ -55,7 +67,7 @@ export default async function ArtistDashboardPage() {
   for (const p of successPurchases) {
     const entry = salesByDrop.get(p.drop_id) ?? { count: 0, revenueKobo: 0 };
     entry.count += 1;
-    entry.revenueKobo += Math.round(p.amount_kobo * 0.8);
+    entry.revenueKobo += applyCommission(p.amount_kobo, settings.dropCommissionBps);
     salesByDrop.set(p.drop_id, entry);
   }
 
@@ -109,7 +121,11 @@ export default async function ArtistDashboardPage() {
         </div>
 
         <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatBox icon="₦" value={formatNaira(revenueKobo)} label="Revenue (80%)" />
+          <StatBox
+            icon="₦"
+            value={formatNaira(revenueKobo)}
+            label={`Revenue (${((10000 - settings.dropCommissionBps) / 100).toFixed(0)}%)`}
+          />
           <StatBox icon="◐" value={String(buyerCount)} label="Buyers" />
           <StatBox icon="♪" value={String(liveDropCount)} label="Live drops" />
         </div>
@@ -144,6 +160,25 @@ export default async function ArtistDashboardPage() {
                     {formatNaira(sales.revenueKobo)}
                   </div>
                 </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(gifts ?? []).length > 0 && (
+          <div className="mb-8">
+            <h2 className="mb-4 text-lg font-bold">Recent gifts</h2>
+            <div className="divide-y divide-line rounded-xl border border-line">
+              {(gifts ?? []).map((gift) => (
+                <GiftRow
+                  key={gift.id}
+                  id={gift.id}
+                  fanName={gift.fan_name}
+                  fanLocation={gift.fan_location}
+                  amountKobo={applyCommission(gift.amount_kobo, settings.giftCommissionBps)}
+                  createdAt={gift.created_at}
+                  shoutoutSentAt={gift.shoutout_sent_at}
+                />
               ))}
             </div>
           </div>

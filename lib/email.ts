@@ -8,6 +8,18 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 // a verified address (e.g. receipts@preem.ng) via RECEIPT_FROM_EMAIL once one exists.
 const FROM = process.env.RECEIPT_FROM_EMAIL ?? "Preem <onboarding@resend.dev>";
 
+// The gift shout-out is free text an artist writes about a specific fan --
+// the closest thing to arbitrary user input these emails ever interpolate,
+// so it gets escaped before landing in the HTML body.
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendReceiptEmail({
   to,
   fanName,
@@ -51,6 +63,70 @@ export async function sendReceiptEmail({
           — enter the phone number you checked out with.
         </p>
         <p style="color: #aaa; font-size: 12px; margin-top: 32px;">No refunds once access is granted. Questions? Reply to this email.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendGiftThankYouEmail({
+  to,
+  fanName,
+  artistName,
+  amountKobo,
+}: {
+  to: string;
+  fanName: string;
+  artistName: string;
+  amountKobo: number;
+}) {
+  if (!resend) return;
+
+  const safeFanName = escapeHtml(fanName);
+  const safeArtistName = escapeHtml(artistName);
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Thanks for supporting ${safeArtistName}!`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="margin-bottom: 4px;">Thanks, ${safeFanName}!</h2>
+        <p style="color: #555;">
+          Your gift of <strong>${formatNaira(amountKobo)}</strong> went straight to
+          <strong>${safeArtistName}</strong> — no middleman, no delay.
+        </p>
+        <p style="color: #aaa; font-size: 12px; margin-top: 32px;">Questions? Reply to this email.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendGiftShoutoutEmail({
+  to,
+  fanName,
+  artistName,
+  message,
+}: {
+  to: string;
+  fanName: string;
+  artistName: string;
+  message: string;
+}) {
+  if (!resend) return;
+
+  const safeFanName = escapeHtml(fanName);
+  const safeArtistName = escapeHtml(artistName);
+  const safeMessage = escapeHtml(message);
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${safeArtistName} sent you a shout-out!`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="margin-bottom: 4px;">${safeArtistName} wanted to say thanks, ${safeFanName}</h2>
+        <p style="color: #555; white-space: pre-wrap; border-left: 3px solid #eee; padding-left: 12px;">${safeMessage}</p>
+        <p style="color: #aaa; font-size: 12px; margin-top: 32px;">Questions? Reply to this email.</p>
       </div>
     `,
   });

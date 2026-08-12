@@ -13,6 +13,7 @@ import {
   RepeatIcon,
   ShuffleIcon,
 } from "@/components/Icons";
+import { GiftButton } from "@/components/GiftButton";
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -150,6 +151,10 @@ export function PlayerBar() {
           <span className="text-xs text-[#ff6b6b]">Playback failed</span>
         )}
       </div>
+
+      {track.artistId && (
+        <GiftButton artistId={track.artistId} artistName={track.artistName} variant="row" />
+      )}
     </div>
   );
 }

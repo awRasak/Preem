@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Nav, NavLink } from "@/components/Nav";
 import { Avatar } from "@/components/Avatar";
 import { DropCard } from "@/components/DropCard";
 import { DiscoverMore } from "@/components/DiscoverMore";
+import { GiftButton } from "@/components/GiftButton";
 import {
   FacebookIcon,
   InstagramIcon,
@@ -13,6 +15,18 @@ import {
 } from "@/components/SocialIcons";
 import { sanitizeBio } from "@/lib/format";
 import type { Artist, ArtistLink, Drop } from "@/lib/types";
+
+// Monday 00:00 UTC of the current week -- "Top gifters" resets on this
+// boundary, matching the existing weekly payout cycle's semantics.
+function startOfCurrentWeekUTC(): Date {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0 = Sunday
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diffToMonday),
+  );
+  return monday;
+}
 
 const SOCIAL_LINKS = [
   { key: "twitter_url", label: "X / Twitter", Icon: TwitterIcon },
@@ -53,6 +67,39 @@ export default async function ArtistProfilePage({
     .select("*")
     .eq("artist_id", id)
     .order("created_at", { ascending: false });
+
+  // Computed with the admin client, server-side only -- amount/email never
+  // reach the client, just name + location, per the "not the amounts
+  // gifted" requirement.
+  const admin = createAdminClient();
+  const { data: weekGifts } = await admin
+    .from("gifts")
+    .select("fan_email, fan_name, fan_location, amount_kobo")
+    .eq("artist_id", id)
+    .eq("status", "success")
+    .gte("created_at", startOfCurrentWeekUTC().toISOString());
+
+  const totalsByFan = new Map<
+    string,
+    { name: string; location: string | null; totalKobo: number }
+  >();
+  for (const g of weekGifts ?? []) {
+    const entry = totalsByFan.get(g.fan_email);
+    if (entry) {
+      entry.totalKobo += g.amount_kobo;
+      entry.name = g.fan_name;
+      entry.location = g.fan_location;
+    } else {
+      totalsByFan.set(g.fan_email, {
+        name: g.fan_name,
+        location: g.fan_location,
+        totalKobo: g.amount_kobo,
+      });
+    }
+  }
+  const topGifters = [...totalsByFan.values()]
+    .sort((a, b) => b.totalKobo - a.totalKobo)
+    .slice(0, 5);
 
   const joinedYear = new Date((artist as Artist).created_at).getFullYear();
   const socialLinks = SOCIAL_LINKS.filter(({ key }) => (artist as Artist)[key]);
@@ -116,8 +163,27 @@ export default async function ArtistProfilePage({
                 Listen on other platforms →
               </a>
             )}
+            <div className="mt-4 flex justify-center sm:justify-start">
+              <GiftButton artistId={id} artistName={artist.stage_name} variant="button" />
+            </div>
           </div>
         </div>
+
+        {topGifters.length > 0 && (
+          <div className="mb-10 rounded-xl border border-line p-4">
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
+              Top supporters this week
+            </h2>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {topGifters.map((g, i) => (
+                <div key={i} className="text-sm">
+                  <span className="font-bold text-accent">{i + 1}.</span> {g.name}
+                  {g.location && <span className="text-muted"> · {g.location}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <h2 className="mb-4 text-lg font-bold">Drops</h2>
         {(drops ?? []).length === 0 ? (

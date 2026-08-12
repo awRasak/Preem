@@ -127,3 +127,39 @@ export function DownloadIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function GiftIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <rect
+        x="3.5"
+        y="9"
+        width="17"
+        height="4"
+        rx="0.75"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 13h14v6.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5V13z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <path d="M12 9v12" stroke="currentColor" strokeWidth={1.8} />
+      <path
+        d="M12 9C12 9 9.5 4.5 7 4.5A2.25 2.25 0 0 0 7 9h5z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 9c0 0 2.5-4.5 5-4.5a2.25 2.25 0 0 1 0 4.5h-5z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
