@@ -5,6 +5,14 @@ import Link from "next/link";
 import { usePlayer } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
 import { PREVIEW_SECONDS } from "@/lib/preview";
+import {
+  NextTrackIcon,
+  PauseIcon,
+  PlayIcon,
+  PreviousTrackIcon,
+  RepeatIcon,
+  ShuffleIcon,
+} from "@/components/Icons";
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -62,52 +70,33 @@ export function PlayerBar() {
 
         <div className="flex flex-shrink-0 items-center gap-1">
           <button
-            onClick={toggleShuffle}
-            aria-label={shuffle ? "Disable shuffle" : "Enable shuffle"}
-            aria-pressed={shuffle}
-            className={`hidden h-8 w-8 items-center justify-center rounded-full text-sm hover:text-paper sm:flex ${
-              shuffle ? "text-accent" : "text-muted"
-            }`}
-          >
-            🔀
-          </button>
-          <button
             onClick={previous}
             disabled={!hasPrevious || loading}
             aria-label="Previous track"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-sm text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
           >
-            ⏮
+            <PreviousTrackIcon className="h-4 w-4" />
           </button>
           <button
             onClick={toggle}
             disabled={loading}
-            className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
+            className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-paper disabled:opacity-50"
           >
-            {loading ? "…" : playing ? "❚❚" : "▶"}
+            {loading ? (
+              <span className="text-xs">…</span>
+            ) : playing ? (
+              <PauseIcon className="h-4 w-4" />
+            ) : (
+              <PlayIcon className="h-4 w-4" />
+            )}
           </button>
           <button
             onClick={next}
             disabled={!hasNext || loading}
             aria-label="Next track"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-sm text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
           >
-            ⏭
-          </button>
-          <button
-            onClick={cycleRepeat}
-            aria-label={`Repeat: ${repeatMode}`}
-            aria-pressed={repeatMode !== "off"}
-            className={`relative hidden h-8 w-8 items-center justify-center rounded-full text-sm hover:text-paper sm:flex ${
-              repeatMode !== "off" ? "text-accent" : "text-muted"
-            }`}
-          >
-            🔁
-            {repeatMode === "one" && (
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[8px] font-bold text-[#1a0d05]">
-                1
-              </span>
-            )}
+            <NextTrackIcon className="h-4 w-4" />
           </button>
         </div>
 
@@ -128,6 +117,34 @@ export function PlayerBar() {
         <span className="hidden font-mono text-[11px] text-muted sm:inline">
           {formatTime(displayDuration)}
         </span>
+
+        <div className="hidden flex-shrink-0 items-center gap-1 sm:flex">
+          <button
+            onClick={toggleShuffle}
+            aria-label={shuffle ? "Disable shuffle" : "Enable shuffle"}
+            aria-pressed={shuffle}
+            className={`flex h-8 w-8 items-center justify-center rounded-full hover:text-paper ${
+              shuffle ? "text-accent" : "text-muted"
+            }`}
+          >
+            <ShuffleIcon className="h-4 w-4" />
+          </button>
+          <button
+            onClick={cycleRepeat}
+            aria-label={`Repeat: ${repeatMode}`}
+            aria-pressed={repeatMode !== "off"}
+            className={`relative flex h-8 w-8 items-center justify-center rounded-full hover:text-paper ${
+              repeatMode !== "off" ? "text-accent" : "text-muted"
+            }`}
+          >
+            <RepeatIcon className="h-4 w-4" />
+            {repeatMode === "one" && (
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[8px] font-bold text-[#1a0d05]">
+                1
+              </span>
+            )}
+          </button>
+        </div>
 
         {error && (
           <span className="text-xs text-[#ff6b6b]">Playback failed</span>

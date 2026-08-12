@@ -47,19 +47,19 @@ export function FeatureCarousel() {
   }, []);
 
   return (
-    <div ref={sectionRef} className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div ref={sectionRef} className="grid grid-cols-1 gap-4 sm:grid-cols-4">
       {FEATURES.map((f, i) => (
         <div
           key={f.title}
-          className="card-inset-glow flex h-[260px] flex-col justify-between rounded-xl border border-line bg-card p-8 transition-all duration-700 ease-out"
+          className="card-inset-glow flex h-[182px] flex-col justify-between rounded-xl border border-line bg-card p-6 transition-all duration-700 ease-out sm:h-[260px]"
           style={{
             transitionDelay: revealed ? "0ms" : `${i * 150}ms`,
             opacity: revealed ? 1 : 0,
             transform: revealed ? "translateY(0)" : "translateY(16px)",
           }}
         >
-          <div className="relative h-24 w-24">
-            <Image src={f.icon} alt="" fill className="object-contain" sizes="96px" />
+          <div className="relative h-16 w-16 sm:h-24 sm:w-24">
+            <Image src={f.icon} alt="" fill className="object-contain" sizes="(min-width: 640px) 96px, 64px" />
           </div>
           <div>
             <div className="mb-2 text-sm font-bold">{f.title}</div>

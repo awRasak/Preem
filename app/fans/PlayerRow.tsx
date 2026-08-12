@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePlayer, type PlayerTrack } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
+import { PauseIcon, PlayIcon } from "@/components/Icons";
 import { TrackDetailModal } from "./TrackDetailModal";
 
 export function PlayerRow({
@@ -68,7 +69,13 @@ export function PlayerRow({
           disabled={isCurrent && loading}
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
         >
-          {isCurrent && loading ? "…" : isCurrent && playing ? "❚❚" : "▶"}
+          {isCurrent && loading ? (
+            <span className="text-xs">…</span>
+          ) : isCurrent && playing ? (
+            <PauseIcon className="h-3.5 w-3.5" />
+          ) : (
+            <PlayIcon className="h-3.5 w-3.5" />
+          )}
         </button>
       </div>
 

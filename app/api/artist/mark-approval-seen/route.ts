@@ -12,6 +12,13 @@ export async function POST() {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  await supabase.from("artists").update({ approval_seen: true }).eq("id", user.id);
+  const { error } = await supabase
+    .from("artists")
+    .update({ approval_seen: true })
+    .eq("id", user.id);
+
+  if (error) {
+    return NextResponse.json({ error: "Could not update." }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

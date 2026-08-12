@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePlayer, type PlayerTrack } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
+import { PauseIcon, PlayIcon } from "@/components/Icons";
 import { ShareDropButton } from "@/app/artist/drops/[id]/ShareDropButton";
 
 export function TrackDetailModal({
@@ -91,7 +92,13 @@ export function TrackDetailModal({
             disabled={isCurrent && loading}
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-sm disabled:opacity-50"
           >
-            {isCurrent && loading ? "…" : isCurrent && playing ? "❚❚" : "▶"}
+            {isCurrent && loading ? (
+              <span className="text-xs">…</span>
+            ) : isCurrent && playing ? (
+              <PauseIcon className="h-4 w-4" />
+            ) : (
+              <PlayIcon className="h-4 w-4" />
+            )}
           </button>
           <ShareDropButton dropId={dropId} title={title} />
         </div>

@@ -41,7 +41,7 @@ export function FilmstripGallery({ drops }: { drops: Drop[] }) {
   }));
 
   return (
-    <div className="scroll-fade-x marquee-hover-pause relative -mx-5 overflow-hidden py-14 sm:-mx-8">
+    <div className="scroll-fade-x marquee-hover-pause relative overflow-hidden py-14">
       <div className="marquee-track flex w-max" style={{ animation: "marquee-reverse 110s linear infinite" }}>
         <Track items={items} />
         <Track items={items} />

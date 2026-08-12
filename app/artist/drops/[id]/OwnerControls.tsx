@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePlayer } from "@/lib/player-context";
 import { Button } from "@/components/Button";
+import { DownloadIcon, PauseIcon, PlayIcon } from "@/components/Icons";
 
 export function OwnerControls({
   trackId,
@@ -41,18 +42,24 @@ export function OwnerControls({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <>
       <Button
         variant="outline"
         onClick={handlePlay}
         disabled={isCurrent && loading}
         className="!px-4 !py-2 text-xs"
       >
-        {isCurrent && loading
-          ? "Loading…"
-          : isCurrent && playing
-            ? "❚❚ Pause"
-            : "▶ Preview"}
+        {isCurrent && loading ? (
+          "Loading…"
+        ) : isCurrent && playing ? (
+          <>
+            <PauseIcon className="h-3.5 w-3.5" /> Pause
+          </>
+        ) : (
+          <>
+            <PlayIcon className="h-3.5 w-3.5" /> Preview
+          </>
+        )}
       </Button>
       {showDownload && (
         <Button
@@ -61,9 +68,13 @@ export function OwnerControls({
           disabled={downloading}
           className="!px-4 !py-2 text-xs"
         >
-          {downloading ? "…" : "Download"}
+          {downloading ? "…" : (
+            <>
+              <DownloadIcon className="h-3.5 w-3.5" /> Download
+            </>
+          )}
         </Button>
       )}
-    </div>
+    </>
   );
 }
