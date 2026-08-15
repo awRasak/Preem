@@ -1,24 +1,11 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminShell } from "@/components/AdminShell";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
-import { PayoutsTable, type PayoutArtist } from "../PayoutsTable";
+import { PayoutsTable, type PayoutArtist } from "../../PayoutsTable";
 
 export const revalidate = 0;
 
 export default async function AdminPayoutsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/artist/login");
-
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (roleRow?.role !== "admin") redirect("/");
 
   const settings = await getPlatformSettings(supabase);
 
@@ -67,11 +54,9 @@ export default async function AdminPayoutsPage() {
   }));
 
   return (
-    <AdminShell active="payouts">
-      <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
-        <h1 className="mb-6 text-xl font-bold">Payouts</h1>
-        <PayoutsTable artists={payoutArtists} />
-      </main>
-    </AdminShell>
+    <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
+      <h1 className="mb-6 text-xl font-bold">Payouts</h1>
+      <PayoutsTable artists={payoutArtists} />
+    </main>
   );
 }

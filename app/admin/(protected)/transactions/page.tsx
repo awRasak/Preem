@@ -1,23 +1,10 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminShell } from "@/components/AdminShell";
-import { TransactionsTable, type Transaction } from "../TransactionsTable";
+import { TransactionsTable, type Transaction } from "../../TransactionsTable";
 
 export const revalidate = 0;
 
 export default async function AdminTransactionsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/artist/login");
-
-  const { data: roleRow } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (roleRow?.role !== "admin") redirect("/");
 
   const { data: recentPurchases } = await supabase
     .from("purchases")
@@ -39,11 +26,9 @@ export default async function AdminTransactionsPage() {
   });
 
   return (
-    <AdminShell active="transactions">
-      <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
-        <h1 className="mb-6 text-xl font-bold">Transactions</h1>
-        <TransactionsTable transactions={transactions} />
-      </main>
-    </AdminShell>
+    <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
+      <h1 className="mb-6 text-xl font-bold">Transactions</h1>
+      <TransactionsTable transactions={transactions} />
+    </main>
   );
 }

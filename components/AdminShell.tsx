@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { SignOutButton } from "./SignOutButton";
 
-export type AdminSection = "home" | "support" | "transactions" | "payouts" | "settings";
+type AdminSection = "home" | "support" | "transactions" | "payouts" | "settings";
 
 const NAV_ITEMS: { section: AdminSection; label: string; href: string; icon: string }[] = [
   { section: "home", label: "Home", href: "/admin", icon: "⌂" },
@@ -12,13 +15,16 @@ const NAV_ITEMS: { section: AdminSection; label: string; href: string; icon: str
   { section: "settings", label: "Settings", href: "/admin/settings", icon: "⚙" },
 ];
 
-export function AdminShell({
-  active,
-  children,
-}: {
-  active: AdminSection;
-  children: React.ReactNode;
-}) {
+// Lives in a layout.tsx above every /admin/* page (except /admin/setup),
+// so it stays mounted across navigations instead of remounting per click --
+// active tab is derived from the URL rather than passed down, since a
+// shared layout only renders once per navigation, not per page.
+export function AdminShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const active: AdminSection =
+    NAV_ITEMS.find((item) => item.href !== "/admin" && pathname.startsWith(item.href))?.section ??
+    "home";
+
   return (
     <>
       <nav className="hidden items-center justify-between border-b border-line px-5 py-3 sm:flex sm:px-8">
