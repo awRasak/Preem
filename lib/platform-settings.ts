@@ -5,16 +5,19 @@ export type PlatformSettings = {
   giftCommissionBps: number;
   paystackEnabled: boolean;
   monipayEnabled: boolean;
+  waitlistModeEnabled: boolean;
 };
 
-// Falls back to today's rates (20% drops, 5% gifts) and Paystack-only if the
-// singleton row is somehow missing -- keeps payout/checkout logic from ever
-// silently computing against undefined instead of a real setting.
+// Falls back to today's rates (20% drops, 5% gifts), Paystack-only, and
+// waitlist mode ON if the singleton row is somehow missing -- keeps
+// payout/checkout/homepage logic from ever silently computing against
+// undefined instead of a real setting.
 const DEFAULT_SETTINGS: PlatformSettings = {
   dropCommissionBps: 2000,
   giftCommissionBps: 500,
   paystackEnabled: true,
   monipayEnabled: false,
+  waitlistModeEnabled: true,
 };
 
 export async function getPlatformSettings(
@@ -22,7 +25,9 @@ export async function getPlatformSettings(
 ): Promise<PlatformSettings> {
   const { data } = await supabase
     .from("platform_settings")
-    .select("drop_commission_bps, gift_commission_bps, paystack_enabled, monipay_enabled")
+    .select(
+      "drop_commission_bps, gift_commission_bps, paystack_enabled, monipay_enabled, waitlist_mode_enabled",
+    )
     .eq("id", true)
     .maybeSingle();
 
@@ -32,6 +37,7 @@ export async function getPlatformSettings(
     giftCommissionBps: data.gift_commission_bps,
     paystackEnabled: data.paystack_enabled,
     monipayEnabled: data.monipay_enabled,
+    waitlistModeEnabled: data.waitlist_mode_enabled,
   };
 }
 

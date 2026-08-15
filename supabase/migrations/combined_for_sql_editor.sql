@@ -538,3 +538,8 @@ alter table artists add column monipay_recipient_code text;
 -- click can produce up to two payout rows, one per gateway.
 alter table payouts add column gateway text not null default 'paystack' check (gateway in ('paystack', 'monipay'));
 
+-- Replaces the WAITLIST_MODE env var (needed a code edit + redeploy to
+-- flip) with a real admin-editable switch, same pattern as the gateway
+-- toggles. Defaults on, matching the env var's previous default.
+alter table platform_settings add column waitlist_mode_enabled boolean not null default true;
+

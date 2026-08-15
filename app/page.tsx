@@ -15,6 +15,7 @@ import { HomeFAQ } from "@/components/HomeFAQ";
 import { WaitlistModal } from "@/components/WaitlistModal";
 import { createClient } from "@/lib/supabase/server";
 import { artworkFallback } from "@/lib/placeholder";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import type { Drop } from "@/lib/types";
 
 export const revalidate = 0;
@@ -69,15 +70,15 @@ export default async function MarketplacePage() {
     }
   }
 
-  // On by default -- set WAITLIST_MODE=false in the environment once ready
-  // to actually launch, no code change needed. Homepage only: artists can
-  // still reach their dashboard, fans can still stream what they've
-  // already bought, and direct drop links still work for checkout.
-  const waitlistMode = process.env.WAITLIST_MODE !== "false";
+  // Editable live from /admin → Settings, no redeploy needed. Homepage
+  // only: artists can still reach their dashboard, fans can still stream
+  // what they've already bought, and direct drop links still work for
+  // checkout.
+  const settings = await getPlatformSettings(supabase);
 
   return (
     <>
-      {waitlistMode && <WaitlistModal />}
+      {settings.waitlistModeEnabled && <WaitlistModal />}
       <Nav>
         <NavLink href="/explore">Explore</NavLink>
         {!sessionUser && <NavLink href="/artist/signup">For artists</NavLink>}

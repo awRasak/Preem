@@ -4,23 +4,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch";
 
 export function PlatformSettingsForm({
   dropCommissionBps,
   giftCommissionBps,
   paystackEnabled,
   monipayEnabled,
+  waitlistModeEnabled,
 }: {
   dropCommissionBps: number;
   giftCommissionBps: number;
   paystackEnabled: boolean;
   monipayEnabled: boolean;
+  waitlistModeEnabled: boolean;
 }) {
   const router = useRouter();
   const [dropPercent, setDropPercent] = useState(String(dropCommissionBps / 100));
   const [giftPercent, setGiftPercent] = useState(String(giftCommissionBps / 100));
   const [paystackOn, setPaystackOn] = useState(paystackEnabled);
   const [monipayOn, setMonipayOn] = useState(monipayEnabled);
+  const [waitlistOn, setWaitlistOn] = useState(waitlistModeEnabled);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,6 +46,7 @@ export function PlatformSettingsForm({
         giftCommissionBps: Math.round(Number(giftPercent) * 100),
         paystackEnabled: paystackOn,
         monipayEnabled: monipayOn,
+        waitlistModeEnabled: waitlistOn,
       }),
     });
     setLoading(false);
@@ -83,27 +88,27 @@ export function PlatformSettingsForm({
         />
       </Field>
 
-      <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
+      <p className="mb-3 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
         Checkout payment methods
       </p>
-      <label className="mb-2 flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={paystackOn}
-          onChange={(e) => setPaystackOn(e.target.checked)}
-          className="h-4 w-4 accent-accent"
-        />
-        Paystack
-      </label>
-      <label className="mb-4 flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={monipayOn}
-          onChange={(e) => setMonipayOn(e.target.checked)}
-          className="h-4 w-4 accent-accent"
-        />
-        Monipay
-      </label>
+      <div className="mb-2">
+        <Switch checked={paystackOn} onChange={setPaystackOn} label="Paystack" />
+      </div>
+      <div className="mb-4">
+        <Switch checked={monipayOn} onChange={setMonipayOn} label="Monipay" />
+      </div>
+
+      <p className="mb-3 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
+        Homepage access
+      </p>
+      <div className="mb-2">
+        <Switch checked={waitlistOn} onChange={setWaitlistOn} label="Pre-launch waitlist modal" />
+      </div>
+      <p className="mb-4 text-xs text-muted">
+        On: homepage visitors see an unclosable &quot;going live soon&quot; waitlist
+        gate. Off: the real homepage is open to everyone. Doesn&apos;t affect
+        artist dashboards, fan libraries, or direct drop links either way.
+      </p>
 
       {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
       <Button type="submit" variant="primary" disabled={loading}>

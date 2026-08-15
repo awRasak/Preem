@@ -9,6 +9,7 @@ const schema = z
     giftCommissionBps: z.number().int().min(0).max(10000),
     paystackEnabled: z.boolean(),
     monipayEnabled: z.boolean(),
+    waitlistModeEnabled: z.boolean(),
   })
   .refine((v) => v.paystackEnabled || v.monipayEnabled, {
     message: "At least one payment gateway must stay on.",
@@ -36,6 +37,7 @@ export async function PATCH(req: Request) {
       gift_commission_bps: parsed.data.giftCommissionBps,
       paystack_enabled: parsed.data.paystackEnabled,
       monipay_enabled: parsed.data.monipayEnabled,
+      waitlist_mode_enabled: parsed.data.waitlistModeEnabled,
       updated_at: new Date().toISOString(),
     })
     .eq("id", true);
