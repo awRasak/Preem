@@ -22,6 +22,20 @@
   --font-plakat: var(--font-es-klarheit-plakat), var(--font-sans);
 }
 
+/* Full-bleed sections break out of the max-w-6xl column with 100vw, which
+   on some browsers is a hair wider than the visible viewport once a
+   scrollbar is factored in -- clip that sliver instead of letting it add a
+   horizontal scrollbar to the whole page. Lives on html, not body: setting
+   overflow-x alone on an element implicitly forces its overflow-y to auto
+   too, which would make body its own scroll container instead of the
+   viewport/html -- and position: fixed descendants (the bottom tab bars)
+   are known to misbehave on mobile Safari when their containing scroll
+   context isn't the true root, especially on short pages that never
+   actually need to scroll. */
+html {
+  overflow-x: hidden;
+}
+
 body {
   background-color: var(--color-bg);
   background-image: url("/background-gradient.jpg");
@@ -31,11 +45,6 @@ body {
   background-attachment: fixed;
   color: var(--color-paper);
   font-family: var(--font-sans);
-  /* Full-bleed sections break out of the max-w-6xl column with 100vw,
-     which on some browsers is a hair wider than the visible viewport once
-     a scrollbar is factored in -- clip that sliver instead of letting it
-     add a horizontal scrollbar to the whole page. */
-  overflow-x: hidden;
 }
 
 /* Laptop screens and up (15" MacBook Pro and larger) read better at a

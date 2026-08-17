@@ -9,32 +9,31 @@ export const revalidate = 0;
 export default async function AdminPage() {
   const supabase = await createClient();
 
-  const settings = await getPlatformSettings(supabase);
-
-  const { data: pendingArtists } = await supabase
-    .from("artists")
-    .select("id, stage_name, profile_link")
-    .eq("approval_status", "pending")
-    .order("created_at", { ascending: true });
-
-  const { count: totalArtistCount } = await supabase
-    .from("artists")
-    .select("id", { count: "exact", head: true })
-    .eq("approval_status", "approved");
-
-  const { count: totalDropCount } = await supabase
-    .from("drops")
-    .select("id", { count: "exact", head: true });
-
-  const { data: allSuccessPurchases } = await supabase
-    .from("purchases")
-    .select("fan_phone, amount_kobo")
-    .eq("status", "success");
-
-  const { data: allSuccessGifts } = await supabase
-    .from("gifts")
-    .select("amount_kobo")
-    .eq("status", "success");
+  // None of these six queries depend on each other's results -- firing
+  // them together cuts total wait time from the sum of every round trip to
+  // just the slowest one, instead of paying for each sequentially.
+  const [
+    settings,
+    { data: pendingArtists },
+    { count: totalArtistCount },
+    { count: totalDropCount },
+    { data: allSuccessPurchases },
+    { data: allSuccessGifts },
+  ] = await Promise.all([
+    getPlatformSettings(supabase),
+    supabase
+      .from("artists")
+      .select("id, stage_name, profile_link")
+      .eq("approval_status", "pending")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("artists")
+      .select("id", { count: "exact", head: true })
+      .eq("approval_status", "approved"),
+    supabase.from("drops").select("id", { count: "exact", head: true }),
+    supabase.from("purchases").select("fan_phone, amount_kobo").eq("status", "success"),
+    supabase.from("gifts").select("amount_kobo").eq("status", "success"),
+  ]);
 
   const totalListeners = new Set(
     (allSuccessPurchases ?? []).map((p) => p.fan_phone),

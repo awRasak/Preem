@@ -7,24 +7,30 @@ export const revalidate = 0;
 export default async function AdminPayoutsPage() {
   const supabase = await createClient();
 
-  const settings = await getPlatformSettings(supabase);
-
-  const { data: approvedArtists } = await supabase
-    .from("artists")
-    .select("id, stage_name, bank_code, account_number, account_name")
-    .eq("approval_status", "approved");
-
-  const { data: unpaidPurchases } = await supabase
-    .from("purchases")
-    .select("amount_kobo, drops(artist_id)")
-    .eq("status", "success")
-    .eq("paid_out", false);
-
-  const { data: unpaidGifts } = await supabase
-    .from("gifts")
-    .select("artist_id, amount_kobo")
-    .eq("status", "success")
-    .eq("paid_out", false);
+  // Independent queries, fired together rather than paying for four
+  // sequential round trips.
+  const [
+    settings,
+    { data: approvedArtists },
+    { data: unpaidPurchases },
+    { data: unpaidGifts },
+  ] = await Promise.all([
+    getPlatformSettings(supabase),
+    supabase
+      .from("artists")
+      .select("id, stage_name, bank_code, account_number, account_name")
+      .eq("approval_status", "approved"),
+    supabase
+      .from("purchases")
+      .select("amount_kobo, drops(artist_id)")
+      .eq("status", "success")
+      .eq("paid_out", false),
+    supabase
+      .from("gifts")
+      .select("artist_id, amount_kobo")
+      .eq("status", "success")
+      .eq("paid_out", false),
+  ]);
 
   const balanceByArtist = new Map<string, number>();
   for (const p of unpaidPurchases ?? []) {
