@@ -53,7 +53,7 @@ export function Nav({
       {/* Sticky (not fixed) below lg so it pins to the top while scrolling
           without needing every page that renders <Nav> to compensate with
           extra top padding -- sticky elements stay in normal flow. */}
-      <nav className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/95 px-5 py-4 backdrop-blur lg:static lg:bg-transparent lg:backdrop-blur-none sm:px-8">
+      <nav className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/95 px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] backdrop-blur lg:static lg:bg-transparent lg:backdrop-blur-none sm:px-8">
         <div className="flex items-center gap-3">
           <Link href="/" className="block" onClick={() => setOpen(false)}>
             <Image
@@ -102,7 +102,7 @@ export function Nav({
 
           {/* Drawer */}
           <div
-            className={`fixed inset-y-0 right-0 z-50 flex w-72 max-w-[85vw] flex-col gap-2 border-l border-line bg-surface p-5 transition-transform duration-300 ease-out lg:hidden ${
+            className={`fixed inset-y-0 right-0 z-50 flex w-72 max-w-[85vw] flex-col gap-2 border-l border-line bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-[calc(1.25rem+env(safe-area-inset-top))] transition-transform duration-300 ease-out lg:hidden ${
               open ? "translate-x-0" : "translate-x-full"
             }`}
             onClick={() => setOpen(false)}

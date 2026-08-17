@@ -163,3 +163,60 @@ export function GiftIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function HomeIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path
+        d="M4 11.5L12 4l8 7.5"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function MusicNoteIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="8" cy="17" r="3" stroke="currentColor" strokeWidth={1.8} />
+      <circle cx="17" cy="13" r="3" stroke="currentColor" strokeWidth={1.8} />
+      <path
+        d="M11 17V4l9-2v11"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function PeopleIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth={1.8} />
+      <path
+        d="M3.5 20c0-3.5 2.5-6 5.5-6s5.5 2.5 5.5 6"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+      <circle cx="17" cy="9" r="2.3" stroke="currentColor" strokeWidth={1.8} />
+      <path
+        d="M15.3 14.3c1.9.5 3.2 2.3 3.2 5.7"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

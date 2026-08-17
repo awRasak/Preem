@@ -1,13 +1,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Avatar } from "./Avatar";
+import { HomeIcon, MusicNoteIcon, PeopleIcon } from "./Icons";
 
 export type ArtistSection = "home" | "drops" | "listeners" | "profile";
 
-const NAV_ITEMS: { section: ArtistSection; label: string; href: string; icon: string }[] = [
-  { section: "home", label: "Home", href: "/artist/dashboard", icon: "⌂" },
-  { section: "drops", label: "Drops", href: "/artist/drops", icon: "♪" },
-  { section: "listeners", label: "Listeners", href: "/artist/listeners", icon: "◐" },
+const NAV_ITEMS: {
+  section: ArtistSection;
+  label: string;
+  href: string;
+  icon: typeof HomeIcon;
+}[] = [
+  { section: "home", label: "Home", href: "/artist/dashboard", icon: HomeIcon },
+  { section: "drops", label: "Drops", href: "/artist/drops", icon: MusicNoteIcon },
+  { section: "listeners", label: "Listeners", href: "/artist/listeners", icon: PeopleIcon },
 ];
 
 export function ArtistShell({
@@ -71,7 +77,7 @@ export function ArtistShell({
         </div>
       </nav>
 
-      <nav className="flex items-center justify-between border-b border-line px-5 py-3 sm:hidden">
+      <nav className="flex items-center justify-between border-b border-line px-5 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:hidden">
         <Link href="/" className="block">
           <Image
             src="/preem-logo.png"
@@ -90,28 +96,35 @@ export function ArtistShell({
         </span>
       </nav>
 
-      <div className="pb-16 sm:pb-0">{children}</div>
+      <div className="pb-[calc(4.25rem+env(safe-area-inset-bottom))] sm:pb-0">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-line bg-surface/95 backdrop-blur sm:hidden">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.section}
-            href={item.href}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold ${
-              active === item.section ? "text-accent" : "text-muted"
-            }`}
-          >
-            <span className="text-base leading-none">{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
+      {/* Bottom tab bar: sized for comfortable one-handed thumb reach --
+          24px icons and a min ~64px tap target per item (well above the
+          44px/48px touch-target minimums), plus the home-indicator safe
+          area on notched devices so it never gets crowded by the OS. */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.section}
+              href={item.href}
+              className={`flex flex-1 flex-col items-center justify-center gap-1 py-3 text-[11px] font-bold ${
+                active === item.section ? "text-accent" : "text-muted"
+              }`}
+            >
+              <Icon className="h-6 w-6" />
+              {item.label}
+            </Link>
+          );
+        })}
         <Link
           href="/artist/profile"
-          className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-bold ${
+          className={`flex flex-1 flex-col items-center justify-center gap-1 py-3 text-[11px] font-bold ${
             active === "profile" ? "text-accent" : "text-muted"
           }`}
         >
-          <Avatar src={avatarUrl} seed={artistId} alt={artistName} size={18} />
+          <Avatar src={avatarUrl} seed={artistId} alt={artistName} size={24} />
           Profile
         </Link>
       </nav>
