@@ -99,6 +99,14 @@ h2 {
   mask-image: linear-gradient(to right, transparent, black 160px, black calc(100% - 160px), transparent);
 }
 
+/* Fades an element's bottom edge to transparent -- used behind the gift
+   row's artist-artwork background so it dissolves into the row's own
+   color instead of ending in a hard edge. */
+.fade-mask-b {
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+
 /* Fades the hero video's edges to transparent so it dissolves into the page
    background instead of reading as a hard-edged rectangle. */
 .hero-video-fade {

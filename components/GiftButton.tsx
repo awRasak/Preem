@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Script from "next/script";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
@@ -30,10 +31,14 @@ type Step = "closed" | "form" | "submitting" | "verifying" | "done" | "error";
 export function GiftButton({
   artistId,
   artistName,
+  artworkUrl,
   variant = "button",
 }: {
   artistId: string;
   artistName: string;
+  // Currently-playing track's artwork, shown faintly behind the "row"
+  // variant only -- not used for the profile-page button.
+  artworkUrl?: string | null;
   // "row": full-width pill row for the persistent mini-player, directly
   // below the progress bar. "button": compact pill for the artist profile
   // page.
@@ -131,10 +136,21 @@ export function GiftButton({
         <button
           type="button"
           onClick={openPanel}
-          className="flex w-full items-center justify-center gap-2 border-t border-line bg-accent/10 py-2 text-xs font-bold text-accent transition-colors hover:bg-accent/15"
+          className="relative flex w-full items-center justify-center gap-2 overflow-hidden border-t border-line bg-accent/10 py-4 text-xs font-bold text-accent transition-colors hover:bg-accent/15"
         >
-          <GiftIcon className="h-3.5 w-3.5" />
-          Gift {artistName}
+          {artworkUrl && (
+            <Image
+              src={artworkUrl}
+              alt=""
+              fill
+              className="fade-mask-b object-cover opacity-10"
+              sizes="100vw"
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <GiftIcon className="h-3.5 w-3.5" />
+            Gift {artistName}
+          </span>
         </button>
       ) : (
         <button
