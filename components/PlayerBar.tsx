@@ -45,10 +45,19 @@ export function PlayerBar() {
   if (!track) return null;
 
   const displayDuration = track.preview ? Math.min(duration || PREVIEW_SECONDS, PREVIEW_SECONDS) : duration;
+  const progressPct = displayDuration > 0 ? Math.min(100, (currentTime / displayDuration) * 100) : 0;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:px-8">
+      {/* Mobile mini-player: a thin progress line at the top edge instead of
+          a full slider row, same treatment Spotify uses on its compact
+          bottom bar -- the full seek bar + time labels only show at sm+,
+          where there's room for them without squeezing everything else. */}
+      <div className="h-[2px] w-full bg-line-strong sm:hidden">
+        <div className="h-full bg-accent" style={{ width: `${progressPct}%` }} />
+      </div>
+
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-2.5 sm:py-3 sm:px-8">
         <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
           <Image
             src={track.artworkUrl || artworkFallback(track.trackId)}
@@ -59,7 +68,7 @@ export function PlayerBar() {
           />
         </div>
 
-        <div className="min-w-0 flex-shrink-0 sm:w-40">
+        <div className="min-w-0 flex-1 sm:flex-shrink-0 sm:w-40">
           <div className="truncate text-sm font-medium">{track.title}</div>
           <div className="truncate text-xs text-muted">
             <Link href={`/artist/${track.artistId}`} className="hover:text-paper hover:underline">
@@ -74,14 +83,14 @@ export function PlayerBar() {
             onClick={previous}
             disabled={!hasPrevious || loading}
             aria-label="Previous track"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+            className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted sm:flex"
           >
             <PreviousTrackIcon className="h-4 w-4" />
           </button>
           <button
             onClick={toggle}
             disabled={loading}
-            className="flex h-9 w-9 items-center justify-center rounded-full border-[1.5px] border-paper disabled:opacity-50"
+            className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-paper disabled:opacity-50 sm:h-9 sm:w-9"
           >
             {loading ? (
               <span className="text-xs">…</span>
@@ -95,7 +104,7 @@ export function PlayerBar() {
             onClick={next}
             disabled={!hasNext || loading}
             aria-label="Next track"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted"
+            className="hidden h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper disabled:opacity-30 disabled:hover:text-muted sm:flex"
           >
             <NextTrackIcon className="h-4 w-4" />
           </button>
@@ -112,7 +121,7 @@ export function PlayerBar() {
           step={0.1}
           value={Math.min(currentTime, displayDuration || currentTime)}
           onChange={(e) => seek(Number(e.target.value))}
-          className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line-strong accent-accent"
+          className="hidden h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line-strong accent-accent sm:block"
         />
 
         <span className="hidden font-mono text-[11px] text-muted sm:inline">
@@ -153,7 +162,12 @@ export function PlayerBar() {
       </div>
 
       {track.artistId && (
-        <GiftButton artistId={track.artistId} artistName={track.artistName} variant="row" />
+        <GiftButton
+          artistId={track.artistId}
+          artistName={track.artistName}
+          artworkUrl={track.artworkUrl}
+          variant="row"
+        />
       )}
     </div>
   );

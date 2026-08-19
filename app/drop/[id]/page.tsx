@@ -167,8 +167,13 @@ export default async function DropPage({
             )}
           </div>
           <div className="flex-1">
-            <h1 className="mb-3 text-2xl font-bold sm:text-3xl">{drop.title}</h1>
-            <div className="flex flex-wrap items-center gap-2">
+            <h1 className="mb-2 text-2xl font-bold sm:text-3xl">{drop.title}</h1>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                {genreLabel(drop.genre)}
+                {drop.secondary_genre ? ` / ${genreLabel(drop.secondary_genre)}` : ""}
+                {isBundle ? ` · ${drop.release_type} · ${tracks.length} tracks` : ""}
+              </span>
               {drop.is_exclusive ? (
                 <Badge status="exclusive">EXCLUSIVE</Badge>
               ) : live && drop.window_end ? (
@@ -176,11 +181,6 @@ export default async function DropPage({
               ) : (
                 <Badge status="closed">Released</Badge>
               )}
-              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                {genreLabel(drop.genre)}
-                {drop.secondary_genre ? ` / ${genreLabel(drop.secondary_genre)}` : ""}
-                {isBundle ? ` · ${drop.release_type} · ${tracks.length} tracks` : ""}
-              </span>
             </div>
             {drop.description && (
               <p className="mt-4 text-sm text-muted">{drop.description}</p>
