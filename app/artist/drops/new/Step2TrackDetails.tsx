@@ -73,7 +73,7 @@ export function Step2TrackDetails({
                     value={track.title}
                     onChange={(e) => updateTrack(track.localId, { title: e.target.value })}
                     placeholder="Track title"
-                    className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-paper focus:border-line-strong focus:outline-none"
+                    className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-paper focus:border-line-strong focus:outline-none"
                   />
                 </div>
                 {track.file ? (

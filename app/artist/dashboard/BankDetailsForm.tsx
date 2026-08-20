@@ -72,7 +72,7 @@ export function BankDetailsForm({
             required
             value={bankCode}
             onChange={(e) => setBankCode(e.target.value)}
-            className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm text-paper focus:border-line-strong focus:outline-none"
+            className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
           >
             <option value="">Select bank</option>
             {banks.map((b) => (

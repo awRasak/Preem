@@ -47,7 +47,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
         value={query}
         onChange={(e) => handleQueryChange(e.target.value)}
         placeholder="Search by fan, drop, status, or ref"
-        className="mb-4 w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
+        className="mb-4 w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-base text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
       />
 
       {pageItems.length === 0 ? (

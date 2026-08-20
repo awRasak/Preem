@@ -67,7 +67,7 @@ export function PlayerRow({
         <button
           onClick={handlePlayToggle}
           disabled={isCurrent && loading}
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
         >
           {isCurrent && loading ? (
             <span className="text-xs">…</span>

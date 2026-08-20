@@ -71,7 +71,7 @@ export function TrackDetailModal({
           <button
             onClick={onClose}
             aria-label="Close"
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-muted hover:text-paper"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-muted hover:text-paper"
           >
             ✕
           </button>
@@ -90,7 +90,7 @@ export function TrackDetailModal({
           <button
             onClick={handlePlayToggle}
             disabled={isCurrent && loading}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-sm disabled:opacity-50"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-sm disabled:opacity-50"
           >
             {isCurrent && loading ? (
               <span className="text-xs">…</span>

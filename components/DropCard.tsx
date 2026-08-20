@@ -39,7 +39,7 @@ export function DropCard({ drop }: { drop: Drop }) {
           artistName={drop.artist?.stage_name ?? ""}
           artistId={drop.artist?.id ?? drop.artist_id}
           artworkUrl={drop.artwork_path}
-          className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white backdrop-blur-sm transition-transform hover:scale-110"
+          className="absolute bottom-2 left-2 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-xs text-white backdrop-blur-sm transition-transform hover:scale-110"
         />
         <div className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2.5 py-1 font-mono text-[11px] font-bold text-white backdrop-blur-sm">
           Min. {formatNaira(drop.min_price_kobo)}

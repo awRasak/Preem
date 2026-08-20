@@ -51,13 +51,6 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`h-full antialiased ${esKlarheit.variable} ${esKlarheitPlakat.variable}`}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Code:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body className="min-h-full flex flex-col bg-bg text-paper pb-20">
         <PlayerProvider>
           {children}

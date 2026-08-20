@@ -156,18 +156,32 @@ export function PlayerBar() {
           </button>
         </div>
 
+        {/* Desktop: compact pill sits right in the control row instead of
+            taking its own full-width row below. */}
+        {track.artistId && (
+          <div className="hidden flex-shrink-0 sm:block">
+            <GiftButton
+              artistId={track.artistId}
+              artistName={track.artistName}
+              variant="button"
+            />
+          </div>
+        )}
+
         {error && (
           <span className="text-xs text-[#ff6b6b]">Playback failed</span>
         )}
       </div>
 
       {track.artistId && (
-        <GiftButton
-          artistId={track.artistId}
-          artistName={track.artistName}
-          artworkUrl={track.artworkUrl}
-          variant="row"
-        />
+        <div className="sm:hidden">
+          <GiftButton
+            artistId={track.artistId}
+            artistName={track.artistName}
+            artworkUrl={track.artworkUrl}
+            variant="row"
+          />
+        </div>
       )}
     </div>
   );

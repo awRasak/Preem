@@ -23,12 +23,23 @@ export const revalidate = 0;
 export default async function MarketplacePage() {
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("drops")
-    .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
-    .eq("status", "published")
-    .or(`window_end.is.null,window_end.gt.${new Date().toISOString()}`)
-    .order("created_at", { ascending: false });
+  // These three don't depend on each other -- running them sequentially was
+  // paying for three full round trips to Supabase before the page could
+  // even start rendering, which is where most of the "feels slow on
+  // mobile" complaint was coming from. In parallel, the wait is just the
+  // slowest of the three instead of the sum.
+  const [{ data }, {
+    data: { user: sessionUser },
+  }, settings] = await Promise.all([
+    supabase
+      .from("drops")
+      .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
+      .eq("status", "published")
+      .or(`window_end.is.null,window_end.gt.${new Date().toISOString()}`)
+      .order("created_at", { ascending: false }),
+    supabase.auth.getUser(),
+    getPlatformSettings(supabase),
+  ]);
 
   const drops = ((data ?? []) as (Drop & {
     artist: {
@@ -47,9 +58,6 @@ export default async function MarketplacePage() {
   // — indistinguishable from actually being logged out, even though the
   // session was untouched (confirmed: navigating away and back still showed
   // them signed in). Reflect the real session instead.
-  const {
-    data: { user: sessionUser },
-  } = await supabase.auth.getUser();
   let accountHref = "/artist/login";
   let accountLabel = "Sign in";
   if (sessionUser) {
@@ -69,12 +77,6 @@ export default async function MarketplacePage() {
       accountLabel = "My Music Collections";
     }
   }
-
-  // Editable live from /admin → Settings, no redeploy needed. Homepage
-  // only: artists can still reach their dashboard, fans can still stream
-  // what they've already bought, and direct drop links still work for
-  // checkout.
-  const settings = await getPlatformSettings(supabase);
 
   return (
     <>

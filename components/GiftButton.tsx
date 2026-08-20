@@ -136,7 +136,7 @@ export function GiftButton({
         <button
           type="button"
           onClick={openPanel}
-          className="relative flex w-full items-center justify-center gap-2 overflow-hidden border-t border-line bg-accent/10 py-4 text-xs font-bold text-accent transition-colors hover:bg-accent/15"
+          className="relative flex w-full items-center justify-center gap-2 overflow-hidden border-t border-line bg-accent/10 py-5 text-xs font-bold text-accent transition-colors hover:bg-accent/15"
         >
           {artworkUrl && (
             <Image
