@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { Switch } from "@/components/Switch";
@@ -112,7 +113,15 @@ export function PlatformSettingsForm({
 
       {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
       <Button type="submit" variant="primary" disabled={loading}>
-        {loading ? "…" : saved ? "Saved ✓" : "Save"}
+        {loading ? (
+          "…"
+        ) : saved ? (
+          <span className="flex items-center gap-1.5">
+            Saved <Check className="h-3.5 w-3.5" />
+          </span>
+        ) : (
+          "Save"
+        )}
       </Button>
     </form>
   );

@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { PREVIEW_SECONDS } from "@/lib/preview";
+import { artworkFallback } from "@/lib/placeholder";
 
 export type PlayerTrack = {
   trackId: string;
@@ -187,6 +188,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("error", onError);
 
+    // Lets iOS/Android show the track title, artist, and artwork on the
+    // lock screen and Control Center instead of just the page title and a
+    // generic app icon, and lets the hardware/lock-screen prev-next buttons
+    // (rather than the generic 10s skip buttons browsers fall back to)
+    // drive the actual queue.
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      navigator.mediaSession.setActionHandler("play", () => audio.play());
+      navigator.mediaSession.setActionHandler("pause", () => audio.pause());
+      navigator.mediaSession.setActionHandler("previoustrack", () => step(-1));
+      navigator.mediaSession.setActionHandler("nexttrack", () => step(1));
+    }
+
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("durationchange", onDuration);
@@ -195,8 +208,40 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
       audio.pause();
+      if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+      }
     };
   }, [step]);
+
+  // Refreshes the lock-screen/Control Center metadata whenever the active
+  // track changes -- falls back to the same deterministic artwork used
+  // elsewhere in the app when a track has no artwork of its own.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    if (!track) {
+      navigator.mediaSession.metadata = null;
+      return;
+    }
+    const artwork = track.artworkUrl || artworkFallback(track.trackId);
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title,
+      artist: track.artistName,
+      artwork: [
+        { src: artwork, sizes: "512x512", type: "image/png" },
+        { src: artwork, sizes: "256x256", type: "image/png" },
+        { src: artwork, sizes: "96x96", type: "image/png" },
+      ],
+    });
+  }, [track]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+  }, [playing]);
 
   const play = useCallback(
     (nextTrack: PlayerTrack, nextQueue?: PlayerTrack[]) => {

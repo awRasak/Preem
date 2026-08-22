@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PartyPopper } from "lucide-react";
 import { Button } from "@/components/Button";
 
 const CONFETTI_COLORS = [
@@ -70,7 +71,7 @@ export function ApprovalCelebration() {
       <div className="relative w-full max-w-sm rounded-xl border border-line-strong bg-surface p-6 text-center">
         {stage === "congrats" ? (
           <>
-            <p className="mb-2 text-3xl">🎉</p>
+            <PartyPopper className="mx-auto mb-2 h-9 w-9 text-accent" />
             <h2 className="mb-2 text-xl font-bold">Congratulations!</h2>
             <p className="mb-6 text-sm text-muted">
               Your artist profile is approved — you&apos;re ready to start selling directly to your fans.

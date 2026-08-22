@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Bell } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { HomeIcon, MusicNoteIcon, PeopleIcon } from "./Icons";
 
@@ -61,10 +62,10 @@ export function ArtistShell({
         </div>
         <div className="flex items-center gap-4">
           <span
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong text-sm text-muted"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong text-muted"
             aria-hidden
           >
-            🔔
+            <Bell className="h-4 w-4" />
           </span>
           <Link
             href="/artist/profile"
@@ -89,10 +90,10 @@ export function ArtistShell({
           />
         </Link>
         <span
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong text-sm text-muted"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong text-muted"
           aria-hidden
         >
-          🔔
+          <Bell className="h-4 w-4" />
         </span>
       </nav>
 

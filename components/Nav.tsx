@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 export type NavRole = "artist" | "admin" | "fan";
@@ -83,7 +84,7 @@ export function Nav({
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
             >
-              ☰
+              <Menu className="h-4 w-4" />
             </button>
           </>
         )}
@@ -115,7 +116,7 @@ export function Nav({
               aria-label="Close menu"
               className="mb-2 flex h-9 w-9 flex-shrink-0 items-center justify-center self-end rounded-full border border-line-strong text-sm"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
             {children}
           </div>

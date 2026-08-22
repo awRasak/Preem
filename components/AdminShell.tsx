@@ -3,16 +3,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { Home, Mail, ArrowLeftRight, Wallet, Settings } from "lucide-react";
 import { SignOutButton } from "./SignOutButton";
 
 type AdminSection = "home" | "support" | "transactions" | "payouts" | "settings";
 
-const NAV_ITEMS: { section: AdminSection; label: string; href: string; icon: string }[] = [
-  { section: "home", label: "Home", href: "/admin", icon: "⌂" },
-  { section: "support", label: "Support", href: "/admin/support", icon: "✉" },
-  { section: "transactions", label: "Transactions", href: "/admin/transactions", icon: "↻" },
-  { section: "payouts", label: "Payouts", href: "/admin/payouts", icon: "₦" },
-  { section: "settings", label: "Settings", href: "/admin/settings", icon: "⚙" },
+const NAV_ITEMS: { section: AdminSection; label: string; href: string; icon: typeof Home }[] = [
+  { section: "home", label: "Home", href: "/admin", icon: Home },
+  { section: "support", label: "Support", href: "/admin/support", icon: Mail },
+  { section: "transactions", label: "Transactions", href: "/admin/transactions", icon: ArrowLeftRight },
+  { section: "payouts", label: "Payouts", href: "/admin/payouts", icon: Wallet },
+  { section: "settings", label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 // Lives in a layout.tsx above every /admin/* page (except /admin/setup),
@@ -86,6 +87,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-line bg-surface/95 backdrop-blur sm:hidden">
         {NAV_ITEMS.map((item) => {
           const isActive = active === item.section;
+          const Icon = item.icon;
           return (
             <Link
               key={item.section}
@@ -96,7 +98,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 isActive ? "text-accent" : "text-muted"
               }`}
             >
-              <span className="text-base leading-none">{item.icon}</span>
+              <Icon className="h-4 w-4" />
               {item.label}
             </Link>
           );

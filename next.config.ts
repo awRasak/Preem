@@ -5,6 +5,18 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : undefined;
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Dashboard tabs (artist Home/Drops/Listeners, admin sections) are
+    // separate dynamic routes with `revalidate = 0` for data freshness, but
+    // that's server-side only -- the client Router Cache still defaults to
+    // dropping a dynamic page's RSC payload the instant you navigate away,
+    // so switching back re-fetches from scratch every time. This keeps a
+    // recently-visited tab's payload around for 30s so tab-switching feels
+    // instant, while any post-mutation router.refresh() still bypasses it.
+    staleTimes: {
+      dynamic: 30,
+    },
+  },
   async redirects() {
     return [
       // Old receipt emails and bookmarks used /my-drops before the rename.

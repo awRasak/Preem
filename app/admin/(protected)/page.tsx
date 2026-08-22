@@ -1,3 +1,4 @@
+import { Music2, Mic2, Users, ShoppingBag, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
@@ -53,12 +54,12 @@ export default async function AdminPage() {
     <main className="mx-auto w-full max-w-4xl flex-1 space-y-12 px-5 py-8 sm:px-8">
       <section>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <StatBox icon="♪" value={String(totalDropCount ?? 0)} label="Songs" />
-          <StatBox icon="◐" value={String(totalArtistCount ?? 0)} label="Artists" />
-          <StatBox icon="☺" value={String(totalListeners)} label="Listeners" />
-          <StatBox icon="↻" value={String(totalSales)} label="Sales" />
+          <StatBox icon={<Music2 className="h-4 w-4" />} value={String(totalDropCount ?? 0)} label="Songs" />
+          <StatBox icon={<Mic2 className="h-4 w-4" />} value={String(totalArtistCount ?? 0)} label="Artists" />
+          <StatBox icon={<Users className="h-4 w-4" />} value={String(totalListeners)} label="Listeners" />
+          <StatBox icon={<ShoppingBag className="h-4 w-4" />} value={String(totalSales)} label="Sales" />
           <StatBox
-            icon="₦"
+            icon={<Wallet className="h-4 w-4" />}
             value={formatNaira(platformRevenueKobo)}
             label="Platform revenue"
           />

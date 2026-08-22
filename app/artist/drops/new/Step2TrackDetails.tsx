@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronUp, ChevronDown, X } from "lucide-react";
 import { Field, Input, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { newTrackDraft } from "./types";
@@ -49,19 +50,19 @@ export function Step2TrackDetails({
                   type="button"
                   onClick={() => moveTrack(index, -1)}
                   disabled={index === 0}
-                  className="text-xs text-muted hover:text-paper disabled:opacity-30"
+                  className="text-muted hover:text-paper disabled:opacity-30"
                   aria-label="Move up"
                 >
-                  ▲
+                  <ChevronUp className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveTrack(index, 1)}
                   disabled={index === state.tracks.length - 1}
-                  className="text-xs text-muted hover:text-paper disabled:opacity-30"
+                  className="text-muted hover:text-paper disabled:opacity-30"
                   aria-label="Move down"
                 >
-                  ▼
+                  <ChevronDown className="h-3.5 w-3.5" />
                 </button>
               </div>
               <div className="min-w-0 flex-1">
@@ -97,10 +98,10 @@ export function Step2TrackDetails({
               <button
                 type="button"
                 onClick={() => removeTrack(track.localId)}
-                className="flex-shrink-0 text-xs text-muted hover:text-paper"
+                className="flex-shrink-0 text-muted hover:text-paper"
                 aria-label="Remove track"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
             <button

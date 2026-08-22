@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import { Wallet, Users, Radio } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ArtistShell } from "@/components/ArtistShell";
 import { ApprovalCelebration } from "./ApprovalCelebration";
@@ -122,12 +123,12 @@ export default async function ArtistDashboardPage() {
 
         <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatBox
-            icon="₦"
+            icon={<Wallet className="h-4 w-4" />}
             value={formatNaira(revenueKobo)}
             label={`Revenue (${((10000 - settings.dropCommissionBps) / 100).toFixed(0)}%)`}
           />
-          <StatBox icon="◐" value={String(buyerCount)} label="Buyers" />
-          <StatBox icon="♪" value={String(liveDropCount)} label="Live drops" />
+          <StatBox icon={<Users className="h-4 w-4" />} value={String(buyerCount)} label="Buyers" />
+          <StatBox icon={<Radio className="h-4 w-4" />} value={String(liveDropCount)} label="Live drops" />
         </div>
 
         {topDrops.length > 0 && (

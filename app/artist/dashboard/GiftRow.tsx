@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Textarea } from "@/components/Field";
 import { formatNaira } from "@/lib/format";
@@ -73,7 +74,11 @@ export function GiftRow({
               Send a shout-out
             </Button>
           )}
-          {sent && <span className="text-xs text-muted">Shout-out sent ✓</span>}
+          {sent && (
+            <span className="flex items-center gap-1 text-xs text-muted">
+              Shout-out sent <Check className="h-3.5 w-3.5" />
+            </span>
+          )}
         </div>
       </div>
 
