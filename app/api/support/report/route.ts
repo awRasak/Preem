@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseBody } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   phone: z.string().trim().min(5).max(20),
@@ -10,10 +12,15 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  if (!rateLimit(`support-report:${clientIp(req)}`, { windowMs: 60 * 60 * 1000, max: 10 })) {
+    return NextResponse.json(
+      { error: "Too many reports — try again later." },
+      { status: 429 },
+    );
   }
+
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const { phone, email, dropId, message } = parsed.data;
 
   const admin = createAdminClient();

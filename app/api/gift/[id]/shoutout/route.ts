@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendGiftShoutoutEmail } from "@/lib/email";
+import { parseBody } from "@/lib/http";
 
 const schema = z.object({ message: z.string().trim().min(1).max(2000) });
 
@@ -20,10 +21,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Not authorized" }, { status: 401 });
   }
 
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
+  const { message } = parsed.data;
 
   const admin = createAdminClient();
 
@@ -52,7 +52,7 @@ export async function PATCH(
     to: gift.fan_email,
     fanName: gift.fan_name,
     artistName: artistName ?? "An artist",
-    message: parsed.data.message,
+    message,
   });
 
   await admin

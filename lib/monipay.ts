@@ -1,4 +1,5 @@
 const MONIPAY_BASE = "https://api.monipay.ng";
+const FETCH_TIMEOUT_MS = 15000;
 
 function authHeaders() {
   return {
@@ -10,6 +11,7 @@ function authHeaders() {
 async function monipayFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${MONIPAY_BASE}${path}`, {
     ...init,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { ...authHeaders(), ...(init?.headers ?? {}) },
   });
   const body = await res.json();

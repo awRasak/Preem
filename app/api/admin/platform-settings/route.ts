@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseBody } from "@/lib/http";
 
 const schema = z
   .object({
@@ -21,7 +22,13 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  const parsed = schema.safeParse(await req.json());
+  // parseBody handles content-type/JSON robustness with a permissive
+  // schema; the real schema runs here so the refine message ("At least one
+  // payment gateway must stay on.") still reaches the settings UI.
+  const raw = await parseBody(req, z.unknown());
+  if (!raw.ok) return raw.response;
+
+  const parsed = schema.safeParse(raw.data);
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid input" },

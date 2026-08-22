@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseBody } from "@/lib/http";
 
 const schema = z.object({
   artistId: z.string().uuid(),
@@ -19,10 +20,8 @@ const RATE_LIMIT_WINDOW_MINUTES = 10;
 const RATE_LIMIT_MAX_ATTEMPTS = 10;
 
 export async function POST(req: Request) {
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const { artistId, amountKobo, fanName } = parsed.data;
 
   if (amountKobo < MIN_GIFT_KOBO) {

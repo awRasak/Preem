@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseBody } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().trim().email(),
@@ -10,6 +12,15 @@ const schema = z.object({
 // First-run only: refuses once any admin already exists, so this can't be
 // used to mint additional admins later.
 export async function POST(req: Request) {
+  // While no admin exists this endpoint can mint accounts -- keep it from
+  // being hammered in that window.
+  if (!rateLimit(`admin-setup:${clientIp(req)}`, { windowMs: 60 * 60 * 1000, max: 10 })) {
+    return NextResponse.json(
+      { error: "Too many attempts — try again later." },
+      { status: 429 },
+    );
+  }
+
   const supabase = createAdminClient();
 
   const { count } = await supabase
@@ -24,10 +35,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const { email, password } = parsed.data;
 
   const { data: created, error: createError } =

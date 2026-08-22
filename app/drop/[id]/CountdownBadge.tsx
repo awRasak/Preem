@@ -1,25 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Badge } from "@/components/Badge";
 import { formatTimeLeft, isDropLive } from "@/lib/format";
 
+// One shared 1s clock tick for every mounted instance.
+const subscribe = (onStoreChange: () => void) => {
+  const interval = setInterval(onStoreChange, 1000);
+  return () => clearInterval(interval);
+};
+const getSnapshot = () => Date.now();
+// Server snapshot: formatTimeLeft/isDropLive are clock-dependent, so the
+// server and first client render agree on "nothing" -- no hydration
+// mismatch, same visible behavior as fill-after-mount.
+const getServerSnapshot = () => 0;
+
 export function CountdownBadge({ windowEnd }: { windowEnd: string }) {
-  // Starts empty so the server render and the first client render match —
-  // formatTimeLeft/isDropLive are clock-dependent, so evaluating them during
-  // the initial render (even via a useState initializer) risks a value
-  // computed a tick apart on the server vs. the client, which trips a
-  // hydration mismatch. Filling in after mount avoids that entirely.
-  const [state, setState] = useState<{ live: boolean; label: string } | null>(null);
+  const now = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  useEffect(() => {
-    const update = () => setState({ live: isDropLive(windowEnd), label: formatTimeLeft(windowEnd) });
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [windowEnd]);
-
-  if (!state) return null;
-  if (!state.live) return <Badge status="closed">Released</Badge>;
-  return <Badge status="live">LIVE — {state.label}</Badge>;
+  if (now === 0) return null;
+  if (!isDropLive(windowEnd)) return <Badge status="closed">Released</Badge>;
+  return <Badge status="live">LIVE — {formatTimeLeft(windowEnd)}</Badge>;
 }

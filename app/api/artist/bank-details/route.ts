@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAccountNumber } from "@/lib/paystack";
+import { parseBody } from "@/lib/http";
 
 const schema = z.object({
   bankCode: z.string().min(1),
@@ -17,10 +18,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const { bankCode, accountNumber } = parsed.data;
 
   let resolved;
@@ -39,8 +38,10 @@ export async function POST(req: Request) {
       bank_code: bankCode,
       account_number: accountNumber,
       account_name: resolved.account_name,
-      // bank details changed — any previously created payout recipient is now stale
+      // bank details changed — previously created payout recipients are now
+      // stale for BOTH gateways (each registers its own recipient code).
       paystack_recipient_code: null,
+      monipay_recipient_code: null,
     })
     .eq("id", user.id);
 

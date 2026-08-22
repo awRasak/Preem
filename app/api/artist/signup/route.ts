@@ -3,6 +3,8 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectPlatform, fetchOEmbed } from "@/lib/oembed";
 import { sendNewArtistSignupEmail } from "@/lib/email";
+import { parseBody } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   stageName: z.string().trim().min(1).max(80),
@@ -12,10 +14,17 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  // Unauthenticated account creation + admin notification emails: needs a
+  // floor on abuse even though signup itself is open.
+  if (!rateLimit(`artist-signup:${clientIp(req)}`, { windowMs: 60 * 60 * 1000, max: 5 })) {
+    return NextResponse.json(
+      { error: "Too many attempts — try again later." },
+      { status: 429 },
+    );
   }
+
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const { stageName, email, password } = parsed.data;
   const profileLink = parsed.data.profileLink || null;
 

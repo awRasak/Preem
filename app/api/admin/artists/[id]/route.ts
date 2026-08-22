@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseBody } from "@/lib/http";
 
 const schema = z.object({
   status: z.enum(["approved", "rejected"]),
@@ -16,10 +17,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
 
   const { id } = await params;
   const supabase = createAdminClient();

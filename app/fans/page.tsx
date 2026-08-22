@@ -63,7 +63,7 @@ export const revalidate = 0;
 
 export default async function MyDropsPage() {
   const cookieStore = await cookies();
-  const phone = verifyPhoneSessionCookieValue(
+  const phoneSession = verifyPhoneSessionCookieValue(
     cookieStore.get(PHONE_SESSION_COOKIE)?.value,
   );
 
@@ -74,17 +74,17 @@ export default async function MyDropsPage() {
 
   return (
     <>
-      <Nav role="fan">{(fan || phone) && <SignOutButton redirectTo="/fans" />}</Nav>
+      <Nav role="fan">{(fan || phoneSession) && <SignOutButton redirectTo="/fans" />}</Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 sm:px-8">
         {fan ? (
           <MyDropsLibrary userId={fan.id} />
-        ) : !phone ? (
+        ) : !phoneSession ? (
           <PhoneLookupForm />
         ) : (
-          <MyDropsLibrary phone={phone} />
+          <MyDropsLibrary phone={phoneSession.phone} email={phoneSession.email} />
         )}
         <div className="mt-10 text-center">
-          <ReportProblemButton defaultPhone={phone ?? ""} />
+          <ReportProblemButton defaultPhone={phoneSession?.phone ?? ""} />
         </div>
       </main>
     </>
@@ -108,9 +108,11 @@ type TrackInfo = {
 
 async function MyDropsLibrary({
   phone,
+  email,
   userId,
 }: {
   phone?: string;
+  email?: string;
   userId?: string;
 }) {
   const admin = createAdminClient();
@@ -120,9 +122,14 @@ async function MyDropsLibrary({
     .select("drop_id, track_id, purchased_at, amount_kobo")
     .eq("status", "success")
     .order("purchased_at", { ascending: false });
-  purchasesQuery = userId
-    ? purchasesQuery.eq("fan_user_id", userId)
-    : purchasesQuery.eq("fan_phone", phone!);
+  if (userId) {
+    purchasesQuery = purchasesQuery.eq("fan_user_id", userId);
+  } else {
+    // Phone sessions are scoped to both checkout identity halves.
+    purchasesQuery = purchasesQuery
+      .eq("fan_phone", phone!)
+      .ilike("fan_email", email!);
+  }
   const { data: purchases } = await purchasesQuery;
 
   if (!purchases || purchases.length === 0) {

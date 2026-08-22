@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import * as paystack from "@/lib/paystack";
 import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
+import { parseBody } from "@/lib/http";
 
 const schema = z.object({ artistId: z.string().uuid() });
 
@@ -16,10 +17,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const { artistId } = parsed.data;
 
   const supabase = createAdminClient();
@@ -72,6 +71,7 @@ export async function POST(req: Request) {
   const paystackPurchases = purchases.filter((p) => (p.gateway ?? "paystack") === "paystack");
   const monipayPurchases = purchases.filter((p) => p.gateway === "monipay");
 
+  // Pre-check so the common "nothing to do" case exits before claiming.
   const paystackAmountKobo =
     paystackPurchases.reduce(
       (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
@@ -89,74 +89,108 @@ export async function POST(req: Request) {
 
   const results: { gateway: Gateway; amountKobo: number }[] = [];
 
+  // Claim-then-pay: flip paid_out on exactly the still-unpaid rows FIRST
+  // (the conditional update returns what THIS call claimed), then transfer
+  // the claimed sum. Two concurrent triggers can no longer both pay the
+  // same rows -- the loser claims zero and moves on. If anything throws
+  // after claiming (recipient creation, transfer), the claim is reverted so
+  // a retry picks the money back up.
   async function payOutVia(
     gateway: Gateway,
-    amountKobo: number,
-    purchaseIds: string[],
-    includeGifts: boolean,
+    candidatePurchases: { id: string }[],
+    candidateGifts: { id: string }[],
   ) {
-    if (amountKobo <= 0) return;
-
     const client = gateway === "monipay" ? monipay : paystack;
-    const recipientColumn = gateway === "monipay" ? "monipay_recipient_code" : "paystack_recipient_code";
-    let recipientCode = artist[recipientColumn] as string | null;
+    const claimedPurchaseIds: string[] = [];
+    let claimedKobo = 0;
+    const claimedGiftIds: string[] = [];
+    let claimedGiftKobo = 0;
 
-    if (!recipientCode) {
-      const recipient = await client.createTransferRecipient({
-        name: artist.account_name,
-        accountNumber: artist.account_number,
-        bankCode: artist.bank_code,
+    try {
+      if (candidatePurchases.length > 0) {
+        const { data: claimed, error } = await supabase
+          .from("purchases")
+          .update({ paid_out: true })
+          .in("id", candidatePurchases.map((p) => p.id))
+          .eq("status", "success")
+          .eq("paid_out", false)
+          .select("id, amount_kobo");
+        if (error) throw new Error(error.message);
+        for (const row of claimed ?? []) {
+          claimedPurchaseIds.push(row.id);
+          claimedKobo += applyCommission(row.amount_kobo, settings.dropCommissionBps);
+        }
+      }
+      if (candidateGifts.length > 0) {
+        const { data: claimed, error } = await supabase
+          .from("gifts")
+          .update({ paid_out: true })
+          .in("id", candidateGifts.map((g) => g.id))
+          .eq("status", "success")
+          .eq("paid_out", false)
+          .select("id, amount_kobo");
+        if (error) throw new Error(error.message);
+        for (const row of claimed ?? []) {
+          claimedGiftIds.push(row.id);
+          claimedGiftKobo += applyCommission(row.amount_kobo, settings.giftCommissionBps);
+        }
+      }
+
+      const totalKobo =
+        gateway === "paystack" ? claimedKobo + claimedGiftKobo : claimedKobo;
+      if (totalKobo <= 0) return;
+
+      const recipientColumn =
+        gateway === "monipay" ? "monipay_recipient_code" : "paystack_recipient_code";
+      let recipientCode = artist[recipientColumn] as string | null;
+
+      if (!recipientCode) {
+        const recipient = await client.createTransferRecipient({
+          name: artist.account_name,
+          accountNumber: artist.account_number,
+          bankCode: artist.bank_code,
+        });
+        recipientCode = recipient.recipient_code;
+        await supabase
+          .from("artists")
+          .update({ [recipientColumn]: recipientCode })
+          .eq("id", artistId);
+      }
+
+      const reference = `payout_${crypto.randomUUID()}`;
+      const transfer = await client.initiateTransfer({
+        amountKobo: totalKobo,
+        recipientCode,
+        reason: "Preem weekly payout",
+        reference,
       });
-      recipientCode = recipient.recipient_code;
-      await supabase.from("artists").update({ [recipientColumn]: recipientCode }).eq("id", artistId);
+
+      await supabase.from("payouts").insert({
+        artist_id: artistId,
+        amount_kobo: totalKobo,
+        paystack_transfer_ref: reference,
+        status: transfer.status === "success" ? "success" : "pending",
+        payout_week: new Date().toISOString().slice(0, 10),
+        gateway,
+      });
+
+      results.push({ gateway, amountKobo: totalKobo });
+    } catch (err) {
+      // Transfer never completed or was never recorded -- release the
+      // claims so the next attempt isn't skipped.
+      if (claimedPurchaseIds.length > 0) {
+        await supabase.from("purchases").update({ paid_out: false }).in("id", claimedPurchaseIds);
+      }
+      if (claimedGiftIds.length > 0) {
+        await supabase.from("gifts").update({ paid_out: false }).in("id", claimedGiftIds);
+      }
+      throw err;
     }
-
-    const reference = `payout_${crypto.randomUUID()}`;
-    const transfer = await client.initiateTransfer({
-      amountKobo,
-      recipientCode,
-      reason: "Preem weekly payout",
-      reference,
-    });
-
-    await supabase.from("payouts").insert({
-      artist_id: artistId,
-      amount_kobo: amountKobo,
-      paystack_transfer_ref: reference,
-      status: transfer.status === "success" ? "success" : "pending",
-      payout_week: new Date().toISOString().slice(0, 10),
-      gateway,
-    });
-
-    if (purchaseIds.length > 0) {
-      await supabase.from("purchases").update({ paid_out: true }).in("id", purchaseIds);
-    }
-    if (includeGifts && gifts.length > 0) {
-      await supabase
-        .from("gifts")
-        .update({ paid_out: true })
-        .in(
-          "id",
-          gifts.map((g) => g.id),
-        );
-    }
-
-    results.push({ gateway, amountKobo });
   }
 
   try {
-    await payOutVia(
-      "paystack",
-      paystackAmountKobo,
-      paystackPurchases.map((p) => p.id),
-      true,
-    );
-    await payOutVia(
-      "monipay",
-      monipayAmountKobo,
-      monipayPurchases.map((p) => p.id),
-      false,
-    );
+    await payOutVia("paystack", paystackPurchases, gifts);
+    await payOutVia("monipay", monipayPurchases, []);
 
     return NextResponse.json({
       ok: true,
@@ -164,9 +198,9 @@ export async function POST(req: Request) {
       results,
     });
   } catch (err) {
-    // Whichever transfers already succeeded above are already recorded and
-    // marked paid_out -- only the failing gateway's leg is reported, so a
-    // retry naturally skips what's already been paid.
+    // Whichever transfers already succeeded are recorded and stay claimed;
+    // the failing leg's rows were released, so a retry naturally skips
+    // what's already been paid.
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Transfer failed" },
       { status: 502 },

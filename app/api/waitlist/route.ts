@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseBody } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().trim().email() });
 
 export async function POST(req: Request) {
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  if (!rateLimit(`waitlist:${clientIp(req)}`, { windowMs: 60 * 60 * 1000, max: 10 })) {
+    return NextResponse.json(
+      { error: "Too many attempts — try again later." },
+      { status: 429 },
+    );
   }
+
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
 
   const admin = createAdminClient();
   const { error } = await admin

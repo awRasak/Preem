@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Script from "next/script";
 import { Field, Input } from "@/components/Field";
@@ -163,121 +164,128 @@ export function GiftButton({
         </button>
       )}
 
-      {step !== "closed" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-xs rounded-xl border border-line-strong bg-surface p-6">
-            {step === "done" ? (
-              <div className="text-center">
-                <h3 className="mb-2 text-lg font-bold">Sent!</h3>
-                <p className="mb-4 text-sm text-muted">
-                  Your gift went straight to {artistName}. We&apos;ve emailed you a
-                  confirmation.
-                </p>
-                <Button
-                  variant="primary"
-                  className="w-full"
-                  onClick={() => setStep("closed")}
-                >
-                  Close
-                </Button>
-              </div>
-            ) : (
-              <form onSubmit={handleSend}>
-                <h3 className="mb-1 text-base font-bold">Gift {artistName}</h3>
-                <p className="mb-4 text-xs text-muted">
-                  Straight to the artist — no track unlocked, no strings attached.
-                </p>
-                <div className="mb-3 grid grid-cols-4 gap-2">
-                  {PRESET_AMOUNTS_NAIRA.map((n) => (
+      {/* Portaled to <body>: this component renders inside the PlayerBar,
+          whose backdrop-blur makes it the containing block for position:fixed
+          descendants -- without the portal the overlay is sized/positioned
+          against the ~64px bar instead of the viewport, squashing it to the
+          bottom of the screen with its buttons clipped out of reach. */}
+      {step !== "closed" &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-xs rounded-xl border border-line-strong bg-surface p-6">
+              {step === "done" ? (
+                <div className="text-center">
+                  <h3 className="mb-2 text-lg font-bold">Sent!</h3>
+                  <p className="mb-4 text-sm text-muted">
+                    Your gift went straight to {artistName}. We&apos;ve emailed you a
+                    confirmation.
+                  </p>
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    onClick={() => setStep("closed")}
+                  >
+                    Close
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleSend}>
+                  <h3 className="mb-1 text-base font-bold">Gift {artistName}</h3>
+                  <p className="mb-4 text-xs text-muted">
+                    Straight to the artist — no track unlocked, no strings attached.
+                  </p>
+                  <div className="mb-3 grid grid-cols-4 gap-2">
+                    {PRESET_AMOUNTS_NAIRA.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setSelectedNaira(n)}
+                        className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
+                          selectedNaira === n
+                            ? "border-accent bg-accent/10 text-accent"
+                            : "border-line-strong text-muted hover:text-paper"
+                        }`}
+                      >
+                        ₦{n.toLocaleString()}
+                      </button>
+                    ))}
                     <button
-                      key={n}
                       type="button"
-                      onClick={() => setSelectedNaira(n)}
+                      onClick={() => setSelectedNaira("custom")}
                       className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
-                        selectedNaira === n
+                        selectedNaira === "custom"
                           ? "border-accent bg-accent/10 text-accent"
                           : "border-line-strong text-muted hover:text-paper"
                       }`}
                     >
-                      ₦{n.toLocaleString()}
+                      Custom
                     </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedNaira("custom")}
-                    className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
-                      selectedNaira === "custom"
-                        ? "border-accent bg-accent/10 text-accent"
-                        : "border-line-strong text-muted hover:text-paper"
-                    }`}
-                  >
-                    Custom
-                  </button>
-                </div>
-                {selectedNaira === "custom" && (
-                  <Field label="Amount (₦)">
-                    <Input
-                      required
-                      type="number"
-                      min={100}
-                      step="1"
-                      value={customNaira}
-                      onChange={(e) => setCustomNaira(e.target.value)}
-                      autoFocus
-                    />
-                  </Field>
-                )}
-                {needsGuestInfo && (
-                  <>
-                    <Field label="Name">
+                  </div>
+                  {selectedNaira === "custom" && (
+                    <Field label="Amount (₦)">
                       <Input
                         required
-                        value={fanName}
-                        onChange={(e) => setFanName(e.target.value)}
-                        placeholder="Your name"
+                        type="number"
+                        min={100}
+                        step="1"
+                        value={customNaira}
+                        onChange={(e) => setCustomNaira(e.target.value)}
+                        autoFocus
                       />
                     </Field>
-                    <Field label="Email">
-                      <Input
-                        required
-                        type="email"
-                        value={fanEmail}
-                        onChange={(e) => setFanEmail(e.target.value)}
-                        placeholder="you@email.com"
-                      />
-                    </Field>
-                  </>
-                )}
-                {error && (
-                  <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setStep("closed")}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="flex-1"
-                    disabled={step === "submitting" || step === "verifying"}
-                  >
-                    {step === "submitting"
-                      ? "…"
-                      : step === "verifying"
-                        ? "Verifying…"
-                        : `Send ${amountValid ? formatNaira(amountKobo) : ""}`}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+                  )}
+                  {needsGuestInfo && (
+                    <>
+                      <Field label="Name">
+                        <Input
+                          required
+                          value={fanName}
+                          onChange={(e) => setFanName(e.target.value)}
+                          placeholder="Your name"
+                        />
+                      </Field>
+                      <Field label="Email">
+                        <Input
+                          required
+                          type="email"
+                          value={fanEmail}
+                          onChange={(e) => setFanEmail(e.target.value)}
+                          placeholder="you@email.com"
+                        />
+                      </Field>
+                    </>
+                  )}
+                  {error && (
+                    <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setStep("closed")}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="flex-1"
+                      disabled={step === "submitting" || step === "verifying"}
+                    >
+                      {step === "submitting"
+                        ? "…"
+                        : step === "verifying"
+                          ? "Verifying…"
+                          : `Send ${amountValid ? formatNaira(amountKobo) : ""}`}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

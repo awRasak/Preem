@@ -25,12 +25,12 @@ export function PhoneLookupForm() {
     const res = await fetch("/api/my-drops/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, email }),
     });
 
     setLoading(false);
     if (!res.ok) {
-      setError("Enter a valid phone number.");
+      setError("No purchases found for that phone number and email.");
       return;
     }
     router.refresh();
@@ -133,7 +133,7 @@ export function PhoneLookupForm() {
     <div className="mx-auto w-full max-w-sm">
       <h1 className="mb-2 text-2xl font-bold">My Music Collections</h1>
       <p className="mb-6 text-sm text-muted">
-        Enter the phone number you used at checkout to see your library.
+        Enter the phone number and email you used at checkout to see your library.
       </p>
       <form onSubmit={handlePhoneSubmit}>
         <Field label="Phone number">
@@ -143,6 +143,15 @@ export function PhoneLookupForm() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="080..."
+          />
+        </Field>
+        <Field label="Email">
+          <Input
+            required
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@email.com"
           />
         </Field>
         {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}

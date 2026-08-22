@@ -101,6 +101,14 @@ export async function GET(
   const requestedRange = /^bytes=(\d+)-(\d*)$/.exec(req.headers.get("range") ?? "");
   if (requestedRange) {
     start = Math.min(Number(requestedRange[1]), previewMaxBytes - 1);
+    // A range starting at/after the cap is unsatisfiable -- say so instead
+    // of proxying a doomed upstream request.
+    if (Number(requestedRange[1]) >= previewMaxBytes) {
+      return new Response("Preview range not satisfiable", {
+        status: 416,
+        headers: { "Content-Range": `bytes */${previewMaxBytes}` },
+      });
+    }
     end = requestedRange[2]
       ? Math.min(Number(requestedRange[2]), previewMaxBytes - 1)
       : previewMaxBytes - 1;

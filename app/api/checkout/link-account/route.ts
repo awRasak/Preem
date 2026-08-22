@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseBody } from "@/lib/http";
 
 const schema = z.object({ reference: z.string().min(1) });
 
@@ -11,10 +12,8 @@ const schema = z.object({ reference: z.string().min(1) });
 // with this email") and re-checks the email matches, so a signed-in fan
 // can't attach someone else's purchase by guessing a reference.
 export async function POST(req: Request) {
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
 
   const supabase = await createClient();
   const {

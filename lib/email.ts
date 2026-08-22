@@ -38,6 +38,11 @@ export async function sendReceiptEmail({
   if (!resend) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng";
+  // fanName and dropTitle are user/artist-controlled -- never interpolate
+  // them raw into HTML (same treatment as the gift emails below).
+  const safeFanName = escapeHtml(fanName);
+  const safeDropTitle = escapeHtml(dropTitle);
+  const safeArtistName = escapeHtml(artistName);
 
   await resend.emails.send({
     from: FROM,
@@ -45,8 +50,8 @@ export async function sendReceiptEmail({
     subject: `Your receipt for "${dropTitle}"`,
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
-        <h2 style="margin-bottom: 4px;">Thanks, ${fanName}!</h2>
-        <p style="color: #555;">You now have permanent streaming access to <strong>${dropTitle}</strong>${artistName ? ` by ${artistName}` : ""}.</p>
+        <h2 style="margin-bottom: 4px;">Thanks, ${safeFanName}!</h2>
+        <p style="color: #555;">You now have permanent streaming access to <strong>${safeDropTitle}</strong>${artistName ? ` by ${safeArtistName}` : ""}.</p>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777;">Amount paid</td>
@@ -146,6 +151,10 @@ export async function sendNewArtistSignupEmail({
   if (!resend || to.length === 0) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng";
+  // All four fields are artist-controlled at signup time.
+  const safeStageName = escapeHtml(stageName);
+  const safeEmail = escapeHtml(email);
+  const safeProfileLink = profileLink ? escapeHtml(profileLink) : null;
 
   await resend.emails.send({
     from: FROM,
@@ -157,15 +166,15 @@ export async function sendNewArtistSignupEmail({
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777;">Stage name</td>
-            <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${stageName}</td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${safeStageName}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777;">Email</td>
-            <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${email}</td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${safeEmail}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #777;">Profile link</td>
-            <td style="padding: 8px 0; text-align: right;">${profileLink ?? "— none —"}</td>
+            <td style="padding: 8px 0; text-align: right;">${profileLink ? `<a href="${safeProfileLink}" rel="noopener noreferrer nofollow">${safeProfileLink}</a>` : "— none —"}</td>
           </tr>
         </table>
         <p style="color: #555;">

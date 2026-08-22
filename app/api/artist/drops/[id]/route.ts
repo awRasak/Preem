@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { GENRES } from "@/lib/genres";
 import type { Genre } from "@/lib/types";
+import { parseBody } from "@/lib/http";
 
 const genreValues = GENRES.map((g) => g.value) as [Genre, ...Genre[]];
 const genreSchema = z.enum(genreValues);
@@ -23,7 +24,13 @@ const schema = z.object({
   artworkPath: z.string().nullable().optional(),
   minPriceNaira: z.number().positive(),
   isExclusive: z.boolean(),
-  releaseDate: z.string().nullable(),
+  // Must be a bare YYYY-MM-DD date -- it's concatenated with a time and
+  // parsed below, and an unparseable value would throw on toISOString().
+  releaseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .refine((s) => !Number.isNaN(new Date(`${s}T23:59:59`).getTime()))
+    .nullable(),
   tracks: z.array(trackSchema).optional(),
 });
 
@@ -39,10 +46,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const input = parsed.data;
 
   const { id } = await params;

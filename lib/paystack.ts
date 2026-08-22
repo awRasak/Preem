@@ -1,6 +1,7 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
+const FETCH_TIMEOUT_MS = 15000;
 
 function authHeaders() {
   return {
@@ -15,6 +16,7 @@ async function paystackFetch<T>(
 ): Promise<T> {
   const res = await fetch(`${PAYSTACK_BASE}${path}`, {
     ...init,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { ...authHeaders(), ...(init?.headers ?? {}) },
   });
   const body = await res.json();
@@ -91,5 +93,8 @@ export function verifyWebhookSignature(
   const hash = createHmac("sha512", process.env.PAYSTACK_SECRET_KEY!)
     .update(rawBody)
     .digest("hex");
-  return hash === signature;
+  const hashBuf = Buffer.from(hash);
+  const sigBuf = Buffer.from(signature);
+  if (sigBuf.length !== hashBuf.length) return false;
+  return timingSafeEqual(sigBuf, hashBuf);
 }

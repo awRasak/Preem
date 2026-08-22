@@ -15,7 +15,11 @@ export async function POST(req: Request) {
 
   if (event.event === "charge.success") {
     const supabase = createAdminClient();
-    await markPurchaseSuccess(supabase, event.data.reference);
+    // Fail closed if Paystack ever omits the collected amount: the verify
+    // callback path re-checks independently, so skipping here is safe.
+    const paidAmount =
+      typeof event.data?.amount === "number" ? event.data.amount : undefined;
+    await markPurchaseSuccess(supabase, event.data.reference, paidAmount);
   }
 
   return NextResponse.json({ received: true });

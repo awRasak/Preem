@@ -3,6 +3,8 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDropLive } from "@/lib/format";
 import { getPlatformSettings } from "@/lib/platform-settings";
+import { parseBody } from "@/lib/http";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   dropId: z.string().uuid(),
@@ -21,10 +23,19 @@ const RATE_LIMIT_WINDOW_MINUTES = 10;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 
 export async function POST(req: Request) {
-  const parsed = schema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  // IP-level backstop on top of the per-phone limit below: pending rows are
+  // created before any payment happens, so unthrottled this endpoint is a
+  // free DB write (and lets one actor lock out a victim phone's checkout
+  // quota).
+  if (!rateLimit(`checkout-init:${clientIp(req)}`, { windowMs: 10 * 60 * 1000, max: 20 })) {
+    return NextResponse.json(
+      { error: "Too many attempts — try again in a few minutes." },
+      { status: 429 },
+    );
   }
+
+  const parsed = await parseBody(req, schema);
+  if (!parsed.ok) return parsed.response;
   const { dropId, trackId, amountKobo, fanName, fanPhone, fanEmail, gateway } = parsed.data;
 
   const supabase = createAdminClient();

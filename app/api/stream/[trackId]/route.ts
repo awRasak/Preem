@@ -5,12 +5,17 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { PHONE_SESSION_COOKIE, verifyPhoneSessionCookieValue } from "@/lib/phone-session";
 
 const SIGNED_URL_EXPIRY_SECONDS = 300;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ trackId: string }> },
 ) {
   const { trackId } = await params;
+  // Validate before it reaches any PostgREST filter string below.
+  if (!UUID_RE.test(trackId)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const admin = createAdminClient();
 
   const { data } = await admin
@@ -37,18 +42,21 @@ export async function GET(
   let authorized = false;
 
   const cookieStore = await cookies();
-  const phone = verifyPhoneSessionCookieValue(
+  const session = verifyPhoneSessionCookieValue(
     cookieStore.get(PHONE_SESSION_COOKIE)?.value,
   );
 
-  if (phone) {
+  if (session) {
     // Access rule: a success purchase on this drop with track_id = this
     // track OR track_id IS NULL (bought the whole release) unlocks it.
+    // Both halves of the checkout identity (phone + email) must match --
+    // the cookie is only issued after proving both anyway.
     const { count } = await admin
       .from("purchases")
       .select("id", { count: "exact", head: true })
       .eq("drop_id", track.drop_id)
-      .eq("fan_phone", phone)
+      .eq("fan_phone", session.phone)
+      .ilike("fan_email", session.email)
       .eq("status", "success")
       .or(`track_id.eq.${trackId},track_id.is.null`);
     if ((count ?? 0) > 0) authorized = true;
