@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { invalidatePlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 
 const schema = z
@@ -52,6 +53,8 @@ export async function PATCH(req: Request) {
   if (error) {
     return NextResponse.json({ error: "Could not save." }, { status: 500 });
   }
+
+  invalidatePlatformSettings();
 
   return NextResponse.json({ ok: true });
 }

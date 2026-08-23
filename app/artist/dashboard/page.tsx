@@ -11,6 +11,7 @@ import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
 import { GiftRow } from "./GiftRow";
+import { DropsManager } from "./DropsManager";
 import type { Drop, Purchase } from "@/lib/types";
 
 export default async function ArtistDashboardPage() {
@@ -20,52 +21,72 @@ export default async function ArtistDashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/artist/login");
 
-  const { data: artist } = await supabase
-    .from("artists")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const settings = await getPlatformSettings(supabase);
+
+  // Everything below is independent of everything else in its wave -- the
+  // purchases and track-path queries reach this artist's rows through
+  // drops!inner(artist_id) joins instead of waiting for the drops list, so
+  // all four fire together instead of stacking seven round-trips on a
+  // ~0.3-1.5s-per-query remote database.
+  const [
+    { data: artist },
+    { data: drops },
+    { data: successPurchases },
+    { data: gifts },
+    { data: trackPaths },
+  ] = await Promise.all([
+    supabase.from("artists").select("*").eq("id", user.id).single(),
+    supabase
+      .from("drops")
+      .select("*")
+      .eq("artist_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("purchases")
+      .select("drop_id, amount_kobo, fan_phone, drops!inner(artist_id)")
+      .eq("status", "success")
+      .eq("drops.artist_id", user.id),
+    supabase
+      .from("gifts")
+      .select("*")
+      .eq("artist_id", user.id)
+      .eq("status", "success")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("drop_tracks")
+      .select("drop_id, audio_file_path, drops!inner(artist_id)")
+      .eq("drops.artist_id", user.id),
+  ]);
 
   if (!artist) redirect("/artist/login");
 
-  const settings = await getPlatformSettings(supabase);
+  const purchases = (successPurchases ?? []) as unknown as Purchase[];
 
-  const { data: drops } = await supabase
-    .from("drops")
-    .select("*")
-    .eq("artist_id", user.id)
-    .order("created_at", { ascending: false });
+  // Audio storage paths per drop, handed to the client manager so deleting a
+  // drop can also evict its files from the bucket. (Queried in the parallel
+  // wave above via drops!inner(artist_id).)
+  const audioPathsByDrop = new Map<string, string[]>();
+  for (const t of trackPaths ?? []) {
+    const list = audioPathsByDrop.get(t.drop_id) ?? [];
+    if ("audio_file_path" in t && typeof t.audio_file_path === "string") {
+      list.push(t.audio_file_path);
+    }
+    audioPathsByDrop.set(t.drop_id, list);
+  }
 
-  const dropIds = (drops ?? []).map((d) => d.id);
-
-  const { data: purchases } = dropIds.length
-    ? await supabase
-        .from("purchases")
-        .select("*")
-        .in("drop_id", dropIds)
-        .eq("status", "success")
-    : { data: [] as Purchase[] };
-
-  const { data: gifts } = await supabase
-    .from("gifts")
-    .select("*")
-    .eq("artist_id", user.id)
-    .eq("status", "success")
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  const successPurchases = purchases ?? [];
-  const revenueKobo = successPurchases.reduce(
+  const successPurchasesList = purchases;
+  const revenueKobo = successPurchasesList.reduce(
     (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
     0,
   );
-  const buyerCount = new Set(successPurchases.map((p) => p.fan_phone)).size;
+  const buyerCount = new Set(purchases.map((p) => p.fan_phone)).size;
   const liveDropCount = (drops ?? []).filter(
     (d) => d.status === "published" && isDropLive(d.window_end),
   ).length;
 
   const salesByDrop = new Map<string, { count: number; revenueKobo: number }>();
-  for (const p of successPurchases) {
+  for (const p of purchases) {
     const entry = salesByDrop.get(p.drop_id) ?? { count: 0, revenueKobo: 0 };
     entry.count += 1;
     entry.revenueKobo += applyCommission(p.amount_kobo, settings.dropCommissionBps);
@@ -186,56 +207,19 @@ export default async function ArtistDashboardPage() {
         )}
 
         <h2 className="mb-4 text-lg font-bold">Your drops</h2>
-        <div className="divide-y divide-line rounded-xl border border-line">
-          {(drops ?? []).length === 0 && (
-            <p className="p-5 text-sm text-muted">
-              No drops yet — publish your first one.
-            </p>
-          )}
-          {(drops as Drop[] | null)?.map((drop) => {
-            const sales = salesByDrop.get(drop.id) ?? { count: 0, revenueKobo: 0 };
-            const live = drop.status === "published" && isDropLive(drop.window_end);
-            return (
-              <div
-                key={drop.id}
-                className="flex items-center justify-between gap-3 p-4"
-              >
-                <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
-                  <Image
-                    src={drop.artwork_path || artworkFallback(drop.id)}
-                    alt={drop.title}
-                    fill
-                    className="object-cover"
-                    sizes="44px"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <a
-                    href={`/artist/drops/${drop.id}`}
-                    className="block truncate text-sm font-medium hover:underline"
-                  >
-                    {drop.title}
-                  </a>
-                  <div className="mt-1 text-xs text-muted">
-                    {sales.count} sale{sales.count === 1 ? "" : "s"} ·{" "}
-                    {formatNaira(sales.revenueKobo)}
-                  </div>
-                </div>
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  {drop.status === "draft" ? (
-                    <Badge status="pending">Draft</Badge>
-                  ) : drop.is_exclusive ? (
-                    <Badge status="exclusive">Exclusive</Badge>
-                  ) : live ? (
-                    <Badge status="live">Live</Badge>
-                  ) : (
-                    <Badge status="closed">Released</Badge>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <DropsManager
+          drops={(drops as Drop[] | null)?.map((drop) => ({
+            id: drop.id,
+            title: drop.title,
+            status: drop.status,
+            is_exclusive: drop.is_exclusive,
+            window_end: drop.window_end,
+            artwork_path: drop.artwork_path,
+            salesCount: salesByDrop.get(drop.id)?.count ?? 0,
+            revenueKobo: salesByDrop.get(drop.id)?.revenueKobo ?? 0,
+            audioPaths: audioPathsByDrop.get(drop.id) ?? [],
+          })) ?? []}
+        />
       </main>
     </ArtistShell>
   );

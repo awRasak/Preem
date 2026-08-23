@@ -601,3 +601,9 @@ drop trigger if exists artist_privileged_columns_guard on artists;
 create trigger artist_privileged_columns_guard
   before update or insert on artists
   for each row execute function enforce_artist_privileged_columns();
+-- Synced lyrics (LRC format) for Spotify-style karaoke highlighting in the
+-- player. Stored alongside -- never replacing -- the plain-text lyrics
+-- column: lib/lrc.ts splits artist input into both, so existing consumers
+-- of `lyrics` (drop page sheet, etc.) keep working unchanged.
+
+alter table drop_tracks add column if not exists lyrics_lrc text;

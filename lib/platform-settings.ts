@@ -20,9 +20,25 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   waitlistModeEnabled: true,
 };
 
+// Short-lived in-process cache: settings are read on nearly every page but
+// change maybe once a month, so paying a full Supabase round-trip (~0.3-1.5s
+// on the current region) per render is pure waste. 30s staleness is
+// invisible to artists/fans; admin saves call invalidatePlatformSettings()
+// so the settings screen itself is always exact.
+const SETTINGS_TTL_MS = 30_000;
+let settingsCache: { data: PlatformSettings; at: number } | null = null;
+
+export function invalidatePlatformSettings() {
+  settingsCache = null;
+}
+
 export async function getPlatformSettings(
   supabase: SupabaseClient,
 ): Promise<PlatformSettings> {
+  if (settingsCache && Date.now() - settingsCache.at < SETTINGS_TTL_MS) {
+    return settingsCache.data;
+  }
+
   const { data } = await supabase
     .from("platform_settings")
     .select(
@@ -32,13 +48,15 @@ export async function getPlatformSettings(
     .maybeSingle();
 
   if (!data) return DEFAULT_SETTINGS;
-  return {
+  const settings: PlatformSettings = {
     dropCommissionBps: data.drop_commission_bps,
     giftCommissionBps: data.gift_commission_bps,
     paystackEnabled: data.paystack_enabled,
     monipayEnabled: data.monipay_enabled,
     waitlistModeEnabled: data.waitlist_mode_enabled,
   };
+  settingsCache = { data: settings, at: Date.now() };
+  return settings;
 }
 
 // amountKobo * (10000 - commissionBps) / 10000, rounded -- the artist's cut
