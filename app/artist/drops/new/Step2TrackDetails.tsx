@@ -125,6 +125,7 @@ export function Step2TrackDetails({
                     rows={4}
                     value={track.lyrics}
                     onChange={(e) => updateTrack(track.localId, { lyrics: e.target.value })}
+                    placeholder={"Plain text, or LRC for synced playback:\n[00:12.50] First line of the verse"}
                   />
                 </Field>
               </div>

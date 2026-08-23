@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { splitLyrics } from "@/lib/lrc";
 import { Nav } from "@/components/Nav";
 import { QuickCaptureModal } from "./QuickCaptureModal";
 import { Step1ReleaseSetup } from "./Step1ReleaseSetup";
@@ -31,23 +32,67 @@ function sleep(ms: number) {
 // right after a fresh page load/login — the very first Supabase call fired
 // can transiently fail RLS auth even though the artist is genuinely
 // approved. One retry after a short delay clears this reliably.
-async function uploadFile(
-  supabase: ReturnType<typeof createClient>,
+//
+// Uploads deliberately bypass supabase-js (.upload() is fetch-based, which
+// offers no progress events) and use XHR so the UI can render real
+// byte-level progress over slow links.
+type UploadProgress = (percent: number) => void;
+
+function storageUpload(
   bucket: "audio" | "artwork",
-  userId: string,
+  path: string,
   file: File,
-) {
+  token: string,
+  onPercent: UploadProgress,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(
+      "POST",
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${bucket}/${path}`,
+    );
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("apikey", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "");
+    xhr.setRequestHeader("x-upsert", "true");
+    xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onPercent(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () =>
+      xhr.status < 300 ? resolve() : reject(new Error(`Storage error (${xhr.status})`));
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.send(file);
+  });
+}
+
+async function uploadFile(
+  userId: string,
+  token: string,
+  bucket: "audio" | "artwork",
+  file: File,
+  label: string,
+  onPercent: UploadProgress,
+): Promise<string> {
   const ext = file.name.split(".").pop();
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-  const label = bucket === "audio" ? "track" : "artwork";
 
-  let { error } = await supabase.storage.from(bucket).upload(path, file);
-  if (error) {
-    await sleep(500);
-    ({ error } = await supabase.storage.from(bucket).upload(path, file));
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await storageUpload(bucket, path, file, token, onPercent);
+      return path;
+    } catch (e) {
+      lastError = e;
+      // Same transient-session-race protection as before: the very first
+      // authenticated call can fail RLS while the session cookie settles.
+      if (attempt === 0) await sleep(500);
+    }
   }
-  if (error) throw new Error(`Could not upload ${label} file: ${error.message}`);
-  return path;
+  throw new Error(
+    `Could not upload ${label} file: ${
+      lastError instanceof Error ? lastError.message : "unknown error"
+    }`,
+  );
 }
 
 export default function CreateDropWizard() {
@@ -57,6 +102,9 @@ export default function CreateDropWizard() {
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<"publish" | "save" | null>(null);
+  const [progress, setProgress] = useState<{ label: string; percent: number | null } | null>(
+    null,
+  );
 
   function patch(p: Partial<WizardState>) {
     setState((s) => ({ ...s, ...p }));
@@ -108,7 +156,7 @@ export default function CreateDropWizard() {
   }
 
   async function buildTrackRows(
-    supabase: ReturnType<typeof createClient>,
+    token: string,
     userId: string,
     releaseMinPriceKobo: number,
     strict: boolean,
@@ -118,7 +166,10 @@ export default function CreateDropWizard() {
         if (strict) throw new Error("Add a track file.");
         return [];
       }
-      const audioPath = await uploadFile(supabase, "audio", userId, state.singleAudioFile);
+      setProgress({ label: "Uploading track", percent: 0 });
+      const audioPath = await uploadFile(userId, token, "audio", state.singleAudioFile, "track", (p) =>
+        setProgress({ label: "Uploading track", percent: p }),
+      );
       return [
         {
           track_number: 1,
@@ -139,6 +190,7 @@ export default function CreateDropWizard() {
       min_price_kobo: number;
       collaborators: string | null;
       lyrics: string | null;
+      lyrics_lrc: string | null;
     }[] = [];
     for (const track of usable) {
       if (!track.file) {
@@ -146,7 +198,12 @@ export default function CreateDropWizard() {
         continue;
       }
       const trackNumber = rows.length + 1;
-      const audioPath = await uploadFile(supabase, "audio", userId, track.file);
+      const of = ` of ${usable.length}`;
+      setProgress({ label: `Uploading track ${trackNumber}${of}`, percent: 0 });
+      const audioPath = await uploadFile(userId, token, "audio", track.file, "track", (p) =>
+        setProgress({ label: `Uploading track ${trackNumber}${of}`, percent: p }),
+      );
+      const { lyrics: plainLyrics, lyricsLrc } = splitLyrics(track.lyrics);
       rows.push({
         track_number: trackNumber,
         title: track.title || `Track ${trackNumber}`,
@@ -155,7 +212,8 @@ export default function CreateDropWizard() {
           ? Math.round(Number(track.minPriceNaira) * 100)
           : Math.round((Number(track.minPriceNaira) || 0) * 100) || 1,
         collaborators: track.collaborators || null,
-        lyrics: track.lyrics || null,
+        lyrics: plainLyrics,
+        lyrics_lrc: lyricsLrc,
       });
     }
     return rows;
@@ -180,10 +238,17 @@ export default function CreateDropWizard() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Your session expired — sign in again.");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Your session expired — sign in again.");
 
       let artworkPublicUrl: string | null = null;
       if (state.artworkFile) {
-        const artPath = await uploadFile(supabase, "artwork", user.id, state.artworkFile);
+        setProgress({ label: "Uploading artwork", percent: 0 });
+        const artPath = await uploadFile(user.id, session.access_token, "artwork", state.artworkFile, "artwork", (p) =>
+          setProgress({ label: "Uploading artwork", percent: p }),
+        );
         artworkPublicUrl = supabase.storage.from("artwork").getPublicUrl(artPath).data.publicUrl;
       }
 
@@ -235,7 +300,8 @@ export default function CreateDropWizard() {
         );
       }
 
-      const trackRows = await buildTrackRows(supabase, user.id, releaseMinPriceKobo, mode === "publish");
+      const trackRows = await buildTrackRows(session.access_token, user.id, releaseMinPriceKobo, mode === "publish");
+      setProgress({ label: "Saving tracklist", percent: null });
       if (trackRows.length > 0) {
         const { error: tracksError } = await supabase
           .from("drop_tracks")
@@ -248,6 +314,7 @@ export default function CreateDropWizard() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setSubmitting(null);
+      setProgress(null);
     }
   }
 
@@ -284,6 +351,24 @@ export default function CreateDropWizard() {
             {step === 2 && <Step2TrackDetails state={state} onChange={patch} />}
             {step === 3 && <Step3Pricing state={state} onChange={patch} />}
             {step === 4 && <Step4Review state={state} />}
+            {progress && (
+              <div className="mt-4" aria-live="polite">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                  {progress.label}
+                  {progress.percent !== null ? ` · ${progress.percent}%` : "…"}
+                </p>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+                  {progress.percent !== null ? (
+                    <div
+                      className="h-full rounded-full bg-paper transition-all duration-200"
+                      style={{ width: `${progress.percent}%` }}
+                    />
+                  ) : (
+                    <div className="h-full w-full animate-pulse rounded-full bg-paper/40" />
+                  )}
+                </div>
+              </div>
+            )}
             {error && <p className="mt-4 text-sm text-[#ff6b6b]">{error}</p>}
           </div>
           {step !== 4 && (

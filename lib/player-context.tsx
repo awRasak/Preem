@@ -17,6 +17,15 @@ export type PlayerTrack = {
   artistName: string;
   artistId: string;
   artworkUrl: string | null;
+  // Shown on the player's Lyrics tab. Lyrics are public on drop pages, so
+  // carrying them here leaks nothing that isn't already visible.
+  lyrics?: string | null;
+  // Optional LRC (timestamped) variant -- enables synced highlighting and
+  // tap-to-seek on the Lyrics tab.
+  lyricsLrc?: string | null;
+  // Human label for where this queue came from ("Lagos Nights", the fan's
+  // library...) shown as "Playing from …" on the now-playing screen.
+  collectionTitle?: string | null;
   // Presence means: fetch from the public preview endpoint (unauthenticated,
   // capped to PREVIEW_SECONDS) instead of the purchase/owner-gated stream
   // endpoint. `trackId` here narrows to a specific track within the drop —
@@ -42,6 +51,8 @@ type PlayerContextValue = {
   seek: (time: number) => void;
   next: () => void;
   previous: () => void;
+  // Dismisses the player entirely: stops audio and clears track + queue.
+  close: () => void;
   hasNext: boolean;
   hasPrevious: boolean;
   repeatMode: RepeatMode;
@@ -282,6 +293,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     step(-1);
   }, [step]);
 
+  // Dismissing the bar: stop playback and drop the audio element's source so
+  // the browser stops buffering, then wipe all visible state.
+  const close = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }
+    setTrack(null);
+    setQueue([]);
+    setCurrentTime(0);
+    setDuration(0);
+    setError(false);
+    setLoading(false);
+    setPlaying(false);
+  }, []);
+
   const cycleRepeat = useCallback(() => {
     setRepeatMode((m) => (m === "off" ? "all" : m === "all" ? "one" : "off"));
   }, []);
@@ -306,11 +335,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         currentTime,
         duration,
         error,
-        play,
-        toggle,
-        seek,
-        next,
-        previous,
+         play,
+         toggle,
+         seek,
+         next,
+         previous,
+         close,
         hasNext,
         hasPrevious,
         repeatMode,

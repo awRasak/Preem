@@ -59,6 +59,7 @@ export type DropTrack = {
   min_price_kobo: number;
   collaborators: string | null;
   lyrics: string | null;
+  lyrics_lrc: string | null;
   created_at: string;
 };
 

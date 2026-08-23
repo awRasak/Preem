@@ -96,6 +96,9 @@ export default async function DropPage({
     artistName,
     artistId,
     artworkUrl: drop.artwork_path,
+    lyrics: t.lyrics,
+    lyricsLrc: t.lyrics_lrc,
+    collectionTitle: drop.title,
     preview: { dropId: drop.id, trackId: t.id },
   }));
 

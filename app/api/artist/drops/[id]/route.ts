@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { GENRES } from "@/lib/genres";
 import type { Genre } from "@/lib/types";
 import { parseBody } from "@/lib/http";
+import { splitLyrics } from "@/lib/lrc";
 
 const genreValues = GENRES.map((g) => g.value) as [Genre, ...Genre[]];
 const genreSchema = z.enum(genreValues);
@@ -106,12 +107,14 @@ export async function PATCH(
   }
 
   for (const track of input.tracks ?? []) {
+    const { lyrics, lyricsLrc } = splitLyrics(track.lyrics);
     const { error: trackError } = await supabase
       .from("drop_tracks")
       .update({
         title: track.title,
         collaborators: track.collaborators || null,
-        lyrics: track.lyrics || null,
+        lyrics,
+        lyrics_lrc: lyricsLrc,
         min_price_kobo: hasSales
           ? undefined
           : Math.round(track.minPriceNaira * 100),

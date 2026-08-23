@@ -104,6 +104,7 @@ type TrackInfo = {
   track_number: number;
   title: string;
   lyrics: string | null;
+  lyrics_lrc: string | null;
 };
 
 async function MyDropsLibrary({
@@ -182,7 +183,7 @@ async function MyDropsLibrary({
     trackQueries.push(
       admin
         .from("drop_tracks")
-        .select("id, drop_id, track_number, title, lyrics")
+        .select("id, drop_id, track_number, title, lyrics, lyrics_lrc")
         .in("drop_id", bundleDropIds),
     );
   }
@@ -190,7 +191,7 @@ async function MyDropsLibrary({
     trackQueries.push(
       admin
         .from("drop_tracks")
-        .select("id, drop_id, track_number, title, lyrics")
+        .select("id, drop_id, track_number, title, lyrics, lyrics_lrc")
         .in("id", specificTrackIds),
     );
   }
@@ -234,6 +235,9 @@ async function MyDropsLibrary({
           artistName,
           artistId,
           artworkUrl: drop.artwork_path,
+          lyrics: track?.lyrics ?? null,
+          lyricsLrc: track?.lyrics_lrc ?? null,
+          collectionTitle: drop.title,
         },
       ];
     }
@@ -243,6 +247,9 @@ async function MyDropsLibrary({
       artistName,
       artistId,
       artworkUrl: drop.artwork_path,
+      lyrics: track.lyrics,
+      lyricsLrc: track.lyrics_lrc,
+      collectionTitle: drop.title,
     }));
   });
 

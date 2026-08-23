@@ -16,6 +16,7 @@ export function TrackDetailModal({
   artistId,
   artworkUrl,
   lyrics,
+  lyricsLrc,
   purchaseNote,
   queue,
   onClose,
@@ -27,6 +28,7 @@ export function TrackDetailModal({
   artistId: string;
   artworkUrl: string | null;
   lyrics?: string | null;
+  lyricsLrc?: string | null;
   purchaseNote?: string;
   queue?: PlayerTrack[];
   onClose: () => void;
@@ -47,7 +49,7 @@ export function TrackDetailModal({
     if (isCurrent) {
       toggle();
     } else {
-      play({ trackId, title, artistName, artistId, artworkUrl }, queue);
+      play({ trackId, title, artistName, artistId, artworkUrl, lyrics, lyricsLrc }, queue);
     }
   }
 

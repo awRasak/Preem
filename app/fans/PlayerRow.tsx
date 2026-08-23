@@ -16,6 +16,7 @@ export function PlayerRow({
   artistId,
   artworkUrl,
   lyrics,
+  lyricsLrc,
   purchaseNote,
   queue,
 }: {
@@ -26,6 +27,7 @@ export function PlayerRow({
   artistId: string;
   artworkUrl: string | null;
   lyrics?: string | null;
+  lyricsLrc?: string | null;
   purchaseNote?: string;
   queue?: PlayerTrack[];
 }) {
@@ -38,7 +40,7 @@ export function PlayerRow({
     if (isCurrent) {
       toggle();
     } else {
-      play({ trackId, title, artistName, artistId, artworkUrl }, queue);
+      play({ trackId, title, artistName, artistId, artworkUrl, lyrics, lyricsLrc }, queue);
     }
   }
 
@@ -88,6 +90,7 @@ export function PlayerRow({
           artistId={artistId}
           artworkUrl={artworkUrl}
           lyrics={lyrics}
+          lyricsLrc={lyricsLrc}
           purchaseNote={purchaseNote}
           queue={queue}
           onClose={() => setShowModal(false)}
