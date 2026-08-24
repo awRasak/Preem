@@ -17,6 +17,7 @@ export function TrackDetailModal({
   artworkUrl,
   lyrics,
   lyricsLrc,
+  sharePath,
   purchaseNote,
   queue,
   onClose,
@@ -29,6 +30,7 @@ export function TrackDetailModal({
   artworkUrl: string | null;
   lyrics?: string | null;
   lyricsLrc?: string | null;
+  sharePath?: string;
   purchaseNote?: string;
   queue?: PlayerTrack[];
   onClose: () => void;
@@ -102,7 +104,7 @@ export function TrackDetailModal({
               <PlayIcon className="h-4 w-4" />
             )}
           </button>
-          <ShareDropButton dropId={dropId} title={title} />
+          <ShareDropButton dropId={dropId} path={sharePath} title={title} />
         </div>
 
         <div className="mt-5 border-t border-line pt-4">

@@ -17,6 +17,7 @@ export function PlayerRow({
   artworkUrl,
   lyrics,
   lyricsLrc,
+  sharePath,
   purchaseNote,
   queue,
 }: {
@@ -28,6 +29,7 @@ export function PlayerRow({
   artworkUrl: string | null;
   lyrics?: string | null;
   lyricsLrc?: string | null;
+  sharePath?: string;
   purchaseNote?: string;
   queue?: PlayerTrack[];
 }) {
@@ -91,6 +93,7 @@ export function PlayerRow({
           artworkUrl={artworkUrl}
           lyrics={lyrics}
           lyricsLrc={lyricsLrc}
+          sharePath={sharePath}
           purchaseNote={purchaseNote}
           queue={queue}
           onClose={() => setShowModal(false)}

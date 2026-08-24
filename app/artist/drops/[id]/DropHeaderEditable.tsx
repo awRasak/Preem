@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { dropPath } from "@/lib/slug";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Field, Input, Textarea } from "@/components/Field";
@@ -190,7 +191,11 @@ export function DropHeaderEditable({
             {(drop.status === "published" || (!isBundle && tracks[0])) && (
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 {drop.status === "published" && (
-                  <ShareDropButton dropId={drop.id} title={drop.title} />
+                  <ShareDropButton
+                    dropId={drop.id}
+                    path={dropPath(artistName, drop.title)}
+                    title={drop.title}
+                  />
                 )}
                 {!isBundle && tracks[0] && (
                   <OwnerControls

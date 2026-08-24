@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Nav, NavLink } from "@/components/Nav";
@@ -14,6 +15,8 @@ import {
   TwitterIcon,
 } from "@/components/SocialIcons";
 import { sanitizeBio } from "@/lib/format";
+import { isUuid } from "@/lib/slug";
+import { artistShareMetadata } from "@/lib/seo";
 import type { Artist, ArtistLink, Drop } from "@/lib/types";
 
 // Monday 00:00 UTC of the current week -- "Top gifters" resets on this
@@ -38,6 +41,32 @@ const SOCIAL_LINKS = [
 
 export const revalidate = 0;
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const base = supabase
+    .from("artists")
+    .select("stage_name, bio, avatar_url")
+    .eq("approval_status", "approved");
+  const { data: artist } = isUuid(id)
+    ? await base.eq("id", id).maybeSingle()
+    : await base
+        .eq("slug", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+  if (!artist) return {};
+  return artistShareMetadata({
+    stageName: artist.stage_name,
+    bio: artist.bio,
+    avatarUrl: artist.avatar_url,
+  });
+}
+
 export default async function ArtistProfilePage({
   params,
 }: {
@@ -46,12 +75,21 @@ export default async function ArtistProfilePage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: artist } = await supabase
+  // Params arrive as either the raw uuid (legacy links, bookmarks) or the
+  // human-readable slug; collisions on a shared stage name resolve to the
+  // newest account.
+  const base = supabase
     .from("artists")
     .select("*")
-    .eq("id", id)
-    .eq("approval_status", "approved")
-    .single();
+    .eq("approval_status", "approved");
+
+  const { data: artist } = isUuid(id)
+    ? await base.eq("id", id).maybeSingle()
+    : await base
+        .eq("slug", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
   if (!artist) notFound();
 

@@ -25,6 +25,7 @@ const esKlarheitPlakat = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng"),
   title: "Preem — Live off your music",
   description:
     "Preem is a Naira-native, Paystack-powered direct-to-fan music marketplace. Sell early access to unreleased tracks straight to your fans.",

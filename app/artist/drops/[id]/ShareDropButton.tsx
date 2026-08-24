@@ -3,7 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/Button";
 
-export function ShareDropButton({ dropId, title }: { dropId: string; title?: string }) {
+export function ShareDropButton({
+  dropId,
+  path,
+  title,
+}: {
+  dropId: string;
+  // Human-readable share URL (e.g. /artist/tobi-swagz/lagos-nights); falls
+  // back to the legacy /drop/<uuid> form when not provided.
+  path?: string;
+  title?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -11,7 +21,7 @@ export function ShareDropButton({ dropId, title }: { dropId: string; title?: str
 
   // Only ever read once the dropdown is open, which requires a prior client
   // click — window is always available by then, so no hydration concern.
-  const url = open ? `${window.location.origin}/drop/${dropId}` : "";
+  const url = open ? `${window.location.origin}${path ?? `/drop/${dropId}`}` : "";
 
   useEffect(() => {
     if (!open) return;

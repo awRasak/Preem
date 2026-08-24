@@ -3,6 +3,7 @@ import Image from "next/image";
 import type { Drop } from "@/lib/types";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
+import { dropPath } from "@/lib/slug";
 import { Badge } from "./Badge";
 import { Avatar } from "./Avatar";
 import { TimeLeft } from "./TimeLeft";
@@ -13,7 +14,7 @@ export function DropCard({ drop }: { drop: Drop }) {
 
   return (
     <Link
-      href={`/drop/${drop.id}`}
+      href={drop.artist?.stage_name ? dropPath(drop.artist.stage_name, drop.title) : `/drop/${drop.id}`}
       className="card-inset-glow block rounded-xl border border-line bg-card p-3 transition-all duration-200 ease-out hover:-translate-y-1 hover:border-line-strong hover:shadow-xl hover:shadow-black/40"
     >
       <div className="relative mb-3 aspect-square overflow-hidden rounded-lg bg-surface-2">

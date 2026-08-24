@@ -12,6 +12,7 @@ import { ReportProblemButton } from "@/components/ReportProblemButton";
 import { formatNaira } from "@/lib/format";
 import type { PlayerTrack } from "@/lib/player-context";
 import type { Drop } from "@/lib/types";
+import { trackPath } from "@/lib/slug";
 
 function formatPurchaseDate(iso: string | null): string {
   if (!iso) return "";
@@ -25,6 +26,7 @@ function formatPurchaseDate(iso: string | null): string {
 const GHOST_DROPS: Drop[] = [
   {
     id: "ghost-1",
+    slug: null,
     artist_id: "ghost-artist-1",
     title: "Your first drop will show up here",
     description: null,
@@ -42,6 +44,7 @@ const GHOST_DROPS: Drop[] = [
   },
   {
     id: "ghost-2",
+    slug: null,
     artist_id: "ghost-artist-2",
     title: "Buy access to unlock it",
     description: null,
@@ -275,6 +278,8 @@ async function MyDropsLibrary({
                 artistId={artistId}
                 artworkUrl={drop.artwork_path}
                 lyrics={track?.lyrics}
+                lyricsLrc={track?.lyrics_lrc}
+                sharePath={trackPath(artistName, drop.title, track?.title)}
                 purchaseNote={purchaseNote}
                 queue={queue}
               />
@@ -298,6 +303,8 @@ async function MyDropsLibrary({
                     artistId={artistId}
                     artworkUrl={drop.artwork_path}
                     lyrics={track.lyrics}
+                    lyricsLrc={track.lyrics_lrc}
+                    sharePath={trackPath(artistName, drop.title, track.title)}
                     queue={queue}
                   />
                 ))}

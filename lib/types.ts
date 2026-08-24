@@ -14,6 +14,7 @@ export type Genre =
 
 export type Artist = {
   id: string;
+  slug: string | null;
   stage_name: string;
   bio: string | null;
   profile_link: string | null;
@@ -34,6 +35,7 @@ export type Artist = {
 export type Drop = {
   id: string;
   artist_id: string;
+  slug: string | null;
   title: string;
   description: string | null;
   release_type: ReleaseType;
@@ -60,6 +62,7 @@ export type DropTrack = {
   collaborators: string | null;
   lyrics: string | null;
   lyrics_lrc: string | null;
+  slug: string | null;
   created_at: string;
 };
 
