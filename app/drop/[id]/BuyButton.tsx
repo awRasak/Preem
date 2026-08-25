@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Script from "next/script";
 import Image from "next/image";
 import { Button } from "@/components/Button";
@@ -85,6 +85,14 @@ export function BuyButton({
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
+  // Anchoring chips above the minimum nudge the amount fans type in the
+  // same way Bandcamp/Patreon's suggested-amount buttons do -- "custom"
+  // reveals the free-text field so the minimum is always reachable.
+  const priceChipsNaira = useMemo(() => {
+    const minNaira = minPriceKobo / 100;
+    return [minNaira, minNaira * 2, minNaira * 5];
+  }, [minPriceKobo]);
+  const [priceMode, setPriceMode] = useState<number | "custom">(priceChipsNaira[0]);
   const [fanName, setFanName] = useState("");
   const [fanPhone, setFanPhone] = useState("");
   const [fanEmail, setFanEmail] = useState("");
@@ -346,16 +354,58 @@ export function BuyButton({
                     ? " This track is exclusive to Preem — it won't be released anywhere else."
                     : " No refunds once access is granted."}
                 </p>
-                <Field label={`Your price (₦${minPriceKobo / 100} minimum)`}>
-                  <Input
-                    required
-                    type="number"
-                    min={minPriceKobo / 100}
-                    step="1"
-                    value={amountNaira}
-                    onChange={(e) => setAmountNaira(e.target.value)}
-                  />
+                <Field label="Your price">
+                  <div className="grid grid-cols-4 gap-2">
+                    {priceChipsNaira.map((n, i) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => {
+                          setPriceMode(n);
+                          setAmountNaira(String(n));
+                        }}
+                        className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
+                          priceMode === n
+                            ? "border-accent bg-accent/10 text-accent"
+                            : "border-line-strong text-muted hover:text-paper"
+                        }`}
+                      >
+                        {i === priceChipsNaira.length - 1 ? (
+                          <>
+                            ₦{n.toLocaleString()}
+                            <span className="block font-normal opacity-70">Biggest fan</span>
+                          </>
+                        ) : (
+                          `₦${n.toLocaleString()}`
+                        )}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setPriceMode("custom")}
+                      className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
+                        priceMode === "custom"
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-line-strong text-muted hover:text-paper"
+                      }`}
+                    >
+                      Custom
+                    </button>
+                  </div>
                 </Field>
+                {priceMode === "custom" && (
+                  <Field label={`Amount (₦${minPriceKobo / 100} minimum)`}>
+                    <Input
+                      required
+                      type="number"
+                      min={minPriceKobo / 100}
+                      step="1"
+                      value={amountNaira}
+                      onChange={(e) => setAmountNaira(e.target.value)}
+                      autoFocus
+                    />
+                  </Field>
+                )}
                 {enabledGateways.length > 1 && (
                   <Field label="Pay with">
                     <div className="flex gap-2">

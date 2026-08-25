@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, ListMusic, X } from "lucide-react";
+import { ChevronDown, ListMusic, Volume1, Volume2, VolumeX, X } from "lucide-react";
 import { usePlayer } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
 import { PREVIEW_SECONDS } from "@/lib/preview";
@@ -47,6 +47,8 @@ export function PlayerBar() {
     cycleRepeat,
     shuffle,
     toggleShuffle,
+    volume,
+    setVolume,
   } = usePlayer();
   const [screen, setScreen] = useState<Screen>("none");
 
@@ -206,6 +208,10 @@ export function PlayerBar() {
             </button>
           </div>
 
+          <div className="hidden flex-shrink-0 items-center gap-1.5 lg:flex">
+            <VolumeControl volume={volume} setVolume={setVolume} />
+          </div>
+
           {/* Desktop: compact pill sits right in the control row instead of
               taking its own full-width row below. */}
           {track.artistId && (
@@ -237,6 +243,44 @@ export function PlayerBar() {
 
       {screen === "now" && <NowPlayingScreen onClose={() => setScreen("none")} />}
       {screen === "queue" && <QueueScreen onClose={() => setScreen("none")} />}
+    </>
+  );
+}
+
+function VolumeControl({
+  volume,
+  setVolume,
+}: {
+  volume: number;
+  setVolume: (v: number) => void;
+}) {
+  const lastNonZeroRef = useRef(volume || 1);
+  useEffect(() => {
+    if (volume > 0) lastNonZeroRef.current = volume;
+  }, [volume]);
+
+  const Icon = volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setVolume(volume === 0 ? lastNonZeroRef.current : 0)}
+        aria-label={volume === 0 ? "Unmute" : "Mute"}
+        className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper"
+      >
+        <Icon className="h-4 w-4" />
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={volume}
+        onChange={(e) => setVolume(Number(e.target.value))}
+        aria-label="Volume"
+        className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-line-strong accent-accent"
+      />
     </>
   );
 }

@@ -49,6 +49,8 @@ type PlayerContextValue = {
   play: (track: PlayerTrack, queue?: PlayerTrack[]) => void;
   toggle: () => void;
   seek: (time: number) => void;
+  volume: number;
+  setVolume: (volume: number) => void;
   next: () => void;
   previous: () => void;
   // Dismisses the player entirely: stops audio and clears track + queue.
@@ -74,6 +76,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [shuffle, setShuffle] = useState(false);
+  // Remembered per-browser (not per-account) -- same treatment as any other
+  // local media player's volume setting. Lazy-init reads localStorage only
+  // on the client; SSR/hydration always start from the same 1.0 default.
+  const [volume, setVolumeState] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    const raw = window.localStorage.getItem("preem-volume");
+    if (raw === null) return 1;
+    const stored = Number(raw);
+    return Number.isFinite(stored) && stored >= 0 && stored <= 1 ? stored : 1;
+  });
+  // The mount-once effect below reads this instead of `volume` directly --
+  // it constructs the Audio element exactly once, so it must not depend on
+  // (and re-run for) every volume change.
+  const initialVolumeRef = useRef(volume);
 
   // The mount-once effect below registers its listeners a single time, so it
   // reads the latest track/queue through these refs rather than closing over
@@ -165,6 +181,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const audio = new Audio();
+    audio.volume = initialVolumeRef.current;
     audioRef.current = audio;
 
     const onTimeUpdate = () => {
@@ -291,6 +308,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (wasPlaying) audio.play().catch(() => {});
   }, []);
 
+  const setVolume = useCallback((next: number) => {
+    const clamped = Math.min(1, Math.max(0, next));
+    const audio = audioRef.current;
+    if (audio) audio.volume = clamped;
+    setVolumeState(clamped);
+    try {
+      window.localStorage.setItem("preem-volume", String(clamped));
+    } catch {
+      // Private browsing / storage disabled -- volume just won't persist.
+    }
+  }, []);
+
   const next = useCallback(() => {
     step(1);
   }, [step]);
@@ -344,6 +373,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
          play,
          toggle,
          seek,
+         volume,
+         setVolume,
          next,
          previous,
          close,
