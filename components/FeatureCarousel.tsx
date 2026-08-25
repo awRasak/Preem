@@ -47,7 +47,7 @@ export function FeatureCarousel() {
   }, []);
 
   return (
-    <div ref={sectionRef} className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+    <div ref={sectionRef} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {FEATURES.map((f, i) => (
         <div
           key={f.title}
