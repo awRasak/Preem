@@ -11,6 +11,7 @@ import { Field, Input, Textarea } from "@/components/Field";
 import { GENRES } from "@/lib/genres";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
+import { prepareArtworkFile } from "@/lib/client-image";
 import { OwnerControls } from "./OwnerControls";
 import { ShareDropButton } from "./ShareDropButton";
 import { LyricsSection } from "@/app/drop/[id]/LyricsSection";
@@ -85,9 +86,10 @@ export function DropHeaderEditable({
     setEditTracks((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
-  function handleArtworkChange(file: File | null) {
-    setArtworkFile(file);
-    setArtworkPreview(file ? URL.createObjectURL(file) : null);
+  async function handleArtworkChange(file: File | null) {
+    const prepared = file ? await prepareArtworkFile(file) : null;
+    setArtworkFile(prepared);
+    setArtworkPreview(prepared ? URL.createObjectURL(prepared) : null);
   }
 
   async function handleSave() {

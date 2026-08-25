@@ -13,6 +13,7 @@ import { PaymentTrustRow } from "@/components/PaymentTrustRow";
 import { FilmstripGallery } from "@/components/FilmstripGallery";
 import { HomeFAQ } from "@/components/HomeFAQ";
 import { WaitlistModal } from "@/components/WaitlistModal";
+import { HomeMobileCta } from "@/components/HomeMobileCta";
 import { createClient } from "@/lib/supabase/server";
 import { artworkFallback } from "@/lib/placeholder";
 import { getPlatformSettings } from "@/lib/platform-settings";
@@ -406,19 +407,11 @@ export default async function MarketplacePage() {
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 p-4 backdrop-blur sm:hidden">
-        <Button href={accountHref} variant="primary" className="w-full">
-          {accountLabel}
-        </Button>
-        {!sessionUser && (
-          <Link
-            href="/fans"
-            className="mt-2 block text-center text-xs text-muted underline"
-          >
-            Sign in as a fan instead
-          </Link>
-        )}
-      </div>
+      <HomeMobileCta
+        accountHref={accountHref}
+        accountLabel={accountLabel}
+        showSignInLink={!sessionUser}
+      />
     </>
   );
 }

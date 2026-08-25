@@ -281,8 +281,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
     const clamped = trackRef.current?.preview ? Math.min(time, PREVIEW_SECONDS) : time;
+    // Some browsers (notably Safari/iOS) implicitly pause the element while
+    // it rebuffers around the new position and won't resume on their own --
+    // re-issuing play() here is a no-op if it was already paused/never
+    // playing, but is required to actually resume when it was playing.
+    const wasPlaying = !audio.paused;
     audio.currentTime = clamped;
     setCurrentTime(clamped);
+    if (wasPlaying) audio.play().catch(() => {});
   }, []);
 
   const next = useCallback(() => {

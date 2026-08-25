@@ -4,6 +4,7 @@
    file previews aren't covered by next/image's remotePatterns */
 
 import { Button } from "@/components/Button";
+import { prepareArtworkFile } from "@/lib/client-image";
 import type { WizardState } from "./types";
 
 export function QuickCaptureModal({
@@ -17,11 +18,12 @@ export function QuickCaptureModal({
   onDiscard: () => void;
   onContinue: () => void;
 }) {
-  function handleArtwork(file: File | null) {
+  async function handleArtwork(file: File | null) {
     if (state.artworkPreviewUrl) URL.revokeObjectURL(state.artworkPreviewUrl);
+    const prepared = file ? await prepareArtworkFile(file) : null;
     onChange({
-      artworkFile: file,
-      artworkPreviewUrl: file ? URL.createObjectURL(file) : null,
+      artworkFile: prepared,
+      artworkPreviewUrl: prepared ? URL.createObjectURL(prepared) : null,
     });
   }
 
