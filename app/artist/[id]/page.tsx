@@ -96,14 +96,14 @@ export default async function ArtistProfilePage({
   const { data: drops } = await supabase
     .from("drops")
     .select("*")
-    .eq("artist_id", id)
+    .eq("artist_id", artist.id)
     .eq("status", "published")
     .order("created_at", { ascending: false });
 
   const { data: links } = await supabase
     .from("artist_links")
     .select("*")
-    .eq("artist_id", id)
+    .eq("artist_id", artist.id)
     .order("created_at", { ascending: false });
 
   // Computed with the admin client, server-side only -- amount/email never
@@ -113,7 +113,7 @@ export default async function ArtistProfilePage({
   const { data: weekGifts } = await admin
     .from("gifts")
     .select("fan_email, fan_name, fan_location, amount_kobo")
-    .eq("artist_id", id)
+    .eq("artist_id", artist.id)
     .eq("status", "success")
     .gte("created_at", startOfCurrentWeekUTC().toISOString());
 
@@ -156,7 +156,7 @@ export default async function ArtistProfilePage({
         <div className="mb-10 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
           <Avatar
             src={(artist as Artist).avatar_url}
-            seed={id}
+            seed={artist.id}
             alt={artist.stage_name}
             size={96}
           />
@@ -202,7 +202,7 @@ export default async function ArtistProfilePage({
               </a>
             )}
             <div className="mt-4 flex justify-center sm:justify-start">
-              <GiftButton artistId={id} artistName={artist.stage_name} variant="button" />
+              <GiftButton artistId={artist.id} artistName={artist.stage_name} variant="button" />
             </div>
           </div>
         </div>
