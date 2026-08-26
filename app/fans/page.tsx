@@ -12,7 +12,14 @@ import { ReportProblemButton } from "@/components/ReportProblemButton";
 import { formatNaira } from "@/lib/format";
 import type { PlayerTrack } from "@/lib/player-context";
 import type { Drop } from "@/lib/types";
-import { trackPath } from "@/lib/slug";
+import { trackPath, dropPath } from "@/lib/slug";
+import { type FanIdentity } from "@/lib/fan-identity";
+import {
+  NewDropNotifications,
+  type FanNotification,
+} from "@/components/NewDropNotifications";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng";
 
 function formatPurchaseDate(iso: string | null): string {
   if (!iso) return "";
@@ -75,16 +82,29 @@ export default async function MyDropsPage() {
     data: { user: fan },
   } = await supabase.auth.getUser();
 
+  // Reuse the identity already resolved above rather than re-reading the
+  // session (getFanIdentity would repeat the auth round-trip).
+  const identity: FanIdentity | null = fan
+    ? { kind: "user", userId: fan.id }
+    : phoneSession
+      ? { kind: "phone", session: phoneSession }
+      : null;
+  const notifications = identity ? await getNotifications(identity) : [];
+
   return (
     <>
       <Nav role="fan">{(fan || phoneSession) && <SignOutButton redirectTo="/fans" />}</Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 sm:px-8">
         {fan ? (
-          <MyDropsLibrary userId={fan.id} />
+          <MyDropsLibrary userId={fan.id} notifications={notifications} />
         ) : !phoneSession ? (
           <PhoneLookupForm />
         ) : (
-          <MyDropsLibrary phone={phoneSession.phone} email={phoneSession.email} />
+          <MyDropsLibrary
+            phone={phoneSession.phone}
+            email={phoneSession.email}
+            notifications={notifications}
+          />
         )}
         <div className="mt-10 text-center">
           <ReportProblemButton defaultPhone={phoneSession?.phone ?? ""} />
@@ -92,6 +112,51 @@ export default async function MyDropsPage() {
       </main>
     </>
   );
+}
+
+// Unseen "new drop" banners for everything this fan follows. Runs on the
+// server so the identity never round-trips through the client.
+async function getNotifications(identity: FanIdentity): Promise<FanNotification[]> {
+  const admin = createAdminClient();
+  let followsQuery = admin.from("artist_follows").select("id");
+  followsQuery =
+    identity.kind === "user"
+      ? followsQuery.eq("fan_user_id", identity.userId)
+      : followsQuery.eq("fan_phone", identity.session.phone);
+  const { data: follows } = await followsQuery;
+  const followIds = (follows ?? []).map((f) => f.id as string);
+  if (followIds.length === 0) return [];
+
+  const { data: notifications } = await admin
+    .from("fan_notifications")
+    .select("id, drop_id, drops(title, artist:artists(stage_name))")
+    .in("follow_id", followIds)
+    .is("seen_at", null)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  return (notifications ?? []).flatMap((n) => {
+    type Row = {
+      id: string;
+      drops: { title: string; artist: { stage_name: string } | { stage_name: string }[] | null } | null;
+    };
+    const row = n as unknown as Row;
+    const drop = row.drops;
+    if (!drop) return [];
+    const artist = Array.isArray(drop.artist) ? drop.artist[0] : drop.artist;
+    const artistName = artist?.stage_name ?? "";
+    const href = dropPath(artistName, drop.title);
+    const text = `${artistName} just released "${drop.title}" on Preem — listen here: ${APP_URL}${href}`;
+    return [
+      {
+        id: row.id,
+        artistName,
+        dropTitle: drop.title,
+        dropHref: href,
+        whatsappUrl: `https://wa.me/?text=${encodeURIComponent(text)}`,
+      },
+    ];
+  });
 }
 
 type DropInfo = {
@@ -114,10 +179,12 @@ async function MyDropsLibrary({
   phone,
   email,
   userId,
+  notifications,
 }: {
   phone?: string;
   email?: string;
   userId?: string;
+  notifications: FanNotification[];
 }) {
   const admin = createAdminClient();
 
@@ -139,6 +206,7 @@ async function MyDropsLibrary({
   if (!purchases || purchases.length === 0) {
     return (
       <div>
+        <NewDropNotifications items={notifications} />
         <h1 className="mb-6 text-2xl font-bold">My Music Collections</h1>
         <p className="mb-6 text-sm text-muted">
           Nothing here yet — buy access to a drop and it&apos;ll show up here permanently.
@@ -258,6 +326,7 @@ async function MyDropsLibrary({
 
   return (
     <div>
+      <NewDropNotifications items={notifications} />
       <h1 className="mb-6 text-2xl font-bold">My Music Collections</h1>
       <div>
         {rows.map(({ dropId, drop, artistName, artistId, tracks }) => {

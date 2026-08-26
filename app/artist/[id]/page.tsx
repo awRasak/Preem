@@ -16,6 +16,8 @@ import {
 } from "@/components/SocialIcons";
 import { sanitizeBio } from "@/lib/format";
 import { isUuid } from "@/lib/slug";
+import { getFanIdentity } from "@/lib/fan-identity";
+import { FollowButton } from "@/components/FollowButton";
 import { artistShareMetadata } from "@/lib/seo";
 import type { Artist, ArtistLink, Drop } from "@/lib/types";
 
@@ -140,6 +142,30 @@ export default async function ArtistProfilePage({
     .slice(0, 5);
 
   const joinedYear = new Date((artist as Artist).created_at).getFullYear();
+
+  // Follow state + social proof. Count is public; whether *this* viewer
+  // follows is resolved server-side from their fan identity.
+  const [{ count: followerCount }, identity] = await Promise.all([
+    admin
+      .from("artist_follows")
+      .select("id", { count: "exact", head: true })
+      .eq("artist_id", artist.id),
+    getFanIdentity(),
+  ]);
+  let initialFollowing = false;
+  if (identity) {
+    let followingQuery = admin
+      .from("artist_follows")
+      .select("id", { count: "exact", head: true })
+      .eq("artist_id", artist.id);
+    followingQuery =
+      identity.kind === "user"
+        ? followingQuery.eq("fan_user_id", identity.userId)
+        : followingQuery.eq("fan_phone", identity.session.phone);
+    const { count: followingCount } = await followingQuery;
+    initialFollowing = (followingCount ?? 0) > 0;
+  }
+
   const socialLinks = SOCIAL_LINKS.filter(({ key }) => (artist as Artist)[key]);
   const bio = artist.bio ? sanitizeBio(artist.bio) : null;
   // Past this length a bio runs several lines deep and pushes the Drops
@@ -201,7 +227,14 @@ export default async function ArtistProfilePage({
                 Listen on other platforms →
               </a>
             )}
-            <div className="mt-4 flex justify-center sm:justify-start">
+            <div className="mt-4 flex items-center justify-center gap-4 sm:justify-start">
+              <FollowButton
+                artistId={artist.id}
+                artistName={artist.stage_name}
+                followerCount={followerCount ?? 0}
+                initialFollowing={initialFollowing}
+                hasIdentity={identity !== null}
+              />
               <GiftButton artistId={artist.id} artistName={artist.stage_name} variant="button" />
             </div>
           </div>
