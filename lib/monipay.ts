@@ -1,18 +1,25 @@
 const MONIPAY_BASE = "https://api.monipay.ng";
 const FETCH_TIMEOUT_MS = 15000;
 
-function authHeaders() {
+function authHeaders(key: string) {
   return {
-    Authorization: `Bearer ${process.env.MONIPAY_SECRET_KEY}`,
+    Authorization: `Bearer ${key}`,
     "Content-Type": "application/json",
   };
 }
 
-async function monipayFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function monipayFetch<T>(
+  path: string,
+  init?: RequestInit & { authKey?: string },
+): Promise<T> {
+  const { authKey, ...rest } = init ?? {};
   const res = await fetch(`${MONIPAY_BASE}${path}`, {
-    ...init,
+    ...rest,
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    headers: { ...authHeaders(), ...(init?.headers ?? {}) },
+    headers: {
+      ...authHeaders(authKey ?? process.env.MONIPAY_SECRET_KEY ?? ""),
+      ...(rest.headers ?? {}),
+    },
   });
   const body = await res.json();
   if (!res.ok || body.status === false) {
@@ -36,6 +43,12 @@ export async function initializeTransaction(params: {
 }): Promise<{ authorization_url: string; access_code: string; reference: string }> {
   return monipayFetch("/transaction/initialize", {
     method: "POST",
+    // Unlike every other Monipay endpoint, /transaction/initialize
+    // authenticates with the *public* key -- confirmed directly against
+    // their live API: "Use public key for this endpoint. Do not use
+    // private key." Makes sense in hindsight: this call only sets up a
+    // checkout session, it can't move money on its own.
+    authKey: process.env.NEXT_PUBLIC_MONIPAY_PUBLIC_KEY,
     body: JSON.stringify({
       email: params.email,
       amount: params.amountKobo,
