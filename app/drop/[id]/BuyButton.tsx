@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Script from "next/script";
+import { loadScript } from "@/lib/load-script";
 import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -99,8 +99,6 @@ export function BuyButton({
   const [fanEmail, setFanEmail] = useState("");
   const [gateway, setGateway] = useState<Gateway>(enabledGateways[0] ?? "paystack");
   const [error, setError] = useState<string | null>(null);
-  const [scriptReady, setScriptReady] = useState(false);
-  const [monipayReady, setMonipayReady] = useState(false);
   const [reference, setReference] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -165,7 +163,14 @@ export function BuyButton({
     }
 
     if (gateway === "monipay") {
-      if (!monipayReady || !window.Monipay) {
+      try {
+        await loadScript("https://js.monipay.ng/v2/inline.js");
+      } catch {
+        setError("Payment failed to load — try again.");
+        setStep("form");
+        return;
+      }
+      if (!window.Monipay) {
         setError("Payment popup is still loading — try again in a second.");
         setStep("form");
         return;
@@ -186,7 +191,14 @@ export function BuyButton({
       return;
     }
 
-    if (!scriptReady || !window.PaystackPop) {
+    try {
+      await loadScript("https://js.paystack.co/v1/inline.js");
+    } catch {
+      setError("Payment failed to load — try again.");
+      setStep("form");
+      return;
+    }
+    if (!window.PaystackPop) {
       setError("Payment popup is still loading — try again in a second.");
       setStep("form");
       return;
@@ -228,16 +240,6 @@ export function BuyButton({
 
   return (
     <>
-      <Script
-        src="https://js.paystack.co/v1/inline.js"
-        onLoad={() => setScriptReady(true)}
-      />
-      {enabledGateways.includes("monipay") && (
-        <Script
-          src="https://js.monipay.ng/v2/inline.js"
-          onLoad={() => setMonipayReady(true)}
-        />
-      )}
       <Button variant="primary" onClick={() => setStep("form")}>
         {label}
       </Button>

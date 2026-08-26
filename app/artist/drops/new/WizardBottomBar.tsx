@@ -20,7 +20,7 @@ export function WizardBottomBar({
   primaryLoading?: boolean;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-5 py-3 backdrop-blur sm:px-8">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-8">
       <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {onBack ? (

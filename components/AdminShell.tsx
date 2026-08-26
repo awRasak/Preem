@@ -84,7 +84,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <div className="pb-16 sm:pb-0">{children}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-line bg-surface/95 backdrop-blur sm:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
         {NAV_ITEMS.map((item) => {
           const isActive = active === item.section;
           const Icon = item.icon;

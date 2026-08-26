@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import Script from "next/script";
+import { loadScript } from "@/lib/load-script";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { GiftIcon } from "@/components/Icons";
@@ -52,7 +52,6 @@ export function GiftButton({
   const [fanEmail, setFanEmail] = useState("");
   const [needsGuestInfo, setNeedsGuestInfo] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [scriptReady, setScriptReady] = useState(false);
 
   const amountNaira = selectedNaira === "custom" ? Number(customNaira) : selectedNaira;
   const amountKobo = Math.round(amountNaira * 100);
@@ -99,7 +98,14 @@ export function GiftButton({
       return;
     }
 
-    if (!scriptReady || !window.PaystackPop) {
+    try {
+      await loadScript("https://js.paystack.co/v1/inline.js");
+    } catch {
+      setError("Payment failed to load — try again.");
+      setStep("form");
+      return;
+    }
+    if (!window.PaystackPop) {
       setError("Payment popup is still loading — try again in a second.");
       setStep("form");
       return;
@@ -129,10 +135,6 @@ export function GiftButton({
 
   return (
     <>
-      <Script
-        src="https://js.paystack.co/v1/inline.js"
-        onLoad={() => setScriptReady(true)}
-      />
       {variant === "row" ? (
         <button
           type="button"

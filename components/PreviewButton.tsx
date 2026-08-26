@@ -26,14 +26,17 @@ export function PreviewButton({
   className?: string;
   iconClassName?: string;
 }) {
-  const { track, playing, loading, play, toggle } = usePlayer();
+  const { track, playing, loading, error, play, toggle } = usePlayer();
   const key = trackId ?? dropId;
   const isCurrent = track?.trackId === key;
+  const isFailed = isCurrent && error;
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (isCurrent) {
+    // A failed load leaves a dead src on the audio element -- retrying via
+    // toggle() would just resume silence, so re-run the full load instead.
+    if (isCurrent && !error) {
       toggle();
     } else {
       play(
@@ -54,10 +57,25 @@ export function PreviewButton({
     <button
       type="button"
       onClick={handleClick}
-      aria-label={isCurrent && playing ? "Pause preview" : "Play 15-second preview"}
+      aria-label={
+        isFailed
+          ? "Playback failed — tap to retry"
+          : isCurrent && playing
+            ? "Pause preview"
+            : "Play 15-second preview"
+      }
+      title={isFailed ? "Playback failed — tap to retry" : undefined}
       className={className}
     >
-      {isCurrent && loading ? (
+      {isFailed ? (
+        <span
+          className={`flex items-center justify-center rounded-full bg-[#ff6b6b] font-bold text-[#1a0d05] ${iconClassName}`}
+          style={{ fontSize: "0.625em" }}
+          aria-hidden="true"
+        >
+          !
+        </span>
+      ) : isCurrent && loading ? (
         <span className="text-xs">…</span>
       ) : isCurrent && playing ? (
         <PauseIcon className={iconClassName} />

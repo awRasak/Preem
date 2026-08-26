@@ -199,7 +199,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setPlaying(false);
       if (repeatModeRef.current === "one") {
         audio.currentTime = 0;
-        audio.play();
+        audio.play().catch(() => setError(true));
         return;
       }
       step(1);
@@ -222,7 +222,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     // (rather than the generic 10s skip buttons browsers fall back to)
     // drive the actual queue.
     if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-      navigator.mediaSession.setActionHandler("play", () => audio.play());
+      navigator.mediaSession.setActionHandler("play", () => audio.play().catch(() => setError(true)));
       navigator.mediaSession.setActionHandler("pause", () => audio.pause());
       navigator.mediaSession.setActionHandler("previoustrack", () => step(-1));
       navigator.mediaSession.setActionHandler("nexttrack", () => step(1));
@@ -276,7 +276,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setQueue(nextQueue ?? [nextTrack]);
       const audio = audioRef.current;
       if (track?.trackId === nextTrack.trackId && audio?.src) {
-        audio.play();
+        audio.play().catch(() => setError(true));
         return;
       }
       loadAndPlay(nextTrack);
@@ -288,7 +288,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
     if (!audio || !track) return;
     if (audio.paused) {
-      audio.play();
+      audio.play().catch(() => setError(true));
     } else {
       audio.pause();
     }

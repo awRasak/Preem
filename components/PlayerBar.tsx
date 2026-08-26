@@ -18,6 +18,47 @@ import {
 } from "@/components/Icons";
 import { GiftButton } from "@/components/GiftButton";
 
+// Calling seek() on every onChange tick during a drag -- which is what a
+// naive controlled range input does -- re-seeks the underlying (byte-range
+// streamed) audio dozens of times per drag, and can race with the browser's
+// own seek-buffering and leave playback paused. Track the live drag value
+// locally instead, and only commit the real seek once the gesture ends.
+function SeekInput({
+  currentTime,
+  duration,
+  onSeek,
+  className,
+  ariaLabel,
+}: {
+  currentTime: number;
+  duration: number;
+  onSeek: (time: number) => void;
+  className: string;
+  ariaLabel?: string;
+}) {
+  const [scrubValue, setScrubValue] = useState<number | null>(null);
+
+  function commit(e: React.SyntheticEvent<HTMLInputElement>) {
+    onSeek(Number(e.currentTarget.value));
+    setScrubValue(null);
+  }
+
+  return (
+    <input
+      type="range"
+      min={0}
+      max={duration || 0}
+      step={0.1}
+      value={scrubValue ?? Math.min(currentTime, duration || currentTime)}
+      onChange={(e) => setScrubValue(Number(e.target.value))}
+      onPointerUp={commit}
+      onKeyUp={commit}
+      className={className}
+      aria-label={ariaLabel}
+    />
+  );
+}
+
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
   const m = Math.floor(seconds / 60);
@@ -59,7 +100,7 @@ export function PlayerBar() {
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         {/* Dismiss control: deliberately straddles the container's top edge
             (half on the bar, half above it) so it reads as "close the whole
             player", not as one more bar button. */}
@@ -151,13 +192,11 @@ export function PlayerBar() {
             {formatTime(currentTime)}
           </span>
 
-          <input
-            type="range"
-            min={0}
-            max={displayDuration || 0}
-            step={0.1}
-            value={Math.min(currentTime, displayDuration || currentTime)}
-            onChange={(e) => seek(Number(e.target.value))}
+          <SeekInput
+            currentTime={currentTime}
+            duration={displayDuration}
+            onSeek={seek}
+            ariaLabel="Seek"
             className="hidden h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line-strong accent-accent sm:block"
           />
 
@@ -391,15 +430,12 @@ function SeekRow() {
   return (
     <div className="flex w-full items-center gap-3">
       <span className="font-mono text-[11px] text-muted">{formatTime(currentTime)}</span>
-      <input
-        type="range"
-        min={0}
-        max={displayDuration || 0}
-        step={0.1}
-        value={Math.min(currentTime, displayDuration || currentTime)}
-        onChange={(e) => seek(Number(e.target.value))}
+      <SeekInput
+        currentTime={currentTime}
+        duration={displayDuration}
+        onSeek={seek}
+        ariaLabel="Seek"
         className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line-strong accent-accent"
-        aria-label="Seek"
       />
       <span className="font-mono text-[11px] text-muted">{formatTime(displayDuration)}</span>
     </div>
@@ -420,7 +456,7 @@ function NowPlayingScreen({ onClose }: { onClose: () => void }) {
         onClose={onClose}
       />
 
-      <div className="mx-auto flex w-full max-w-md flex-col px-6 pb-8">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
         {/* Tab switcher */}
         <div className="mb-6 flex justify-center">
           <div className="flex rounded-full border border-line p-0.5">
@@ -567,7 +603,7 @@ function QueueScreen({ onClose }: { onClose: () => void }) {
         {currentCollection ? `Playing from ${currentCollection}` : `${queue.length} tracks`}
       </p>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-24">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
         {queue.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted">Nothing queued.</p>
         ) : (

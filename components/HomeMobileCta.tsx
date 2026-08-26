@@ -23,7 +23,7 @@ export function HomeMobileCta({
   if (track) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 p-4 backdrop-blur sm:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
       <Button href={accountHref} variant="primary" className="w-full">
         {accountLabel}
       </Button>
