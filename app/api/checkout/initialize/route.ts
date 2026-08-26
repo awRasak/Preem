@@ -5,6 +5,7 @@ import { isDropLive } from "@/lib/format";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { initializeTransaction as initializeMonipayTransaction } from "@/lib/monipay";
 
 const schema = z.object({
   dropId: z.string().uuid(),
@@ -122,10 +123,31 @@ export async function POST(req: Request) {
     );
   }
 
+  // Monipay only recognizes our reference for later verification if it was
+  // registered through this call first -- see initializeTransaction's
+  // comment in lib/monipay.ts. Paystack's Inline JS has no such requirement.
+  let accessCode: string | undefined;
+  if (gateway === "monipay") {
+    try {
+      const monipayTx = await initializeMonipayTransaction({
+        email: fanEmail,
+        amountKobo,
+        reference,
+      });
+      accessCode = monipayTx.access_code;
+    } catch {
+      return NextResponse.json(
+        { error: "Could not start checkout." },
+        { status: 502 },
+      );
+    }
+  }
+
   return NextResponse.json({
     reference,
     amountKobo,
     gateway,
+    accessCode,
     publicKey:
       gateway === "monipay"
         ? process.env.NEXT_PUBLIC_MONIPAY_PUBLIC_KEY

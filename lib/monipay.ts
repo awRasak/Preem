@@ -21,10 +21,30 @@ async function monipayFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return body.data as T;
 }
 
-// We generate our own reference at /api/checkout/initialize (same as the
-// Paystack path) and pass it straight to the Inline JS popup client-side --
-// Monipay's own REST /transaction/initialize isn't needed for that flow,
-// only verify is.
+// Unlike Paystack, Monipay only honors a client-supplied reference if it
+// was first registered through this REST call -- handing an invented
+// reference straight to the Inline JS popup without calling this first
+// means Monipay silently generates its own internal reference instead, and
+// /transaction/verify/{ourReference} comes back "Transaction not found"
+// even though the payment went through. access_code from the response is
+// what makes the popup resume *this* registered transaction rather than
+// starting an anonymous one.
+export async function initializeTransaction(params: {
+  email: string;
+  amountKobo: number;
+  reference: string;
+}): Promise<{ authorization_url: string; access_code: string; reference: string }> {
+  return monipayFetch("/transaction/initialize", {
+    method: "POST",
+    body: JSON.stringify({
+      email: params.email,
+      amount: params.amountKobo,
+      currency: "NGN",
+      reference: params.reference,
+    }),
+  });
+}
+
 export async function verifyTransaction(reference: string): Promise<{
   status: string;
   amount: number;

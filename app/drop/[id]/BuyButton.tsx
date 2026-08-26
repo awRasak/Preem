@@ -27,6 +27,7 @@ declare global {
         email: string;
         amount: number;
         reference?: string;
+        access_code?: string;
         onLoad?: () => void;
         onSuccess?: (data: { status: string }) => void;
         onCancel?: () => void;
@@ -174,6 +175,7 @@ export function BuyButton({
         email: fanEmail,
         amount: body.amountKobo,
         reference: body.reference,
+        access_code: body.accessCode,
         onCancel: () => setStep("form"),
         onError: () => {
           setError("Payment failed to load — try again.");

@@ -41,7 +41,8 @@ export async function GET(req: Request) {
       );
       return NextResponse.json({ error: "Payment amount mismatch" }, { status: 402 });
     }
-  } catch {
+  } catch (e) {
+    console.error(`verify threw for ${reference}:`, e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Verification failed" }, { status: 502 });
   }
 
