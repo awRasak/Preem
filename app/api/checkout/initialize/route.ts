@@ -135,7 +135,8 @@ export async function POST(req: Request) {
         reference,
       });
       accessCode = monipayTx.access_code;
-    } catch {
+    } catch (e) {
+      console.error(`monipay initialize failed for ${reference}:`, e instanceof Error ? e.message : e);
       return NextResponse.json(
         { error: "Could not start checkout." },
         { status: 502 },
