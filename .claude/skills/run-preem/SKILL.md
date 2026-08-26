@@ -41,7 +41,7 @@ Verified representative flow (home → explore → drop detail):
 
 1. `navigate` to `http://localhost:<port>/` — renders the marquee of live drops pulled from Supabase (e.g. "LIVE — 7 DROPS OPEN NOW"). The drop cards in the homepage marquee are decorative (not links) — don't try to click them.
 2. `navigate` to `http://localhost:<port>/explore` — renders real drop cards that ARE links.
-3. `computer left_click` on a drop card's title/body (not the small play-button circle, which is a separate control) → navigates to `/drop/[id]`, e.g. "Owerri Interlude — Amarachi Blaze", showing the live countdown, min price, and a "Buy access" button.
+3. `computer left_click` on a drop card's title/body (not the small play-button circle, which is a separate control) → navigates to `/artist/<handle>/<slug>` (e.g. `/artist/amarachi-blaze/owerri-interlude`, titled "Owerri Interlude — Amarachi Blaze"), showing the live countdown, min price, and a "Buy access" button.
 
 Check server-side errors with:
 
@@ -65,7 +65,10 @@ npm run test   # vitest run
 
 ## Gotchas
 
-- **`navigate` / `read_page` can silently no-op on the first call** right after `preview_start` — the pane isn't composited yet. If `navigate` reports "denied or failed" or `read_page` returns `(empty page)` / `Viewport: 0x0`, immediately retry the same call once before assuming something is broken. A `computer screenshot` or `javascript_tool` reading `window.location.href` is more reliable than `read_page` for confirming you actually landed on the right URL right after a navigation.
+- **`navigate` right after `preview_start` can fail with "denied or failed"** — Turbopack is still compiling / the port isn't accepting connections yet (`curl` to the port returns nothing until then). Retry `navigate` after a couple seconds rather than assuming something is broken; don't `sleep` blindly — a short poll or a couple of retries is enough.
+- **`read_page` can return `(empty page)` / `Viewport: 0x0`** immediately after a navigation even though the page did load — the accessibility snapshot can lag. A `computer screenshot` or `javascript_tool` reading `window.location.href` confirms you actually landed on the right URL when `read_page` looks empty.
+- **`preview_list` can report zero processes even right after a successful-looking `preview_start`** — it's still just starting up. Don't treat an empty `preview_list` as proof the server isn't running; check the port directly (`curl`) or just try `navigate`.
 - **Drop cards on the homepage marquee are not links** (`components/LiveDropsMarquee.tsx`) — only `/explore`'s cards (`components/DropCard.tsx`) are. Don't waste a click cycle on the homepage marquee expecting navigation.
 - **Clicking a drop card's small circular play button vs. its title/body area behave differently** — the play button is a separate audio-preview control; click the title text to navigate into `/drop/[id]`.
+- **One seeded artwork image consistently 500s** through `/_next/image` (a specific Supabase Storage cover under `artwork/<uuid>/<uuid>.png`) — that's missing/broken storage content in this Supabase project, not an app bug. Check `read_network_requests` / `read_console_messages` for 500s after any interaction, but don't chase this specific one.
 - **Port 3000 is frequently already occupied** by another running dev server for this same project (e.g. a session the user already has open). `autoPort: true` in `.claude/launch.json` handles this — always read the assigned port back from `preview_start`'s result rather than assuming 3000.
