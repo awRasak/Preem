@@ -95,8 +95,8 @@ h2 {
 /* Fades the edges of a horizontal-scroll row so items blend into the
    background instead of being clipped by a hard edge. */
 .scroll-fade-x {
-  -webkit-mask-image: linear-gradient(to right, transparent, black 160px, black calc(100% - 160px), transparent);
-  mask-image: linear-gradient(to right, transparent, black 160px, black calc(100% - 160px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 64px, black calc(100% - 64px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 64px, black calc(100% - 64px), transparent);
 }
 
 /* Fades an element's bottom edge to transparent -- used behind the gift
@@ -110,8 +110,8 @@ h2 {
 /* Fades the hero video's edges to transparent so it dissolves into the page
    background instead of reading as a hard-edged rectangle. */
 .hero-video-fade {
-  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
-  mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 45%, transparent 95%);
+  mask-image: radial-gradient(ellipse at center, black 45%, transparent 95%);
 }
 
 /* Pauses a marquee's scroll animation while the pointer is over it, so text
