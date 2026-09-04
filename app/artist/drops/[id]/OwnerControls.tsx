@@ -20,12 +20,15 @@ export function OwnerControls({
   artworkUrl: string | null;
   showDownload?: boolean;
 }) {
-  const { track, playing, loading, play, toggle } = usePlayer();
+  const { track, playing, loading, error, play, toggle } = usePlayer();
   const [downloading, setDownloading] = useState(false);
   const isCurrent = track?.trackId === trackId;
+  const isFailed = isCurrent && error;
 
   function handlePlay() {
-    if (isCurrent) {
+    // A failed load leaves a dead src on the audio element -- retrying via
+    // toggle() would just resume silence, so re-run the full load instead.
+    if (isCurrent && !error) {
       toggle();
     } else {
       play({ trackId, title, artistName, artistId, artworkUrl });
@@ -47,9 +50,12 @@ export function OwnerControls({
         variant="outline"
         onClick={handlePlay}
         disabled={isCurrent && loading}
-        className="!px-4 !py-2 text-xs"
+        title={isFailed ? "Playback failed — tap to retry" : undefined}
+        className={`!px-4 !py-2 text-xs ${isFailed ? "!border-[#ff6b6b] !text-[#ff6b6b]" : ""}`}
       >
-        {isCurrent && loading ? (
+        {isFailed ? (
+          "Playback failed — retry"
+        ) : isCurrent && loading ? (
           "Loading…"
         ) : isCurrent && playing ? (
           <>

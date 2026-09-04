@@ -33,13 +33,16 @@ export function PlayerRow({
   purchaseNote?: string;
   queue?: PlayerTrack[];
 }) {
-  const { track, playing, loading, play, toggle } = usePlayer();
+  const { track, playing, loading, error, play, toggle } = usePlayer();
   const isCurrent = track?.trackId === trackId;
+  const isFailed = isCurrent && error;
   const [showModal, setShowModal] = useState(false);
 
   function handlePlayToggle(e: React.MouseEvent) {
     e.stopPropagation();
-    if (isCurrent) {
+    // A failed load leaves a dead src on the audio element -- retrying via
+    // toggle() would just resume silence, so re-run the full load instead.
+    if (isCurrent && !error) {
       toggle();
     } else {
       play({ trackId, title, artistName, artistId, artworkUrl, lyrics, lyricsLrc }, queue);
@@ -71,9 +74,18 @@ export function PlayerRow({
         <button
           onClick={handlePlayToggle}
           disabled={isCurrent && loading}
+          aria-label={isFailed ? "Playback failed — tap to retry" : undefined}
+          title={isFailed ? "Playback failed — tap to retry" : undefined}
           className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-xs disabled:opacity-50"
         >
-          {isCurrent && loading ? (
+          {isFailed ? (
+            <span
+              className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#ff6b6b] text-[8px] font-bold text-[#1a0d05]"
+              aria-hidden="true"
+            >
+              !
+            </span>
+          ) : isCurrent && loading ? (
             <span className="text-xs">…</span>
           ) : isCurrent && playing ? (
             <PauseIcon className="h-3.5 w-3.5" />
