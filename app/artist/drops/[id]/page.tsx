@@ -62,11 +62,7 @@ export default async function ArtistDropDetailPage({
           hasSales={(buyers?.length ?? 0) > 0}
         />
 
-        {!live && (
-          <div className="mb-8">
-            <DistributionGuidance />
-          </div>
-        )}
+        {!live && <DistributionGuidance dropId={drop.id} />}
 
         <h2 className="mb-3 text-lg font-bold">Buyers ({buyers?.length ?? 0})</h2>
         <div className="divide-y divide-line rounded-xl border border-line">
