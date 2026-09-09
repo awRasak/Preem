@@ -17,7 +17,9 @@ import {
 import { sanitizeBio } from "@/lib/format";
 import { isUuid } from "@/lib/slug";
 import { getFanIdentity } from "@/lib/fan-identity";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { FollowButton } from "@/components/FollowButton";
+import { ShowCard } from "@/components/ShowCard";
 import { artistShareMetadata } from "@/lib/seo";
 import type { Artist, ArtistLink, Drop } from "@/lib/types";
 
@@ -108,10 +110,43 @@ export default async function ArtistProfilePage({
     .eq("artist_id", artist.id)
     .order("created_at", { ascending: false });
 
+  // Upcoming shows: two reads -- the published shows themselves go through
+  // the anon client (RLS public policy), but ticket-sold counts must come
+  // from the admin client since show_tickets has no anonymous policy.
+  const { data: shows } = await supabase
+    .from("shows")
+    .select("*")
+    .eq("artist_id", artist.id)
+    .eq("status", "published")
+    .gte("start_at", new Date().toISOString())
+    .order("start_at", { ascending: true });
+
   // Computed with the admin client, server-side only -- amount/email never
   // reach the client, just name + location, per the "not the amounts
   // gifted" requirement.
   const admin = createAdminClient();
+
+  const showIds = (shows ?? []).map((s) => s.id);
+  const [{ data: soldTickets }, settings] = await Promise.all([
+    showIds.length > 0
+      ? admin
+          .from("show_tickets")
+          .select("show_id")
+          .in("show_id", showIds)
+          .eq("status", "success")
+      : Promise.resolve({ data: [] }),
+    getPlatformSettings(supabase),
+  ]);
+
+  const soldByShow = new Map<string, number>();
+  for (const t of soldTickets ?? []) {
+    soldByShow.set(t.show_id, (soldByShow.get(t.show_id) ?? 0) + 1);
+  }
+
+  const enabledGateways = [
+    settings.paystackEnabled ? "paystack" : null,
+    settings.monipayEnabled ? "monipay" : null,
+  ].filter((g): g is "paystack" | "monipay" => g !== null);
   const { data: weekGifts } = await admin
     .from("gifts")
     .select("fan_email, fan_name, fan_location, amount_kobo")
@@ -254,6 +289,31 @@ export default async function ArtistProfilePage({
               ))}
             </div>
           </div>
+        )}
+
+        {(shows ?? []).length > 0 && (
+          <>
+            <h2 className="mb-4 text-lg font-bold">Upcoming shows</h2>
+            <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              {(shows ?? []).map((show) => (
+                <ShowCard
+                  key={show.id}
+                  show={{
+                    id: show.id,
+                    title: show.title,
+                    venue: show.venue,
+                    city: show.city,
+                    start_at: show.start_at,
+                    ticket_price_kobo: show.ticket_price_kobo,
+                    total_tickets: show.total_tickets,
+                    cover_art_path: show.cover_art_path,
+                    soldCount: soldByShow.get(show.id) ?? 0,
+                  }}
+                  enabledGateways={enabledGateways}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         <h2 className="mb-4 text-lg font-bold">Drops</h2>

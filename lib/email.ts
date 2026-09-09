@@ -137,6 +137,76 @@ export async function sendGiftShoutoutEmail({
   });
 }
 
+export async function sendTicketReceiptEmail({
+  to,
+  fanName,
+  showTitle,
+  showVenue,
+  showCity,
+  showStartAt,
+  artistName,
+  amountKobo,
+  reference,
+}: {
+  to: string;
+  fanName: string;
+  showTitle: string;
+  showVenue: string | null;
+  showCity: string | null;
+  showStartAt: string | null;
+  artistName: string;
+  amountKobo: number;
+  reference: string;
+}) {
+  if (!resend) return;
+
+  const safeFanName = escapeHtml(fanName);
+  const safeShowTitle = escapeHtml(showTitle);
+  const safeArtistName = escapeHtml(artistName);
+
+  let whenHow = "";
+  if (showStartAt) {
+    const d = new Date(showStartAt);
+    const locale = d.toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const location = [showCity, showVenue].filter(Boolean).join(" · ");
+    whenHow = `<tr><td style="padding: 8px 0; color: #777;">When</td><td style="padding: 8px 0; text-align: right;">${escapeHtml(locale)}</td></tr>`;
+    if (location) {
+      whenHow += `<tr><td style="padding: 8px 0; color: #777;">Where</td><td style="padding: 8px 0; text-align: right;">${escapeHtml(location)}</td></tr>`;
+    }
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Your ticket to "${showTitle}"`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="margin-bottom: 4px;">See you there, ${safeFanName}!</h2>
+        <p style="color: #555;">Your ticket to <strong>${safeShowTitle}</strong>${safeArtistName ? ` by ${safeArtistName}` : ""} is confirmed.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          ${whenHow}
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777;">Price paid</td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${formatNaira(amountKobo)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #777;">Reference</td>
+            <td style="padding: 8px 0; text-align: right; font-family: monospace; font-size: 12px;">${reference}</td>
+          </tr>
+        </table>
+        <p style="color: #aaa; font-size: 12px; margin-top: 32px;">Keep your reference handy for entry. Questions? Reply to this email.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendNewArtistSignupEmail({
   to,
   stageName,

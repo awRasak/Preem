@@ -1,19 +1,20 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Bell } from "lucide-react";
+import { Bell, CalendarDays } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { HomeIcon, MusicNoteIcon, PeopleIcon } from "./Icons";
 
-export type ArtistSection = "home" | "drops" | "listeners" | "profile";
+export type ArtistSection = "home" | "drops" | "shows" | "listeners" | "profile";
 
 const NAV_ITEMS: {
   section: ArtistSection;
   label: string;
   href: string;
-  icon: typeof HomeIcon;
+  icon: React.ComponentType<{ className?: string }>;
 }[] = [
   { section: "home", label: "Home", href: "/artist/dashboard", icon: HomeIcon },
   { section: "drops", label: "Drops", href: "/artist/drops", icon: MusicNoteIcon },
+  { section: "shows", label: "Shows", href: "/artist/shows", icon: CalendarDays },
   { section: "listeners", label: "Listeners", href: "/artist/listeners", icon: PeopleIcon },
 ];
 

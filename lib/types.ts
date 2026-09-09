@@ -77,6 +77,40 @@ export type ArtistLink = {
   created_at: string;
 };
 
+export type ShowStatus = "published" | "cancelled";
+
+export type Show = {
+  id: string;
+  artist_id: string;
+  slug: string | null;
+  title: string;
+  description: string | null;
+  venue: string | null;
+  city: string | null;
+  start_at: string;
+  end_at: string | null;
+  ticket_price_kobo: number;
+  total_tickets: number;
+  cover_art_path: string | null;
+  status: ShowStatus;
+  created_at: string;
+  artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;
+};
+
+export type ShowTicket = {
+  id: string;
+  show_id: string;
+  fan_name: string;
+  fan_phone: string;
+  fan_email: string;
+  amount_kobo: number;
+  paystack_ref: string;
+  gateway: "paystack" | "monipay";
+  status: PurchaseStatus;
+  purchased_at: string | null;
+  created_at: string;
+};
+
 export type Purchase = {
   id: string;
   drop_id: string;

@@ -3,7 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyTransaction as verifyPaystackTransaction } from "@/lib/paystack";
 import { verifyTransaction as verifyMonipayTransaction } from "@/lib/monipay";
 import { markPurchaseSuccess } from "@/lib/purchases";
+import { markShowTicketSuccess } from "@/lib/show-tickets";
 
+// One verify endpoint for both drops and show tickets -- both mint pending
+// rows keyed by reference before payment, so the flow is identical.
 export async function GET(req: Request) {
   const reference = new URL(req.url).searchParams.get("reference");
   if (!reference) {
@@ -12,12 +15,20 @@ export async function GET(req: Request) {
 
   const supabase = createAdminClient();
 
-  const { data: existing } = await supabase
-    .from("purchases")
-    .select("gateway, amount_kobo")
-    .eq("paystack_ref", reference)
-    .single();
+  const [{ data: purchase }, { data: showTicket }] = await Promise.all([
+    supabase
+      .from("purchases")
+      .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
+      .eq("paystack_ref", reference)
+      .single(),
+    supabase
+      .from("show_tickets")
+      .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
+      .eq("paystack_ref", reference)
+      .single(),
+  ]);
 
+  const existing = purchase ?? showTicket;
   if (!existing) {
     return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
   }
@@ -46,14 +57,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Verification failed" }, { status: 502 });
   }
 
-  const purchase = await markPurchaseSuccess(supabase, reference);
+  const confirmed = purchase
+    ? await markPurchaseSuccess(supabase, reference)
+    : await markShowTicketSuccess(supabase, reference);
 
-  if (!purchase || purchase.status !== "success") {
+  if (!confirmed || confirmed.status !== "success") {
     return NextResponse.json(
       { error: "Purchase could not be confirmed" },
       { status: 402 },
     );
   }
 
-  return NextResponse.json({ status: "success", fanPhone: purchase.fan_phone });
+  return NextResponse.json({
+    status: "success",
+    fanPhone: "fan_phone" in confirmed ? confirmed.fan_phone : undefined,
+  });
 }

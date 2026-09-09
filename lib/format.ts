@@ -33,3 +33,21 @@ export function formatTimeLeft(windowEnd: string): string {
   const seconds = totalSeconds % 60;
   return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")} left`;
 }
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// "Sat, Sep 6 · 8:00 PM" -- show listings lean on the date far more than
+// the year, which only matters if the gig is not this year's.
+export function formatShowDate(iso: string): string {
+  const d = new Date(iso);
+  const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const thisYear = d.getUTCFullYear() === new Date().getUTCFullYear();
+  const datePart = thisYear
+    ? `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`
+    : `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+  return `${weekday}, ${datePart} · ${time}`;
+}

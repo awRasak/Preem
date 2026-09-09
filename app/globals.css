@@ -34,6 +34,10 @@
    actually need to scroll. */
 html {
   overflow-x: hidden;
+  /* The app is dark throughout: this makes native controls follow suit --
+     the date/time picker indicator icon (which otherwise renders black)
+     and the calendar popup (which otherwise opens white). */
+  color-scheme: dark;
 }
 
 body {

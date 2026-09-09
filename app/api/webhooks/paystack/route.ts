@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/paystack";
 import { markPurchaseSuccess } from "@/lib/purchases";
+import { markShowTicketSuccess } from "@/lib/show-tickets";
 
 export async function POST(req: Request) {
   const rawBody = await req.text();
@@ -19,7 +20,13 @@ export async function POST(req: Request) {
     // callback path re-checks independently, so skipping here is safe.
     const paidAmount =
       typeof event.data?.amount === "number" ? event.data.amount : undefined;
-    await markPurchaseSuccess(supabase, event.data.reference, paidAmount);
+    // Either a drop purchase or a show ticket may carry this reference; the
+    // mark helpers are both idempotent and no-op when the reference isn't
+    // theirs, so it's safe to try both.
+    await Promise.all([
+      markPurchaseSuccess(supabase, event.data.reference, paidAmount),
+      markShowTicketSuccess(supabase, event.data.reference, paidAmount),
+    ]);
   }
 
   return NextResponse.json({ received: true });
