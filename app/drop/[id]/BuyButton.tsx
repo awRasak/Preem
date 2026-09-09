@@ -26,10 +26,14 @@ declare global {
         key: string;
         email: string;
         amount: number;
-        reference?: string;
-        access_code?: string;
+        // NOTE: reference/access_code are NOT forwarded by Monipay's inline
+        // script (it sends only public_key, email, amount to its checkout
+        // page) -- our reference travels via `metadata` for dashboard
+        // reconciliation, and confirmation uses the reference Monipay
+        // reports in onSuccess. See /api/checkout/verify-monipay.
+        metadata?: Record<string, string>;
         onLoad?: () => void;
-        onSuccess?: (data: { status: string }) => void;
+        onSuccess?: (data: unknown) => void;
         onCancel?: () => void;
         onError?: (error: unknown) => void;
       }) => void;
@@ -116,10 +120,21 @@ export function BuyButton({
   const amountKobo = Math.round(Number(amountNaira) * 100);
   const amountValid = Number.isFinite(amountKobo) && amountKobo >= minPriceKobo;
 
-  function afterPaymentSuccess(paidReference: string) {
+  function afterPaymentSuccess(paidReference: string, monipayData?: unknown) {
     setStep("verifying");
     setReference(paidReference);
-    fetch(`/api/checkout/verify?reference=${encodeURIComponent(paidReference)}`)
+    // Monipay completes under its own reference (its popup drops ours), so
+    // confirm via the payload it reports -- see verify-monipay. Paystack's
+    // callback reference already matches our row: plain GET verify.
+    const verifyCall =
+      monipayData === undefined
+        ? fetch(`/api/checkout/verify?reference=${encodeURIComponent(paidReference)}`)
+        : fetch("/api/checkout/verify-monipay", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reference: paidReference, payload: monipayData ?? null }),
+          });
+    verifyCall
       .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
       .then(({ ok, verifyBody }) => {
         if (ok && verifyBody.status === "success") {
@@ -179,14 +194,13 @@ export function BuyButton({
         key: body.publicKey,
         email: fanEmail,
         amount: body.amountKobo,
-        reference: body.reference,
-        access_code: body.accessCode,
+        metadata: { reference: body.reference },
         onCancel: () => setStep("form"),
         onError: () => {
           setError("Payment failed to load — try again.");
           setStep("form");
         },
-        onSuccess: () => afterPaymentSuccess(body.reference),
+        onSuccess: (data) => afterPaymentSuccess(body.reference, data),
       });
       return;
     }

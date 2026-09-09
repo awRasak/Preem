@@ -28,14 +28,18 @@ async function monipayFetch<T>(
   return body.data as T;
 }
 
-// Unlike Paystack, Monipay only honors a client-supplied reference if it
-// was first registered through this REST call -- handing an invented
-// reference straight to the Inline JS popup without calling this first
-// means Monipay silently generates its own internal reference instead, and
-// /transaction/verify/{ourReference} comes back "Transaction not found"
-// even though the payment went through. access_code from the response is
-// what makes the popup resume *this* registered transaction rather than
-// starting an anonymous one.
+// NOTE on the inline popup flow, verified by reading the served script
+// (https://js.monipay.ng/v2/inline.js): Monipay.prototype.checkout forwards
+// ONLY public_key, email and amount (+ name/metadata) to its checkout page.
+// It silently drops any client-supplied reference AND the access_code from
+// this call -- there is no resumeTransaction. So a completed popup payment
+// always lives under Monipay's own internal reference and
+// verify/{ourReference} comes back "Transaction not found" even though the
+// money moved. Confirmation therefore goes through
+// /api/checkout/verify-monipay, which verifies the reference Monipay itself
+// reports in the MONIPAY_SUCCESS postMessage payload. This initialize call
+// is kept (it registers the session and yields an access_code should
+// Monipay ever bind it), but it is NOT what links the popup payment to us.
 export async function initializeTransaction(params: {
   email: string;
   amountKobo: number;
@@ -65,6 +69,43 @@ export async function verifyTransaction(reference: string): Promise<{
   metadata: Record<string, unknown>;
 }> {
   return monipayFetch(`/transaction/verify/${encodeURIComponent(reference)}`);
+}
+
+// The inline popup reports its completed payment via postMessage, but the
+// payload shape is undocumented -- pull every plausible reference field out
+// of it (top level and one nested `data` level, plus a bare string) so the
+// server can verify whichever one Monipay actually completed under.
+const POPUP_REF_KEYS = [
+  "reference",
+  "transaction_reference",
+  "transactionReference",
+  "trxref",
+  "payment_reference",
+  "paymentReference",
+  "id",
+  "transaction_id",
+  "transactionId",
+];
+
+export function monipayCandidateRefs(payload: unknown): string[] {
+  const out: string[] = [];
+  const push = (v: unknown) => {
+    if (typeof v === "string" && v.length >= 4 && !out.includes(v)) out.push(v);
+  };
+  if (typeof payload === "string") {
+    push(payload);
+    return out;
+  }
+  if (payload && typeof payload === "object") {
+    const scopes = [payload as Record<string, unknown>];
+    const data = (payload as Record<string, unknown>).data;
+    if (data && typeof data === "object")
+      scopes.push(data as Record<string, unknown>);
+    for (const scope of scopes) {
+      for (const k of POPUP_REF_KEYS) push(scope[k]);
+    }
+  }
+  return out;
 }
 
 // Bank codes are the standard NIBSS/CBN interbank codes (Monipay's own docs

@@ -3,6 +3,7 @@ import {
   createTransferRecipient,
   initializeTransaction,
   initiateTransfer,
+  monipayCandidateRefs,
   verifyTransaction,
 } from "./monipay";
 
@@ -91,5 +92,43 @@ describe("monipay auth key selection", () => {
     await expect(
       initializeTransaction({ email: "a@b.com", amountKobo: 1000, reference: "ref_1" }),
     ).rejects.toThrow(/Use public key for this endpoint/);
+  });
+});
+
+describe("monipayCandidateRefs", () => {
+  // The inline popup drops our reference, so confirmation depends on
+  // extracting Monipay's own reference from its undocumented postMessage
+  // payload -- these pin the extraction against every shape we've seen.
+  it("returns nothing for null/undefined/numbers", () => {
+    expect(monipayCandidateRefs(null)).toEqual([]);
+    expect(monipayCandidateRefs(undefined)).toEqual([]);
+    expect(monipayCandidateRefs(42)).toEqual([]);
+  });
+
+  it("accepts a bare string reference", () => {
+    expect(monipayCandidateRefs("mp_abc123")).toEqual(["mp_abc123"]);
+  });
+
+  it("reads common reference fields off the payload", () => {
+    expect(monipayCandidateRefs({ reference: "mp_1" })).toEqual(["mp_1"]);
+    expect(monipayCandidateRefs({ trxref: "mp_2" })).toEqual(["mp_2"]);
+    expect(
+      monipayCandidateRefs({ transaction_reference: "mp_3" }),
+    ).toEqual(["mp_3"]);
+  });
+
+  it("reads one nested data level and dedupes", () => {
+    expect(
+      monipayCandidateRefs({
+        status: "success",
+        data: { reference: "mp_4", id: "mp_4" },
+      }),
+    ).toEqual(["mp_4"]);
+  });
+
+  it("skips non-strings and stubs", () => {
+    expect(
+      monipayCandidateRefs({ reference: 123, id: "ab", reference2: "mp_5" }),
+    ).toEqual([]);
   });
 });
