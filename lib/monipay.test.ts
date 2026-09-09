@@ -4,6 +4,7 @@ import {
   initializeTransaction,
   initiateTransfer,
   monipayCandidateRefs,
+  monipayCollected,
   verifyTransaction,
 } from "./monipay";
 
@@ -130,5 +131,17 @@ describe("monipayCandidateRefs", () => {
     expect(
       monipayCandidateRefs({ reference: 123, id: "ab", reference2: "mp_5" }),
     ).toEqual([]);
+  });
+});
+
+describe("monipayCollected", () => {
+  // Live incident: a ₦500 charge verified as amount 48000 + fees 2000.
+  // Guards must compare the gross, or every Monipay payment 402s.
+  it("adds fees back to amount", () => {
+    expect(monipayCollected({ amount: 48000, fees: 2000 })).toBe(50000);
+  });
+
+  it("passes amount through when fees are absent", () => {
+    expect(monipayCollected({ amount: 50000 })).toBe(50000);
   });
 });

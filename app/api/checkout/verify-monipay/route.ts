@@ -5,6 +5,7 @@ import { parseBody } from "@/lib/http";
 import {
   verifyTransaction as verifyMonipayTransaction,
   monipayCandidateRefs,
+  monipayCollected,
 } from "@/lib/monipay";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
@@ -64,11 +65,12 @@ export async function POST(req: Request) {
     try {
       const tx = await verifyMonipayTransaction(candidate);
       if (tx.status !== "success") continue;
-      // Same tamper guard as /api/checkout/verify: the gateway must have
-      // collected at least the committed price before access is granted.
-      if (typeof tx.amount === "number" && tx.amount < existing.amount_kobo) {
+      // Same tamper guard as /api/checkout/verify, but against the GROSS
+      // collected: Monipay's amount is net of fees.
+      const collected = monipayCollected(tx);
+      if (collected < existing.amount_kobo) {
         console.error(
-          `verify-monipay refused ${reference}: paid ${tx.amount} < recorded ${existing.amount_kobo}`,
+          `verify-monipay refused ${reference}: collected ${collected} < recorded ${existing.amount_kobo}`,
         );
         return NextResponse.json(
           { error: "Payment amount mismatch" },
@@ -76,8 +78,8 @@ export async function POST(req: Request) {
         );
       }
       const confirmed = purchase
-        ? await markPurchaseSuccess(supabase, reference)
-        : await markShowTicketSuccess(supabase, reference);
+        ? await markPurchaseSuccess(supabase, reference, collected)
+        : await markShowTicketSuccess(supabase, reference, collected);
       if (confirmed && confirmed.status === "success") {
         return NextResponse.json({
           status: "success",

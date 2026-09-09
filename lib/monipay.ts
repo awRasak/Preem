@@ -67,8 +67,17 @@ export async function verifyTransaction(reference: string): Promise<{
   amount: number;
   reference: string;
   metadata: Record<string, unknown>;
+  fees?: number;
 }> {
   return monipayFetch(`/transaction/verify/${encodeURIComponent(reference)}`);
+}
+
+// Monipay reports `amount` NET of its processing fee (a ₦500 charge with a
+// ₦20 fee verifies as amount 48000, fees 2000) -- confirmed against a live
+// transaction. Gross collected is what the tamper guards must compare
+// against the recorded price.
+export function monipayCollected(tx: { amount: number; fees?: number }): number {
+  return tx.amount + (typeof tx.fees === "number" ? tx.fees : 0);
 }
 
 // The inline popup reports its completed payment via postMessage, but the

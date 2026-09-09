@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyTransaction as verifyPaystackTransaction } from "@/lib/paystack";
-import { verifyTransaction as verifyMonipayTransaction } from "@/lib/monipay";
+import { verifyTransaction as verifyMonipayTransaction, monipayCollected } from "@/lib/monipay";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
 
@@ -43,12 +43,12 @@ export async function GET(req: Request) {
     }
     // The gateway must have collected at least the committed price before
     // access is granted (guards against a tampered inline popup amount).
-    if (
-      typeof tx.amount === "number" &&
-      tx.amount < existing.amount_kobo
-    ) {
+    // Monipay reports net of fees, so compare the gross collected.
+    const collected =
+      existing.gateway === "monipay" ? monipayCollected(tx) : tx.amount;
+    if (typeof collected === "number" && collected < existing.amount_kobo) {
       console.error(
-        `verify refused ${reference}: paid ${tx.amount} < recorded ${existing.amount_kobo}`,
+        `verify refused ${reference}: collected ${collected} < recorded ${existing.amount_kobo}`,
       );
       return NextResponse.json({ error: "Payment amount mismatch" }, { status: 402 });
     }
