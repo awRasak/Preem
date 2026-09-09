@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
 import { initializeTransaction as initializeMonipayTransaction } from "@/lib/monipay";
 
 const schema = z.object({
@@ -22,11 +22,9 @@ const RATE_LIMIT_WINDOW_MINUTES = 10;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 
 export async function POST(req: Request) {
-  if (!rateLimit(`show-ticket-init:${clientIp(req)}`, { windowMs: 10 * 60 * 1000, max: 20 })) {
-    return NextResponse.json(
-      { error: "Too many attempts — try again in a few minutes." },
-      { status: 429 },
-    );
+  const ipLimit = rateLimitCheck(`show-ticket-init:${clientIp(req)}`, { windowMs: 10 * 60 * 1000, max: 20 });
+  if (!ipLimit.allowed) {
+    return tooManyRequests(ipLimit.retryAfterMs);
   }
 
   const parsed = await parseBody(req, schema);
@@ -86,10 +84,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "This show is sold out." }, { status: 400 });
   }
   if ((recentAttempts ?? 0) >= RATE_LIMIT_MAX_ATTEMPTS) {
-    return NextResponse.json(
-      { error: "Too many attempts — try again in a few minutes." },
-      { status: 429 },
-    );
+    // "Later" is when the oldest attempt in this window expires.
+    const { data: oldest } = await supabase
+      .from("show_tickets")
+      .select("created_at")
+      .eq("fan_phone", fanPhone)
+      .gte("created_at", windowStart)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const retryAfterMs = oldest
+      ? Math.max(
+          0,
+          new Date(oldest.created_at).getTime() +
+            RATE_LIMIT_WINDOW_MINUTES * 60 * 1000 -
+            Date.now(),
+        )
+      : RATE_LIMIT_WINDOW_MINUTES * 60 * 1000;
+    return tooManyRequests(retryAfterMs);
   }
 
   const reference = `preem_tkt_${crypto.randomUUID()}`;

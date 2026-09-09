@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBody } from "@/lib/http";
+import { tooManyRequests } from "@/lib/rate-limit";
 
 const schema = z.object({
   artistId: z.string().uuid(),
@@ -66,10 +67,24 @@ export async function POST(req: Request) {
     .gte("created_at", windowStart);
 
   if ((count ?? 0) >= RATE_LIMIT_MAX_ATTEMPTS) {
-    return NextResponse.json(
-      { error: "Too many attempts — try again in a few minutes." },
-      { status: 429 },
-    );
+    // "Later" is when the oldest attempt in this window expires.
+    const { data: oldest } = await admin
+      .from("gifts")
+      .select("created_at")
+      .eq("fan_email", fanEmail)
+      .gte("created_at", windowStart)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const retryAfterMs = oldest
+      ? Math.max(
+          0,
+          new Date(oldest.created_at).getTime() +
+            RATE_LIMIT_WINDOW_MINUTES * 60 * 1000 -
+            Date.now(),
+        )
+      : RATE_LIMIT_WINDOW_MINUTES * 60 * 1000;
+    return tooManyRequests(retryAfterMs);
   }
 
   // Vercel's edge injects these on every incoming request in production;
