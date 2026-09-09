@@ -54,14 +54,15 @@ export default async function AdminPage() {
     <main className="mx-auto w-full max-w-4xl flex-1 space-y-12 px-5 py-8 sm:px-8">
       <section>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <StatBox icon={<Music2 className="h-4 w-4" />} value={String(totalDropCount ?? 0)} label="Songs" />
-          <StatBox icon={<Mic2 className="h-4 w-4" />} value={String(totalArtistCount ?? 0)} label="Artists" />
-          <StatBox icon={<Users className="h-4 w-4" />} value={String(totalListeners)} label="Listeners" />
-          <StatBox icon={<ShoppingBag className="h-4 w-4" />} value={String(totalSales)} label="Sales" />
+          <StatBox icon={<Music2 className="h-4 w-4" />} value={String(totalDropCount ?? 0)} label="Songs" href="/admin/songs" />
+          <StatBox icon={<Mic2 className="h-4 w-4" />} value={String(totalArtistCount ?? 0)} label="Artists" href="/admin/artists" />
+          <StatBox icon={<Users className="h-4 w-4" />} value={String(totalListeners)} label="Listeners" href="/admin/listeners" />
+          <StatBox icon={<ShoppingBag className="h-4 w-4" />} value={String(totalSales)} label="Sales" href="/admin/transactions" />
           <StatBox
             icon={<Wallet className="h-4 w-4" />}
             value={formatNaira(platformRevenueKobo)}
             label="Platform revenue"
+            href="/admin/payouts"
           />
         </div>
       </section>
