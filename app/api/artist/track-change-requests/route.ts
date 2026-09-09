@@ -60,6 +60,7 @@ export async function POST(req: Request) {
     reason: input.reason,
   });
   if (error) {
+    console.error(`track-change-request insert failed for ${input.trackId}:`, error.message);
     return NextResponse.json({ error: "Could not submit request." }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
