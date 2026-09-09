@@ -4,7 +4,7 @@ import { Nav, NavLink } from "@/components/Nav";
 import { DistributionGuidance } from "@/components/DistributionGuidance";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { DropHeaderEditable } from "./DropHeaderEditable";
-import type { Drop, DropTrack } from "@/lib/types";
+import type { Drop, DropTrack, TrackChangeRequest } from "@/lib/types";
 
 export default async function ArtistDropDetailPage({
   params,
@@ -38,6 +38,14 @@ export default async function ArtistDropDetailPage({
     .order("track_number", { ascending: true });
   const tracks = (tracksData ?? []) as DropTrack[];
 
+  // Pending audio-change requests for this drop's tracks, so each track
+  // can show its review state instead of offering a duplicate form.
+  const { data: changeRequestsData } = await supabase
+    .from("track_change_requests")
+    .select("*")
+    .eq("drop_id", id)
+    .eq("status", "pending");
+
   const { data: buyers } = await supabase
     .from("purchases")
     .select("fan_name, fan_phone, amount_kobo, purchased_at, track_id")
@@ -60,6 +68,7 @@ export default async function ArtistDropDetailPage({
           tracks={tracks}
           artistName={artistName ?? ""}
           hasSales={(buyers?.length ?? 0) > 0}
+          pendingRequests={(changeRequestsData ?? []) as TrackChangeRequest[]}
         />
 
         {!live && (

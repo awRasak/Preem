@@ -2,7 +2,7 @@
 
 import { Field, Textarea } from "@/components/Field";
 import { GENRES } from "@/lib/genres";
-import { newTrackDraft } from "./types";
+import { AUDIO_ACCEPT, newTrackDraft } from "./types";
 import type { DropType, ReleaseType, WizardState } from "./types";
 
 const RELEASE_TYPES: { value: ReleaseType; label: string }[] = [
@@ -131,7 +131,7 @@ export function Step1ReleaseSetup({
         <Field label="Track file">
           <input
             type="file"
-            accept="audio/*"
+            accept={AUDIO_ACCEPT}
             onChange={(e) => onChange({ singleAudioFile: e.target.files?.[0] ?? null })}
             className="block w-full text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-xs file:font-bold file:text-paper"
           />
@@ -143,7 +143,7 @@ export function Step1ReleaseSetup({
         <Field label="Tracklist">
           <input
             type="file"
-            accept="audio/*"
+            accept={AUDIO_ACCEPT}
             multiple
             onChange={(e) => handleTracklistFiles(e.target.files)}
             className="block w-full text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-xs file:font-bold file:text-paper"

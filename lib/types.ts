@@ -97,6 +97,20 @@ export type Show = {
   artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;
 };
 
+export type TrackChangeStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export type TrackChangeRequest = {
+  id: string;
+  track_id: string;
+  drop_id: string;
+  artist_id: string;
+  new_audio_path: string;
+  reason: string;
+  status: TrackChangeStatus;
+  created_at: string;
+  reviewed_at: string | null;
+};
+
 export type ShowTicket = {
   id: string;
   show_id: string;

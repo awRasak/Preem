@@ -3,6 +3,12 @@ import type { Genre } from "@/lib/types";
 export type ReleaseType = "single" | "ep" | "album";
 export type DropType = "early-access" | "exclusive";
 
+// Explicit picker filter for track uploads. A bare "audio/*" lets some
+// mobile pickers hide .wav files, so MP3 and WAV are listed by both MIME
+// type and extension.
+export const AUDIO_ACCEPT =
+  "audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/wave,.mp3,.wav";
+
 export type TrackDraft = {
   localId: string;
   file: File | null;

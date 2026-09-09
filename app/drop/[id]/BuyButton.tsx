@@ -260,8 +260,9 @@ export function BuyButton({
 
       {step !== "closed" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-xs rounded-xl border border-line-strong bg-surface p-6">
+          <div className="max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
             {step === "otp" ? (
+              <div className="mx-auto w-full max-w-xs">
               <form onSubmit={handleVerifyOtp} className="text-center">
                 <h3 className="mb-2 text-lg font-bold">Save your access</h3>
                 <p className="mb-4 text-sm text-muted">
@@ -298,8 +299,9 @@ export function BuyButton({
                   </Button>
                 </div>
               </form>
+              </div>
             ) : step === "done" ? (
-              <div className="text-center">
+              <div className="mx-auto w-full max-w-xs text-center">
                 <h3 className="mb-2 text-lg font-bold">You&apos;re in!</h3>
                 <p className="mb-4 text-sm text-muted">
                   {signedIn ? (
@@ -358,7 +360,8 @@ export function BuyButton({
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handlePay}>
+              <form onSubmit={handlePay} className="sm:grid sm:grid-cols-2 sm:gap-x-8">
+                <div>
                 <div className="mb-1 flex items-center gap-2">
                   <h3 className="text-base font-bold">{title}</h3>
                   {isExclusive && <Badge status="exclusive">EXCLUSIVE</Badge>}
@@ -444,6 +447,8 @@ export function BuyButton({
                     </div>
                   </Field>
                 )}
+                </div>
+                <div>
                 <Field label="Name">
                   <Input
                     required
@@ -473,7 +478,8 @@ export function BuyButton({
                 {error && (
                   <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>
                 )}
-                <div className="flex gap-2">
+                </div>
+                <div className="flex gap-2 sm:col-span-2">
                   <Button
                     type="button"
                     variant="outline"

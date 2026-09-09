@@ -3,7 +3,7 @@
 import { ChevronUp, ChevronDown, X } from "lucide-react";
 import { Field, Input, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
-import { newTrackDraft } from "./types";
+import { newTrackDraft, AUDIO_ACCEPT } from "./types";
 import type { TrackDraft, WizardState } from "./types";
 
 export function Step2TrackDetails({
@@ -82,7 +82,7 @@ export function Step2TrackDetails({
                 ) : (
                   <input
                     type="file"
-                    accept="audio/*"
+                    accept={AUDIO_ACCEPT}
                     onChange={(e) => updateTrack(track.localId, { file: e.target.files?.[0] ?? null })}
                     className="mb-2 block w-full text-xs text-muted file:mr-3 file:rounded-full file:border-0 file:bg-surface-2 file:px-2.5 file:py-1.5 file:text-[11px] file:font-bold file:text-paper"
                   />

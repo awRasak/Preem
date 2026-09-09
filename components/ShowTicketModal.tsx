@@ -180,9 +180,9 @@ export function BuyTicketButton({
 
       {step !== "closed" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-xs rounded-xl border border-line-strong bg-surface p-6">
+          <div className="max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
             {step === "done" ? (
-              <div className="text-center">
+              <div className="mx-auto w-full max-w-xs text-center">
                 <h3 className="mb-2 text-lg font-bold">You&apos;re going!</h3>
                 <p className="mb-4 text-sm text-muted">
                   Your ticket to <strong className="text-paper">“{show.title}”</strong> is
@@ -216,7 +216,7 @@ export function BuyTicketButton({
                 </Button>
               </div>
             ) : step === "error" ? (
-              <div className="text-center">
+              <div className="mx-auto w-full max-w-xs text-center">
                 <h3 className="mb-2 text-lg font-bold">Confirming…</h3>
                 <p className="mb-4 text-sm text-muted">{error}</p>
                 <Button variant="primary" className="w-full" onClick={() => setStep("closed")}>
@@ -224,7 +224,8 @@ export function BuyTicketButton({
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handlePay}>
+              <form onSubmit={handlePay} className="sm:grid sm:grid-cols-2 sm:gap-x-8">
+                <div>
                 <h3 className="mb-1 text-base font-bold">{show.title}</h3>
                 <p className="mb-3 text-xs text-muted">
                   {formatShowDate(show.start_at)} ·{" "}
@@ -253,6 +254,8 @@ export function BuyTicketButton({
                     </div>
                   </Field>
                 )}
+                </div>
+                <div>
                 <Field label="Name">
                   <Input
                     required
@@ -280,7 +283,8 @@ export function BuyTicketButton({
                   />
                 </Field>
                 {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
-                <div className="flex gap-2">
+                </div>
+                <div className="flex gap-2 sm:col-span-2">
                   <Button
                     type="button"
                     variant="outline"

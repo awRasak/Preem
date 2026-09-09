@@ -174,9 +174,9 @@ export function GiftButton({
       {step !== "closed" &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-xs rounded-xl border border-line-strong bg-surface p-6">
+            <div className="max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
               {step === "done" ? (
-                <div className="text-center">
+                <div className="mx-auto w-full max-w-xs text-center">
                   <h3 className="mb-2 text-lg font-bold">Sent!</h3>
                   <p className="mb-4 text-sm text-muted">
                     Your gift went straight to {artistName}. We&apos;ve emailed you a
@@ -191,12 +191,13 @@ export function GiftButton({
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handleSend}>
+                <form onSubmit={handleSend} className="sm:grid sm:grid-cols-2 sm:gap-x-8">
+                  <div>
                   <h3 className="mb-1 text-base font-bold">Gift {artistName}</h3>
                   <p className="mb-4 text-xs text-muted">
                     Straight to the artist — no track unlocked, no strings attached.
                   </p>
-                  <div className="mb-3 grid grid-cols-4 gap-2">
+                  <div className="mb-3 grid grid-cols-4 gap-2 sm:grid-cols-2">
                     {PRESET_AMOUNTS_NAIRA.map((n) => (
                       <button
                         key={n}
@@ -236,6 +237,8 @@ export function GiftButton({
                       />
                     </Field>
                   )}
+                  </div>
+                  <div>
                   {needsGuestInfo && (
                     <>
                       <Field label="Name">
@@ -260,7 +263,8 @@ export function GiftButton({
                   {error && (
                     <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>
                   )}
-                  <div className="flex gap-2">
+                  </div>
+                  <div className="flex gap-2 sm:col-span-2">
                     <Button
                       type="button"
                       variant="outline"

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/Button";
 import { ArtistsTable, type AdminArtist } from "../../ArtistsTable";
 
 export const revalidate = 0;
@@ -49,7 +50,12 @@ export default async function AdminArtistsPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
-      <h1 className="mb-6 text-xl font-bold">Artists ({adminArtists.length})</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold">Artists ({adminArtists.length})</h1>
+        <Button href="/admin/artists/new" variant="primary" className="!px-4 !py-2 text-xs">
+          + New artist
+        </Button>
+      </div>
       <ArtistsTable artists={adminArtists} />
     </main>
   );

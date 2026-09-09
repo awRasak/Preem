@@ -14,8 +14,9 @@ import { artworkFallback } from "@/lib/placeholder";
 import { prepareArtworkFile } from "@/lib/client-image";
 import { OwnerControls } from "./OwnerControls";
 import { ShareDropButton } from "./ShareDropButton";
+import { TrackAudioChange } from "./TrackAudioChange";
 import { LyricsSection } from "@/app/drop/[id]/LyricsSection";
-import type { Drop, DropTrack, Genre } from "@/lib/types";
+import type { Drop, DropTrack, Genre, TrackChangeRequest } from "@/lib/types";
 
 type EditableTrack = {
   id: string;
@@ -40,15 +41,18 @@ export function DropHeaderEditable({
   tracks,
   artistName,
   hasSales,
+  pendingRequests,
 }: {
   drop: Drop;
   tracks: DropTrack[];
   artistName: string;
   hasSales: boolean;
+  pendingRequests: TrackChangeRequest[];
 }) {
   const router = useRouter();
   const live = isDropLive(drop.window_end);
   const isBundle = drop.release_type !== "single" && tracks.length > 1;
+  const pendingByTrack = new Map(pendingRequests.map((r) => [r.track_id, r]));
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -210,6 +214,13 @@ export function DropHeaderEditable({
                 )}
               </div>
             )}
+            {!isBundle && tracks[0] && (
+              <TrackAudioChange
+                trackId={tracks[0].id}
+                trackTitle={tracks[0].title}
+                pending={pendingByTrack.get(tracks[0].id) ?? null}
+              />
+            )}
           </div>
         </div>
 
@@ -226,23 +237,30 @@ export function DropHeaderEditable({
             <h2 className="mb-3 text-lg font-bold">Tracks</h2>
             <div className="divide-y divide-line rounded-xl border border-line">
               {tracks.map((track) => (
-                <div key={track.id} className="flex items-center gap-3 p-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">
-                      {track.track_number}. {track.title}
+                <div key={track.id} className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
+                        {track.track_number}. {track.title}
+                      </div>
+                      {track.collaborators && (
+                        <div className="mt-0.5 truncate text-xs text-muted">{track.collaborators}</div>
+                      )}
                     </div>
-                    {track.collaborators && (
-                      <div className="mt-0.5 truncate text-xs text-muted">{track.collaborators}</div>
-                    )}
+                    <Badge status="price">Min. {formatNaira(track.min_price_kobo)}</Badge>
+                    <OwnerControls
+                      trackId={track.id}
+                      title={track.title}
+                      artistName={artistName}
+                      artistId={drop.artist_id}
+                      artworkUrl={drop.artwork_path}
+                      showDownload={false}
+                    />
                   </div>
-                  <Badge status="price">Min. {formatNaira(track.min_price_kobo)}</Badge>
-                  <OwnerControls
+                  <TrackAudioChange
                     trackId={track.id}
-                    title={track.title}
-                    artistName={artistName}
-                    artistId={drop.artist_id}
-                    artworkUrl={drop.artwork_path}
-                    showDownload={false}
+                    trackTitle={track.title}
+                    pending={pendingByTrack.get(track.id) ?? null}
                   />
                 </div>
               ))}
