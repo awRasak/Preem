@@ -9,6 +9,30 @@ import { Field, Textarea } from "@/components/Field";
 import { AUDIO_ACCEPT } from "../new/types";
 import type { TrackChangeRequest } from "@/lib/types";
 
+// supabase-js upload() reports no progress, so large audio files upload
+// blind. A signed URL + XHR PUT gives real byte progress everywhere;
+// if signing fails we fall back to the plain upload (indeterminate bar).
+function uploadWithProgress(
+  signedUrl: string,
+  file: File,
+  onProgress: (pct: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new Error("Could not upload replacement audio."));
+    xhr.onerror = () => reject(new Error("Could not upload replacement audio."));
+    xhr.send(file);
+  });
+}
+
 export function TrackAudioChange({
   trackId,
   trackTitle,
@@ -23,6 +47,7 @@ export function TrackAudioChange({
   const [file, setFile] = useState<File | null>(null);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +61,7 @@ export function TrackAudioChange({
       return;
     }
     setSubmitting(true);
+    setProgress(null);
     setError(null);
     try {
       const supabase = createClient();
@@ -48,10 +74,19 @@ export function TrackAudioChange({
       // live track file -- it only goes live if an admin approves it.
       const ext = file.name.split(".").pop();
       const path = `${user.id}/pending-${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
+      const { data: signed } = await supabase.storage
         .from("audio")
-        .upload(path, file);
-      if (uploadError) throw new Error("Could not upload replacement audio.");
+        .createSignedUploadUrl(path);
+      if (signed?.signedUrl) {
+        setProgress(0);
+        await uploadWithProgress(signed.signedUrl, file, setProgress);
+      } else {
+        // Signing unavailable -- plain upload, indeterminate progress.
+        const { error: uploadError } = await supabase.storage
+          .from("audio")
+          .upload(path, file);
+        if (uploadError) throw new Error("Could not upload replacement audio.");
+      }
 
       const res = await fetch("/api/artist/track-change-requests", {
         method: "POST",
@@ -73,6 +108,7 @@ export function TrackAudioChange({
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setSubmitting(false);
+      setProgress(null);
     }
   }
 
@@ -98,7 +134,7 @@ export function TrackAudioChange({
 
   if (pending) {
     return (
-      <div className="mt-2 rounded-lg border border-line bg-surface-2 p-3">
+      <div className="-order-1 mb-4 basis-full rounded-lg border border-line bg-surface-2 p-3">
         <div className="mb-1 flex items-center gap-2">
           <Badge status="pending">Audio change pending review</Badge>
         </div>
@@ -120,22 +156,23 @@ export function TrackAudioChange({
 
   if (!open) {
     return (
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => {
           setError(null);
           setOpen(true);
         }}
-        className="mt-2 text-[11px] font-bold text-muted underline hover:text-paper"
+        className="!px-5 !py-2.5 text-xs ml-auto"
         aria-label={`Request audio change for ${trackTitle}`}
       >
         Replace audio
-      </button>
+      </Button>
     );
   }
 
   return (
-    <div className="mt-2 rounded-lg border border-line bg-surface-2 p-3">
+    <div className="-order-1 mb-4 basis-full rounded-lg border border-line bg-surface-2 p-3">
       <p className="mb-2 text-xs font-bold">Replace audio — goes to admin for approval</p>
       <input
         type="file"
@@ -153,6 +190,23 @@ export function TrackAudioChange({
         />
       </Field>
       {error && <p className="mb-2 text-xs text-[#ff6b6b]">{error}</p>}
+      {submitting && (
+        <div className="mb-3" role="status" aria-label="Uploading replacement audio">
+          <div className="h-1.5 overflow-hidden rounded-full bg-surface">
+            {progress === null ? (
+              <div className="h-full w-full animate-pulse rounded-full bg-accent/60" />
+            ) : (
+              <div
+                className="h-full rounded-full bg-accent transition-[width] duration-150"
+                style={{ width: `${progress}%` }}
+              />
+            )}
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            {progress === null ? "Uploading…" : `Uploading… ${progress}%`}
+          </p>
+        </div>
+      )}
       <div className="flex gap-2">
         <Button
           onClick={handleSubmit}

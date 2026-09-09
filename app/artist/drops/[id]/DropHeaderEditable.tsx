@@ -424,18 +424,13 @@ export function DropHeaderEditable({
                 onChange={(e) => patchTrack(editTracks[0].id, { lyrics: e.target.value })}
               />
             </Field>
-            <TrackAudioChange
-              trackId={editTracks[0].id}
-              trackTitle={title || "Track"}
-              pending={pendingByTrack.get(editTracks[0].id) ?? null}
-            />
           </>
         )
       )}
 
       {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button onClick={handleSave} disabled={saving} className="!px-5 !py-2.5 text-xs">
           {saving ? "Saving…" : "Save changes"}
         </Button>
@@ -447,6 +442,13 @@ export function DropHeaderEditable({
         >
           Cancel
         </Button>
+        {!isBundle && editTracks[0] && (
+          <TrackAudioChange
+            trackId={editTracks[0].id}
+            trackTitle={title || "Track"}
+            pending={pendingByTrack.get(editTracks[0].id) ?? null}
+          />
+        )}
       </div>
     </div>
   );
