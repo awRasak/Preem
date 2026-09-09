@@ -24,6 +24,12 @@ export function isEndingSoon(windowEnd: string | null, thresholdMs: number): boo
   return new Date(windowEnd).getTime() - Date.now() <= thresholdMs;
 }
 
+// True when the given timestamp is within windowMs of now -- used to split
+// "new" arrivals from lingering open items on triage screens.
+export function isFreshRequest(createdAt: string, windowMs: number): boolean {
+  return Date.now() - new Date(createdAt).getTime() < windowMs;
+}
+
 export function formatTimeLeft(windowEnd: string): string {
   const ms = new Date(windowEnd).getTime() - Date.now();
   if (ms <= 0) return "Closed";

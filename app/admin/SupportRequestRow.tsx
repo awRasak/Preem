@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
+import { Badge } from "@/components/Badge";
 
 export function SupportRequestRow({
   id,
@@ -11,6 +12,7 @@ export function SupportRequestRow({
   dropTitle,
   message,
   createdAt,
+  resolved = false,
 }: {
   id: string;
   fanPhone: string;
@@ -18,6 +20,7 @@ export function SupportRequestRow({
   dropTitle: string | null;
   message: string;
   createdAt: string;
+  resolved?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -37,6 +40,7 @@ export function SupportRequestRow({
           {fanEmail && <span className="font-normal text-muted"> · {fanEmail}</span>}
         </div>
         <div className="text-[11px] text-muted">
+          Support ·{" "}
           {new Date(createdAt).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -46,14 +50,18 @@ export function SupportRequestRow({
       </div>
       {dropTitle && <div className="mb-1.5 text-xs font-bold text-accent">{dropTitle}</div>}
       <p className="mb-3 text-sm text-muted">{message}</p>
-      <Button
-        variant="outline"
-        disabled={loading}
-        onClick={resolve}
-        className="!px-3 !py-1.5 text-xs"
-      >
-        {loading ? "…" : "Mark resolved"}
-      </Button>
+      {resolved ? (
+        <Badge status="closed">Resolved</Badge>
+      ) : (
+        <Button
+          variant="outline"
+          disabled={loading}
+          onClick={resolve}
+          className="!px-3 !py-1.5 text-xs"
+        >
+          {loading ? "…" : "Mark resolved"}
+        </Button>
+      )}
     </div>
   );
 }

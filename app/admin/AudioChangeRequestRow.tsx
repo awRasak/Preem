@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
+import { Badge } from "@/components/Badge";
+
+const OUTCOME_BADGE = {
+  approved: { status: "live", label: "Approved" },
+  rejected: { status: "closed", label: "Rejected" },
+  cancelled: { status: "closed", label: "Withdrawn" },
+} as const;
 
 export function AudioChangeRequestRow({
   id,
@@ -12,6 +19,7 @@ export function AudioChangeRequestRow({
   reason,
   createdAt,
   previewUrl,
+  status,
 }: {
   id: string;
   artistName: string;
@@ -20,6 +28,7 @@ export function AudioChangeRequestRow({
   reason: string;
   createdAt: string;
   previewUrl: string | null;
+  status: "pending" | "approved" | "rejected" | "cancelled";
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<"approved" | "rejected" | null>(null);
@@ -42,6 +51,7 @@ export function AudioChangeRequestRow({
           {artistName} <span className="font-normal text-muted">· {dropTitle}</span>
         </div>
         <div className="text-[11px] text-muted">
+          Audio ·{" "}
           {new Date(createdAt).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -58,24 +68,30 @@ export function AudioChangeRequestRow({
       ) : (
         <p className="mb-3 text-xs text-muted">Replacement audio unavailable.</p>
       )}
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          disabled={loading !== null}
-          onClick={() => review("rejected")}
-          className="!px-3 !py-1.5 text-xs"
-        >
-          {loading === "rejected" ? "…" : "Reject"}
-        </Button>
-        <Button
-          variant="primary"
-          disabled={loading !== null}
-          onClick={() => review("approved")}
-          className="!px-3 !py-1.5 text-xs"
-        >
-          {loading === "approved" ? "…" : "Approve & swap"}
-        </Button>
-      </div>
+      {status === "pending" ? (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            disabled={loading !== null}
+            onClick={() => review("rejected")}
+            className="!px-3 !py-1.5 text-xs"
+          >
+            {loading === "rejected" ? "…" : "Reject"}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={loading !== null}
+            onClick={() => review("approved")}
+            className="!px-3 !py-1.5 text-xs"
+          >
+            {loading === "approved" ? "…" : "Approve & swap"}
+          </Button>
+        </div>
+      ) : (
+        <Badge status={OUTCOME_BADGE[status].status}>
+          {OUTCOME_BADGE[status].label}
+        </Badge>
+      )}
     </div>
   );
 }
