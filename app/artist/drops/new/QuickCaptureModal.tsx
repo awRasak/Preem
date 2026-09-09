@@ -4,6 +4,7 @@
    file previews aren't covered by next/image's remotePatterns */
 
 import { Button } from "@/components/Button";
+import { Field, Input } from "@/components/Field";
 import { prepareArtworkFile } from "@/lib/client-image";
 import type { WizardState } from "./types";
 
@@ -52,14 +53,15 @@ export function QuickCaptureModal({
               <span className="text-xs font-bold text-muted">Add artwork</span>
             </div>
           )}
-          <input
-            type="text"
+        </label>
+        <Field label="Title">
+          <Input
             value={state.title}
             onChange={(e) => onChange({ title: e.target.value })}
-            placeholder="Title"
-            className="absolute inset-x-0 bottom-0 z-10 bg-black/60 px-3 py-2.5 text-base font-bold text-white placeholder:text-white/60 focus:outline-none"
+            placeholder="Name your drop"
+            maxLength={120}
           />
-        </label>
+        </Field>
         <p className="mb-6 text-center text-[11px] text-muted">
           3000×3000px · PNG, JPG, or WEBP
         </p>

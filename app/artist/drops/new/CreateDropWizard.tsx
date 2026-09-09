@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { splitLyrics } from "@/lib/lrc";
 import { Nav } from "@/components/Nav";
@@ -341,7 +342,17 @@ export default function CreateDropWizard() {
     <>
       <Nav role="artist" />
       <main className="mx-auto w-full max-w-4xl flex-1 px-5 pb-28 pt-8 sm:px-8">
-        <h1 className="mb-1 text-xl font-bold">Create a drop</h1>
+        <div className="mb-1 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label="Go back"
+            className="-ml-2 rounded-full p-1 text-muted transition-colors hover:text-paper"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-xl font-bold">Create a drop</h1>
+        </div>
         <p className="mb-6 text-xs font-bold uppercase tracking-wide text-muted">
           Step {step} of 4 · {STEP_TITLES[step]}
         </p>
@@ -393,7 +404,6 @@ export default function CreateDropWizard() {
       )}
 
       <WizardBottomBar
-        onBack={goBack}
         onSaveAndClose={() => submit("save")}
         onPreview={() => setShowPreview(true)}
         primaryLabel={step === 4 ? "Publish drop" : "Continue"}

@@ -10,6 +10,8 @@ export function Step3Pricing({
   state: WizardState;
   onChange: (patch: Partial<WizardState>) => void;
 }) {
+  const isExclusive = state.dropType === "exclusive";
+
   return (
     <div>
       <p className="mb-4 text-xs text-muted">
@@ -27,7 +29,26 @@ export function Step3Pricing({
         />
       </Field>
 
-      {state.dropType === "early-access" && (
+      <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface px-3.5 py-3">
+        <input
+          type="checkbox"
+          checked={isExclusive}
+          onChange={(e) =>
+            onChange({ dropType: e.target.checked ? "exclusive" : "early-access" })
+          }
+          className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+        />
+        <span>
+          <span className="block text-sm font-bold text-paper">
+            Make this exclusive to Preem
+          </span>
+          <span className="mt-0.5 block text-[11px] text-muted">
+            Keep this drop only on Preem — it won&apos;t be released anywhere else.
+          </span>
+        </span>
+      </label>
+
+      {!isExclusive && (
         <Field label="Public release date">
           <Input
             required
