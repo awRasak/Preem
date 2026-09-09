@@ -1,24 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 
-// Deliberately has no close affordance -- no X, no backdrop click, no Escape
-// key handler. This is a full pre-launch gate on the homepage, not a
-// dismissible dialog, per explicit product decision.
+// A full pre-launch gate on the homepage. Deliberately has no close
+// affordance for visitors who haven't joined -- no X, no backdrop click, no
+// Escape. But once an email is collected the gate has served its purpose:
+// the modal disappears on its own and (in this browser) stays gone.
+const JOINED_KEY = "preem-waitlist-joined";
+
+// localStorage is an external store; useSyncExternalStore keeps React's
+// snapshot in sync with it (and returns false during SSR) without needing a
+// state-sniffing effect.
+function useJoinedFlag(): boolean {
+  const getSnapshot = () => {
+    try {
+      return window.localStorage.getItem(JOINED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  };
+  const subscribe = (onChange: () => void) => {
+    window.addEventListener("storage", onChange);
+    return () => window.removeEventListener("storage", onChange);
+  };
+  return useSyncExternalStore(subscribe, getSnapshot, () => false);
+}
+
 export function WaitlistModal() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const joined = useJoinedFlag();
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (joined) return;
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = original;
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
     };
-  }, []);
+  }, [joined]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +61,14 @@ export function WaitlistModal() {
       return;
     }
     setStatus("done");
+    // Short confirmation, then the gate lifts for good in this browser.
+    confirmTimer.current = setTimeout(
+      () => window.localStorage.setItem(JOINED_KEY, "1"),
+      1800,
+    );
   }
+
+  if (joined) return null;
 
   return (
     <div

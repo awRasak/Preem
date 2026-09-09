@@ -106,9 +106,10 @@ export function PlatformSettingsForm({
         <Switch checked={waitlistOn} onChange={setWaitlistOn} label="Pre-launch waitlist modal" />
       </div>
       <p className="mb-4 text-xs text-muted">
-        On: homepage visitors see an unclosable &quot;going live soon&quot; waitlist
-        gate. Off: the real homepage is open to everyone. Doesn&apos;t affect
-        artist dashboards, fan libraries, or direct drop links either way.
+        On: homepage visitors see a &quot;going live soon&quot; waitlist gate. It
+        lifts as soon as they join (and stays lifted in that browser). Off: the
+        real homepage is open to everyone. Doesn&apos;t affect artist dashboards,
+        fan libraries, or direct drop links either way.
       </p>
 
       {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
