@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { formatNaira } from "@/lib/format";
+import { TrackPlayButton } from "./TrackPlayButton";
 
 export type AdminSong = {
   id: string;
@@ -16,6 +17,7 @@ export type AdminSong = {
   minPriceKobo: number;
   salesCount: number;
   createdAt: string;
+  tracks: { id: string; number: number; title: string }[];
 };
 
 const PAGE_SIZE = 20;
@@ -23,6 +25,7 @@ const PAGE_SIZE = 20;
 export function SongsTable({ songs }: { songs: AdminSong[] }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -76,6 +79,32 @@ export function SongsTable({ songs }: { songs: AdminSong[] }) {
                     {s.title}
                   </Link>
                   <div className="text-xs capitalize text-muted">{s.releaseType}</div>
+                  {s.tracks.length > 0 && (
+                    <div className="mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId((cur) => (cur === s.id ? null : s.id))}
+                        aria-expanded={expandedId === s.id}
+                        className="text-[11px] font-bold text-muted underline hover:text-paper"
+                      >
+                        {expandedId === s.id
+                          ? "Hide tracks"
+                          : `${s.tracks.length} track${s.tracks.length === 1 ? "" : "s"} · listen`}
+                      </button>
+                      {expandedId === s.id && (
+                        <div className="mt-2 space-y-2">
+                          {s.tracks.map((t) => (
+                            <div key={t.id} className="flex items-center gap-2">
+                              <TrackPlayButton trackId={t.id} title={t.title} />
+                              <span className="min-w-0 truncate text-xs">
+                                <span className="font-bold text-muted">{t.number}.</span> {t.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td className="py-2.5 pr-4">
                   <Link href={`/artist/${s.artistId}`} className="text-muted hover:underline">

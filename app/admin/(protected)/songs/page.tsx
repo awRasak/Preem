@@ -7,18 +7,30 @@ export const revalidate = 0;
 export default async function AdminSongsPage() {
   const supabase = await createClient();
 
-  const [{ data: drops }, { data: successPurchases }] = await Promise.all([
+  const [{ data: drops }, { data: successPurchases }, { data: allTracks }] = await Promise.all([
     supabase
       .from("drops")
       .select("id, title, artist_id, release_type, status, min_price_kobo, created_at, artists(stage_name)")
       .order("created_at", { ascending: false })
       .limit(500),
     supabase.from("purchases").select("drop_id").eq("status", "success").limit(5000),
+    supabase
+      .from("drop_tracks")
+      .select("id, drop_id, track_number, title")
+      .order("track_number", { ascending: true })
+      .limit(5000),
   ]);
 
   const salesCountByDrop = new Map<string, number>();
   for (const p of successPurchases ?? []) {
     salesCountByDrop.set(p.drop_id, (salesCountByDrop.get(p.drop_id) ?? 0) + 1);
+  }
+
+  const tracksByDrop = new Map<string, { id: string; number: number; title: string }[]>();
+  for (const t of allTracks ?? []) {
+    const list = tracksByDrop.get(t.drop_id) ?? [];
+    list.push({ id: t.id, number: t.track_number, title: t.title });
+    tracksByDrop.set(t.drop_id, list);
   }
 
   const songs: AdminSong[] = (drops ?? []).map((d) => {
@@ -37,6 +49,7 @@ export default async function AdminSongsPage() {
       minPriceKobo: d.min_price_kobo,
       salesCount: salesCountByDrop.get(d.id) ?? 0,
       createdAt: d.created_at,
+      tracks: tracksByDrop.get(d.id) ?? [],
     };
   });
 

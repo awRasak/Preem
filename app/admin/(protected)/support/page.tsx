@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isFreshRequest } from "@/lib/format";
-import { SupportRequestRow } from "../../SupportRequestRow";
-import { AudioChangeRequestRow } from "../../AudioChangeRequestRow";
+import { SupportTabs, type SupportTabItem } from "../../SupportTabs";
 
 export const revalidate = 0;
 
@@ -43,22 +42,33 @@ export default async function AdminSupportPage() {
     supabase
       .from("track_change_requests")
       .select(
-        "id, reason, created_at, new_audio_path, status, drop_tracks(title), drops(title), artists(stage_name)",
+        "id, reason, created_at, new_audio_path, status, drop_tracks(title, audio_file_path), drops(title), artists(stage_name)",
       )
       .order("created_at", { ascending: false })
       .limit(100),
   ]);
 
-  // Signed preview URLs for the staged replacement files (private bucket,
-  // so this needs the service-role client -- never exposed to the browser).
+  // Signed preview URLs for the staged replacement files AND the current
+  // live versions (private bucket, so this needs the service-role client --
+  // never exposed to the browser).
   const admin = createAdminClient();
   const previewUrls = new Map<string, string>();
+  const liveUrls = new Map<string, string>();
   await Promise.all(
     ((audioChanges ?? []) as AudioRow[]).map(async (r) => {
-      const { data } = await admin.storage
-        .from("audio")
-        .createSignedUrl(r.new_audio_path, 3600);
-      if (data?.signedUrl) previewUrls.set(r.id, data.signedUrl);
+      const track = r.drop_tracks as
+        | { audio_file_path: string }
+        | { audio_file_path: string }[]
+        | null;
+      const livePath = Array.isArray(track) ? track[0]?.audio_file_path : track?.audio_file_path;
+      const [staged, live] = await Promise.all([
+        admin.storage.from("audio").createSignedUrl(r.new_audio_path, 3600),
+        livePath
+          ? admin.storage.from("audio").createSignedUrl(livePath, 3600)
+          : Promise.resolve({ data: null }),
+      ]);
+      if (staged.data?.signedUrl) previewUrls.set(r.id, staged.data.signedUrl);
+      if (live.data?.signedUrl) liveUrls.set(r.id, live.data.signedUrl);
     }),
   );
 
@@ -90,24 +100,22 @@ export default async function AdminSupportPage() {
   lingering.sort(byOldest);
   decided.sort(byNewest);
 
-  function renderItem(item: Item) {
+  function renderItem(item: Item): SupportTabItem {
     if (item.kind === "support") {
       const r = item.row;
       type WithDrop = { title: string } | { title: string }[] | null;
       const drop = r.drops as WithDrop;
       const dropTitle = Array.isArray(drop) ? drop[0]?.title : drop?.title;
-      return (
-        <SupportRequestRow
-          key={r.id}
-          id={r.id}
-          fanPhone={r.fan_phone}
-          fanEmail={r.fan_email}
-          dropTitle={dropTitle ?? null}
-          message={r.message}
-          createdAt={r.created_at}
-          resolved={r.status !== "open"}
-        />
-      );
+      return {
+        kind: "support",
+        id: r.id,
+        fanPhone: r.fan_phone,
+        fanEmail: r.fan_email,
+        dropTitle: dropTitle ?? null,
+        message: r.message,
+        createdAt: r.created_at,
+        resolved: r.status !== "open",
+      };
     }
     const r = item.row;
     type WithTitle = { title: string } | { title: string }[] | null;
@@ -120,47 +128,28 @@ export default async function AdminSupportPage() {
     const artistName = Array.isArray(artist)
       ? artist[0]?.stage_name
       : artist?.stage_name;
-    return (
-      <AudioChangeRequestRow
-        key={r.id}
-        id={r.id}
-        artistName={artistName ?? "Unknown artist"}
-        dropTitle={dropTitle ?? "Unknown drop"}
-        trackTitle={trackTitle ?? "Unknown track"}
-        reason={r.reason}
-        createdAt={r.created_at}
-        previewUrl={previewUrls.get(r.id) ?? null}
-        status={r.status as "pending" | "approved" | "rejected" | "cancelled"}
-      />
-    );
-  }
-
-  function renderBucket(
-    title: string,
-    items: Item[],
-    emptyText: string,
-  ) {
-    return (
-      <section>
-        <h2 className="mb-6 text-xl font-bold">
-          {title} ({items.length})
-        </h2>
-        {items.length === 0 ? (
-          <p className="text-sm text-muted">{emptyText}</p>
-        ) : (
-          <div className="rounded-xl border border-line px-4">
-            {items.map(renderItem)}
-          </div>
-        )}
-      </section>
-    );
+    return {
+      kind: "audio",
+      id: r.id,
+      artistName: artistName ?? "Unknown artist",
+      dropTitle: dropTitle ?? "Unknown drop",
+      trackTitle: trackTitle ?? "Unknown track",
+      reason: r.reason,
+      createdAt: r.created_at,
+      previewUrl: previewUrls.get(r.id) ?? null,
+      liveUrl: liveUrls.get(r.id) ?? null,
+      status: r.status as "pending" | "approved" | "rejected" | "cancelled",
+    };
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 space-y-12 px-5 py-8 sm:px-8">
-      {renderBucket("New requests", fresh, "Nothing new.")}
-      {renderBucket("Unresolved requests", lingering, "Nothing lingering.")}
-      {renderBucket("Resolved requests", decided, "Nothing resolved yet.")}
+    <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
+      <h1 className="mb-6 text-xl font-bold">Support</h1>
+      <SupportTabs
+        fresh={fresh.map(renderItem)}
+        lingering={lingering.map(renderItem)}
+        decided={decided.map(renderItem)}
+      />
     </main>
   );
 }

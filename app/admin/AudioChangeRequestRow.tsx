@@ -19,6 +19,7 @@ export function AudioChangeRequestRow({
   reason,
   createdAt,
   previewUrl,
+  liveUrl,
   status,
 }: {
   id: string;
@@ -28,6 +29,7 @@ export function AudioChangeRequestRow({
   reason: string;
   createdAt: string;
   previewUrl: string | null;
+  liveUrl: string | null;
   status: "pending" | "approved" | "rejected" | "cancelled";
 }) {
   const router = useRouter();
@@ -63,11 +65,28 @@ export function AudioChangeRequestRow({
       <p className="mb-3 text-sm text-muted">
         <span className="font-bold text-paper">Reason:</span> {reason}
       </p>
-      {previewUrl ? (
-        <audio controls preload="none" src={previewUrl} className="mb-3 w-full" />
-      ) : (
-        <p className="mb-3 text-xs text-muted">Replacement audio unavailable.</p>
-      )}
+      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">
+            Replacement
+          </p>
+          {previewUrl ? (
+            <audio controls preload="none" src={previewUrl} className="w-full" />
+          ) : (
+            <p className="text-xs text-muted">Replacement audio unavailable.</p>
+          )}
+        </div>
+        <div>
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">
+            Current live version
+          </p>
+          {liveUrl ? (
+            <audio controls preload="none" src={liveUrl} className="w-full" />
+          ) : (
+            <p className="text-xs text-muted">Live audio unavailable.</p>
+          )}
+        </div>
+      </div>
       {status === "pending" ? (
         <div className="flex gap-2">
           <Button
