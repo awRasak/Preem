@@ -858,3 +858,6 @@ create policy "admin can manage all change requests"
 create policy "admin can manage all tracks"
   on public.drop_tracks for all
   using (is_admin());
+-- Gifts were Paystack-only; the gateway column lets geo-routing send
+-- Nigerian gifts through Monipay like every other purchase type.
+alter table gifts add column if not exists gateway text not null default 'paystack' check (gateway in ('paystack', 'monipay'));

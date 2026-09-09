@@ -17,7 +17,6 @@ import {
 import { sanitizeBio } from "@/lib/format";
 import { isUuid } from "@/lib/slug";
 import { getFanIdentity } from "@/lib/fan-identity";
-import { getPlatformSettings } from "@/lib/platform-settings";
 import { FollowButton } from "@/components/FollowButton";
 import { ShowCard } from "@/components/ShowCard";
 import { artistShareMetadata } from "@/lib/seo";
@@ -127,26 +126,20 @@ export default async function ArtistProfilePage({
   const admin = createAdminClient();
 
   const showIds = (shows ?? []).map((s) => s.id);
-  const [{ data: soldTickets }, settings] = await Promise.all([
+  const { data: soldTickets } =
     showIds.length > 0
-      ? admin
+      ? await admin
           .from("show_tickets")
           .select("show_id")
           .in("show_id", showIds)
           .eq("status", "success")
-      : Promise.resolve({ data: [] }),
-    getPlatformSettings(supabase),
-  ]);
+      : { data: [] };
 
   const soldByShow = new Map<string, number>();
   for (const t of soldTickets ?? []) {
     soldByShow.set(t.show_id, (soldByShow.get(t.show_id) ?? 0) + 1);
   }
 
-  const enabledGateways = [
-    settings.paystackEnabled ? "paystack" : null,
-    settings.monipayEnabled ? "monipay" : null,
-  ].filter((g): g is "paystack" | "monipay" => g !== null);
   const { data: weekGifts } = await admin
     .from("gifts")
     .select("fan_email, fan_name, fan_location, amount_kobo")
@@ -309,7 +302,6 @@ export default async function ArtistProfilePage({
                     cover_art_path: show.cover_art_path,
                     soldCount: soldByShow.get(show.id) ?? 0,
                   }}
-                  enabledGateways={enabledGateways}
                 />
               ))}
             </div>

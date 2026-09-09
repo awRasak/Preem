@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
+import { countryFromRequest, gatewayForCountry } from "@/lib/geo";
+import { initializeTransaction as initializeMonipayTransaction } from "@/lib/monipay";
 import { tooManyRequests } from "@/lib/rate-limit";
 
 const schema = z.object({
@@ -46,6 +49,17 @@ export async function POST(req: Request) {
   }
 
   const admin = createAdminClient();
+
+  const settings = await getPlatformSettings(admin);
+  // Server-side geo-routing: Nigeria gifts go local (Monipay), everyone
+  // else international (Paystack). The client never chooses.
+  const gateway = gatewayForCountry(countryFromRequest(req), settings);
+  if (!gateway) {
+    return NextResponse.json(
+      { error: "Payments aren't available right now." },
+      { status: 400 },
+    );
+  }
 
   const { data: artist } = await admin
     .from("artists")
@@ -104,16 +118,44 @@ export async function POST(req: Request) {
     amount_kobo: amountKobo,
     paystack_ref: reference,
     status: "pending",
+    gateway,
   });
 
   if (insertError) {
     return NextResponse.json({ error: "Could not start gift." }, { status: 500 });
   }
 
+  // Monipay only links the popup payment to our reference via the
+  // confirmation payload -- see /api/checkout/verify-monipay. The access
+  // code is returned for forward-compat; confirmation uses the reference
+  // Monipay itself reports.
+  let accessCode: string | undefined;
+  if (gateway === "monipay") {
+    try {
+      const monipayTx = await initializeMonipayTransaction({
+        email: fanEmail,
+        amountKobo,
+        reference,
+      });
+      accessCode = monipayTx.access_code;
+    } catch (e) {
+      console.error(`monipay initialize failed for ${reference}:`, e instanceof Error ? e.message : e);
+      return NextResponse.json(
+        { error: "Could not start gift." },
+        { status: 502 },
+      );
+    }
+  }
+
   return NextResponse.json({
     reference,
     amountKobo,
     fanEmail,
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+    gateway,
+    accessCode,
+    publicKey:
+      gateway === "monipay"
+        ? process.env.NEXT_PUBLIC_MONIPAY_PUBLIC_KEY
+        : process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
   });
 }

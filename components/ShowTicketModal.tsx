@@ -36,19 +36,11 @@ declare global {
   }
 }
 
-type Gateway = "paystack" | "monipay";
-
-const GATEWAY_LABELS: Record<Gateway, string> = {
-  paystack: "Paystack",
-  monipay: "Monipay",
-};
-
 type Step = "closed" | "form" | "submitting" | "verifying" | "done" | "error";
 
 export function BuyTicketButton({
   show,
   artistName,
-  enabledGateways = ["paystack"],
 }: {
   show: {
     id: string;
@@ -59,13 +51,11 @@ export function BuyTicketButton({
     ticket_price_kobo: number;
   };
   artistName: string;
-  enabledGateways?: Gateway[];
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [fanName, setFanName] = useState("");
   const [fanPhone, setFanPhone] = useState("");
   const [fanEmail, setFanEmail] = useState("");
-  const [gateway, setGateway] = useState<Gateway>(enabledGateways[0] ?? "paystack");
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState("");
 
@@ -110,7 +100,6 @@ export function BuyTicketButton({
         fanName,
         fanPhone,
         fanEmail,
-        gateway,
       }),
     });
     const body = await res.json();
@@ -121,7 +110,9 @@ export function BuyTicketButton({
       return;
     }
 
-    if (gateway === "monipay") {
+    // The server geo-routes the payment: Nigeria goes local (Monipay),
+    // everyone else international (Paystack). The client never chooses.
+    if (body.gateway === "monipay") {
       try {
         await loadScript("https://js.monipay.ng/v2/inline.js");
       } catch {
@@ -242,26 +233,6 @@ export function BuyTicketButton({
                 <p className="mb-4 text-xs text-muted">
                   General admission at the door. No refunds once a ticket is issued.
                 </p>
-                {enabledGateways.length > 1 && (
-                  <Field label="Pay with">
-                    <div className="flex gap-2">
-                      {enabledGateways.map((g) => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setGateway(g)}
-                          className={`flex-1 rounded-lg border py-2 text-xs font-bold transition-colors ${
-                            gateway === g
-                              ? "border-accent bg-accent/10 text-accent"
-                              : "border-line-strong text-muted hover:text-paper"
-                          }`}
-                        >
-                          {GATEWAY_LABELS[g]}
-                        </button>
-                      ))}
-                    </div>
-                  </Field>
-                )}
                 </div>
                 <div>
                 <Field label="Name">

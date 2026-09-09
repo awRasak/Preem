@@ -41,13 +41,6 @@ declare global {
   }
 }
 
-type Gateway = "paystack" | "monipay";
-
-const GATEWAY_LABELS: Record<Gateway, string> = {
-  paystack: "Paystack",
-  monipay: "Monipay",
-};
-
 type Step =
   | "closed"
   | "form"
@@ -69,7 +62,6 @@ export function BuyButton({
   thankYouMediaUrl,
   thankYouMediaType,
   owned = false,
-  enabledGateways = ["paystack"],
 }: {
   dropId: string;
   trackId?: string;
@@ -84,9 +76,6 @@ export function BuyButton({
   // Signed-in fan already owns this drop/track (checked server-side) — show
   // a way to listen instead of asking them to pay again.
   owned?: boolean;
-  // Which gateways are currently switched on (admin-configurable). A
-  // selector only shows when there's an actual choice to make.
-  enabledGateways?: Gateway[];
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
@@ -102,7 +91,6 @@ export function BuyButton({
   const [fanName, setFanName] = useState("");
   const [fanPhone, setFanPhone] = useState("");
   const [fanEmail, setFanEmail] = useState("");
-  const [gateway, setGateway] = useState<Gateway>(enabledGateways[0] ?? "paystack");
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -172,7 +160,7 @@ export function BuyButton({
     const res = await fetch("/api/checkout/initialize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dropId, trackId, amountKobo, fanName, fanPhone, fanEmail, gateway }),
+      body: JSON.stringify({ dropId, trackId, amountKobo, fanName, fanPhone, fanEmail }),
     });
     const body = await res.json();
 
@@ -182,7 +170,9 @@ export function BuyButton({
       return;
     }
 
-    if (gateway === "monipay") {
+    // The server geo-routes the payment: Nigeria goes local (Monipay),
+    // everyone else international (Paystack). The client never chooses.
+    if (body.gateway === "monipay") {
       try {
         await loadScript("https://js.monipay.ng/v2/inline.js");
       } catch {
@@ -438,26 +428,6 @@ export function BuyButton({
                       onChange={(e) => setAmountNaira(e.target.value)}
                       autoFocus
                     />
-                  </Field>
-                )}
-                {enabledGateways.length > 1 && (
-                  <Field label="Pay with">
-                    <div className="flex gap-2">
-                      {enabledGateways.map((g) => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setGateway(g)}
-                          className={`flex-1 rounded-lg border py-2 text-xs font-bold transition-colors ${
-                            gateway === g
-                              ? "border-accent bg-accent/10 text-accent"
-                              : "border-line-strong text-muted hover:text-paper"
-                          }`}
-                        >
-                          {GATEWAY_LABELS[g]}
-                        </button>
-                      ))}
-                    </div>
                   </Field>
                 )}
                 </div>

@@ -22,6 +22,18 @@ declare global {
         callback?: (transaction: { reference: string }) => void;
       }) => { openIframe: () => void };
     };
+    Monipay: new () => {
+      checkout: (options: {
+        key: string;
+        email: string;
+        amount: number;
+        metadata?: Record<string, string>;
+        onLoad?: () => void;
+        onSuccess?: (data: unknown) => void;
+        onCancel?: () => void;
+        onError?: (error: unknown) => void;
+      }) => void;
+    };
   }
 }
 
@@ -100,6 +112,52 @@ export function GiftButton({
     if (!res.ok) {
       setError(body.error ?? "Something went wrong.");
       setStep("form");
+      return;
+    }
+
+    // The server geo-routes the gift: Nigeria goes local (Monipay),
+    // everyone else international (Paystack). The client never chooses.
+    if (body.gateway === "monipay") {
+      try {
+        await loadScript("https://js.monipay.ng/v2/inline.js");
+      } catch {
+        setError("Payment failed to load — try again.");
+        setStep("form");
+        return;
+      }
+      if (!window.Monipay) {
+        setError("Payment popup is still loading — try again in a second.");
+        setStep("form");
+        return;
+      }
+      new window.Monipay().checkout({
+        key: body.publicKey,
+        email: body.fanEmail,
+        amount: body.amountKobo,
+        metadata: { reference: body.reference },
+        onCancel: () => setStep("form"),
+        onError: () => {
+          setError("Payment failed to load — try again.");
+          setStep("form");
+        },
+        onSuccess: (data) => {
+          setStep("verifying");
+          fetch("/api/checkout/verify-monipay", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reference: body.reference, payload: data ?? null }),
+          })
+            .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
+            .then(({ ok, verifyBody }) => {
+              if (ok && verifyBody.status === "success") {
+                setStep("done");
+              } else {
+                setError("We received your payment but couldn't confirm it yet.");
+                setStep("error");
+              }
+            });
+        },
+      });
       return;
     }
 

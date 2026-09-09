@@ -3,7 +3,6 @@ import { Button } from "@/components/Button";
 import { ShowCard } from "@/components/ShowCard";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getPlatformSettings } from "@/lib/platform-settings";
 import { ExploreBrowser } from "./ExploreBrowser";
 import type { Artist, Drop } from "@/lib/types";
 
@@ -36,21 +35,16 @@ export default async function ExplorePage() {
   const artists = (artistsData ?? []) as Artist[];
 
   // Shows need an admin-client pass for sold counts (show_tickets has no
-  // anonymous RLS policy), and platform settings for which gateways to offer.
+  // anonymous RLS policy).
   const admin = createAdminClient();
-  const [showsResponse, settings] = await Promise.all([
-    supabase
-      .from("shows")
-      .select("*, artist:artists(id, stage_name, avatar_url)")
-      .eq("status", "published")
-      .gte("start_at", new Date().toISOString())
-      .order("start_at", { ascending: true }),
-    getPlatformSettings(supabase),
-  ]);
+  const { data: showsData } = await supabase
+    .from("shows")
+    .select("*, artist:artists(id, stage_name, avatar_url)")
+    .eq("status", "published")
+    .gte("start_at", new Date().toISOString())
+    .order("start_at", { ascending: true });
 
-  const showsData = showsResponse.data ?? [];
-
-  const showIds = showsData.map((s) => s.id);
+  const showIds = (showsData ?? []).map((s) => s.id);
   const { data: soldTickets } =
     showIds.length > 0
       ? await admin
@@ -64,12 +58,7 @@ export default async function ExplorePage() {
     soldByShow.set(t.show_id, (soldByShow.get(t.show_id) ?? 0) + 1);
   }
 
-  const enabledGateways = [
-    settings.paystackEnabled ? "paystack" : null,
-    settings.monipayEnabled ? "monipay" : null,
-  ].filter((g): g is "paystack" | "monipay" => g !== null);
-
-  const shows = (showsData as (import("@/lib/types").Show & {
+  const shows = ((showsData ?? []) as (import("@/lib/types").Show & {
     artist: {
       id: string;
       stage_name: string;
@@ -106,7 +95,6 @@ export default async function ExplorePage() {
                     soldCount: soldByShow.get(show.id) ?? 0,
                     artist: show.artist ?? undefined,
                   }}
-                  enabledGateways={enabledGateways}
                   showArtist
                 />
               ))}

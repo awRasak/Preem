@@ -21,11 +21,9 @@ export type ShowCardShow = {
 
 export function ShowCard({
   show,
-  enabledGateways = ["paystack"],
   showArtist = false,
 }: {
   show: ShowCardShow;
-  enabledGateways?: ("paystack" | "monipay")[];
   showArtist?: boolean;
 }) {
   const soldOut = show.soldCount >= show.total_tickets;
@@ -87,7 +85,6 @@ export function ShowCard({
               ticket_price_kobo: show.ticket_price_kobo,
             }}
             artistName={artistName}
-            enabledGateways={enabledGateways}
           />
         )}
       </div>

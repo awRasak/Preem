@@ -9,6 +9,7 @@ import {
 } from "@/lib/monipay";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
+import { markGiftSuccess } from "@/lib/gifts";
 
 // Confirms a Monipay payment using the reference Monipay itself reports.
 //
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient();
 
-  const [{ data: purchase }, { data: showTicket }] = await Promise.all([
+  const [{ data: purchase }, { data: showTicket }, { data: gift }] = await Promise.all([
     supabase
       .from("purchases")
       .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
@@ -44,9 +45,14 @@ export async function POST(req: Request) {
       .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
       .eq("paystack_ref", reference)
       .single(),
+    supabase
+      .from("gifts")
+      .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
+      .eq("paystack_ref", reference)
+      .single(),
   ]);
 
-  const existing = purchase ?? showTicket;
+  const existing = purchase ?? showTicket ?? gift;
   if (!existing) {
     return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
   }
@@ -79,7 +85,9 @@ export async function POST(req: Request) {
       }
       const confirmed = purchase
         ? await markPurchaseSuccess(supabase, reference, collected)
-        : await markShowTicketSuccess(supabase, reference, collected);
+        : showTicket
+          ? await markShowTicketSuccess(supabase, reference, collected)
+          : await markGiftSuccess(supabase, reference, collected);
       if (confirmed && confirmed.status === "success") {
         return NextResponse.json({
           status: "success",

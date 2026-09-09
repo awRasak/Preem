@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
+import { countryFromRequest, gatewayForCountry } from "@/lib/geo";
 import { initializeTransaction as initializeMonipayTransaction } from "@/lib/monipay";
 
 const schema = z.object({
@@ -15,7 +16,6 @@ const schema = z.object({
     .trim()
     .regex(/^[0-9+][0-9\s-]{6,19}$/, "Enter a valid phone number"),
   fanEmail: z.string().trim().email(),
-  gateway: z.enum(["paystack", "monipay"]).default("paystack"),
 });
 
 const RATE_LIMIT_WINDOW_MINUTES = 10;
@@ -29,15 +29,17 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, schema);
   if (!parsed.ok) return parsed.response;
-  const { showId, amountKobo, fanName, fanPhone, fanEmail, gateway } = parsed.data;
+  const { showId, amountKobo, fanName, fanPhone, fanEmail } = parsed.data;
 
   const supabase = createAdminClient();
 
   const settings = await getPlatformSettings(supabase);
-  const gatewayEnabled = gateway === "paystack" ? settings.paystackEnabled : settings.monipayEnabled;
-  if (!gatewayEnabled) {
+  // Server-side geo-routing: Nigeria pays local (Monipay), everyone else
+  // pays international (Paystack). The client never chooses.
+  const gateway = gatewayForCountry(countryFromRequest(req), settings);
+  if (!gateway) {
     return NextResponse.json(
-      { error: "That payment method isn't available right now." },
+      { error: "Payments aren't available right now." },
       { status: 400 },
     );
   }
