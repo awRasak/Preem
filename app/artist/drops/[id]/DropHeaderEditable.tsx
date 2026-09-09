@@ -214,13 +214,6 @@ export function DropHeaderEditable({
                 )}
               </div>
             )}
-            {!isBundle && tracks[0] && (
-              <TrackAudioChange
-                trackId={tracks[0].id}
-                trackTitle={tracks[0].title}
-                pending={pendingByTrack.get(tracks[0].id) ?? null}
-              />
-            )}
           </div>
         </div>
 
@@ -257,11 +250,6 @@ export function DropHeaderEditable({
                       showDownload={false}
                     />
                   </div>
-                  <TrackAudioChange
-                    trackId={track.id}
-                    trackTitle={track.title}
-                    pending={pendingByTrack.get(track.id) ?? null}
-                  />
                 </div>
               ))}
             </div>
@@ -411,6 +399,11 @@ export function DropHeaderEditable({
                     className="disabled:opacity-50"
                   />
                 </Field>
+                <TrackAudioChange
+                  trackId={t.id}
+                  trackTitle={t.title || `Track ${i + 1}`}
+                  pending={pendingByTrack.get(t.id) ?? null}
+                />
               </div>
             ))}
           </div>
@@ -431,6 +424,11 @@ export function DropHeaderEditable({
                 onChange={(e) => patchTrack(editTracks[0].id, { lyrics: e.target.value })}
               />
             </Field>
+            <TrackAudioChange
+              trackId={editTracks[0].id}
+              trackTitle={title || "Track"}
+              pending={pendingByTrack.get(editTracks[0].id) ?? null}
+            />
           </>
         )
       )}
