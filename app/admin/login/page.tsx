@@ -90,6 +90,11 @@ export default function AdminLoginPage() {
           >
             {loading ? "Signing in…" : "Sign in"}
           </Button>
+          <p className="mt-4 text-center text-xs text-muted">
+            <Link href="/artist/forgot-password" className="text-paper underline">
+              Forgot password?
+            </Link>
+          </p>
         </form>
       </main>
     </>

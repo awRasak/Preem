@@ -81,6 +81,10 @@ export default function LoginPage() {
             <Link href="/artist/signup" className="text-paper underline">
               Sign up
             </Link>
+            {" · "}
+            <Link href="/artist/forgot-password" className="text-paper underline">
+              Forgot password?
+            </Link>
           </p>
           <p className="mt-2 text-center text-xs text-muted">
             Looking for your purchases?{" "}
