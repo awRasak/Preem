@@ -46,14 +46,15 @@ export function GiftButton({
   variant?: "row" | "button";
 }) {
   const [step, setStep] = useState<Step>("closed");
-  const [selectedNaira, setSelectedNaira] = useState<number | "custom">(PRESET_AMOUNTS_NAIRA[0]);
+  const [selectedNaira, setSelectedNaira] = useState<number | "custom" | null>(null);
+  const amountPicked = selectedNaira !== null;
   const [customNaira, setCustomNaira] = useState("");
   const [fanName, setFanName] = useState("");
   const [fanEmail, setFanEmail] = useState("");
   const [needsGuestInfo, setNeedsGuestInfo] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const amountNaira = selectedNaira === "custom" ? Number(customNaira) : selectedNaira;
+  const amountNaira = selectedNaira === "custom" ? Number(customNaira) : (selectedNaira ?? 0);
   const amountKobo = Math.round(amountNaira * 100);
   const amountValid = Number.isFinite(amountKobo) && amountKobo >= 10000;
 
@@ -68,6 +69,10 @@ export function GiftButton({
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!amountPicked) {
+      setError("Pick an amount first.");
+      return;
+    }
     if (!amountValid) {
       setError("Enter at least ₦100.");
       return;
@@ -174,7 +179,15 @@ export function GiftButton({
       {step !== "closed" &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
-            <div className="max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+            <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+              <button
+                type="button"
+                onClick={() => setStep("closed")}
+                aria-label="Close"
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper"
+              >
+                ✕
+              </button>
               {step === "done" ? (
                 <div className="mx-auto w-full max-w-xs text-center">
                   <h3 className="mb-2 text-lg font-bold">Sent!</h3>
@@ -238,46 +251,38 @@ export function GiftButton({
                     </Field>
                   )}
                   </div>
+                  {amountPicked && needsGuestInfo && (
                   <div>
-                  {needsGuestInfo && (
-                    <>
-                      <Field label="Name">
-                        <Input
-                          required
-                          value={fanName}
-                          onChange={(e) => setFanName(e.target.value)}
-                          placeholder="Your name"
-                        />
-                      </Field>
-                      <Field label="Email">
-                        <Input
-                          required
-                          type="email"
-                          value={fanEmail}
-                          onChange={(e) => setFanEmail(e.target.value)}
-                          placeholder="you@email.com"
-                        />
-                      </Field>
-                    </>
+                      <>
+                        <Field label="Name">
+                          <Input
+                            required
+                            value={fanName}
+                            onChange={(e) => setFanName(e.target.value)}
+                            placeholder="Your name"
+                          />
+                        </Field>
+                        <Field label="Email">
+                          <Input
+                            required
+                            type="email"
+                            value={fanEmail}
+                            onChange={(e) => setFanEmail(e.target.value)}
+                            placeholder="you@email.com"
+                          />
+                        </Field>
+                      </>
+                  </div>
                   )}
                   {error && (
-                    <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>
+                    <p className="mb-3 text-sm text-[#ff6b6b] sm:col-span-2 sm:mb-0">{error}</p>
                   )}
-                  </div>
-                  <div className="flex gap-2 sm:col-span-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setStep("closed")}
-                    >
-                      Cancel
-                    </Button>
+                  <div className="sm:col-span-2">
                     <Button
                       type="submit"
                       variant="primary"
-                      className="flex-1"
-                      disabled={step === "submitting" || step === "verifying"}
+                      className="w-full !py-4 !text-base"
+                      disabled={!amountPicked || step === "submitting" || step === "verifying"}
                     >
                       {step === "submitting"
                         ? "…"

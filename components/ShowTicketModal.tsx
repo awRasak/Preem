@@ -180,7 +180,15 @@ export function BuyTicketButton({
 
       {step !== "closed" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+          <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+            <button
+              type="button"
+              onClick={() => setStep("closed")}
+              aria-label="Close"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper"
+            >
+              ✕
+            </button>
             {step === "done" ? (
               <div className="mx-auto w-full max-w-xs text-center">
                 <h3 className="mb-2 text-lg font-bold">You&apos;re going!</h3>
@@ -282,21 +290,13 @@ export function BuyTicketButton({
                     placeholder="you@email.com"
                   />
                 </Field>
-                {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
                 </div>
-                <div className="flex gap-2 sm:col-span-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setStep("closed")}
-                  >
-                    Cancel
-                  </Button>
+                {error && <p className="mb-3 text-sm text-[#ff6b6b] sm:col-span-2 sm:mb-0">{error}</p>}
+                <div className="sm:col-span-2">
                   <Button
                     type="submit"
                     variant="primary"
-                    className="flex-1"
+                    className="w-full !py-4 !text-base"
                     disabled={step === "submitting" || step === "verifying"}
                   >
                     {step === "submitting"

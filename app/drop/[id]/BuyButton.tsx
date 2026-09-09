@@ -97,7 +97,8 @@ export function BuyButton({
     const minNaira = minPriceKobo / 100;
     return [minNaira, minNaira * 2, minNaira * 5];
   }, [minPriceKobo]);
-  const [priceMode, setPriceMode] = useState<number | "custom">(priceChipsNaira[0]);
+  const [priceMode, setPriceMode] = useState<number | "custom" | null>(null);
+  const pricePicked = priceMode !== null;
   const [fanName, setFanName] = useState("");
   const [fanPhone, setFanPhone] = useState("");
   const [fanEmail, setFanEmail] = useState("");
@@ -158,6 +159,10 @@ export function BuyButton({
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!pricePicked) {
+      setError("Pick a price first.");
+      return;
+    }
     if (!amountValid) {
       setError(`Enter at least ${formatNaira(minPriceKobo)}.`);
       return;
@@ -260,7 +265,15 @@ export function BuyButton({
 
       {step !== "closed" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+          <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+            <button
+              type="button"
+              onClick={() => setStep("closed")}
+              aria-label="Close"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper"
+            >
+              ✕
+            </button>
             {step === "otp" ? (
               <div className="mx-auto w-full max-w-xs">
               <form onSubmit={handleVerifyOtp} className="text-center">
@@ -376,7 +389,7 @@ export function BuyButton({
                     : " No refunds once access is granted."}
                 </p>
                 <Field label="Your price">
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-2">
                     {priceChipsNaira.map((n, i) => (
                       <button
                         key={n}
@@ -448,6 +461,7 @@ export function BuyButton({
                   </Field>
                 )}
                 </div>
+                {pricePicked && (
                 <div>
                 <Field label="Name">
                   <Input
@@ -475,24 +489,17 @@ export function BuyButton({
                     placeholder="you@email.com"
                   />
                 </Field>
-                {error && (
-                  <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>
-                )}
                 </div>
-                <div className="flex gap-2 sm:col-span-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setStep("closed")}
-                  >
-                    Cancel
-                  </Button>
+                )}
+                {error && (
+                  <p className="mb-3 text-sm text-[#ff6b6b] sm:col-span-2 sm:mb-0">{error}</p>
+                )}
+                <div className="sm:col-span-2">
                   <Button
                     type="submit"
                     variant="primary"
-                    className="flex-1"
-                    disabled={step === "submitting" || step === "verifying"}
+                    className="w-full !py-4 !text-base"
+                    disabled={!pricePicked || step === "submitting" || step === "verifying"}
                   >
                     {step === "submitting"
                       ? "…"
