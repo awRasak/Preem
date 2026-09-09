@@ -134,19 +134,21 @@ export function TrackAudioChange({
 
   if (pending) {
     return (
-      <div className="-order-1 mb-4 basis-full rounded-lg border border-line bg-surface-2 p-3">
-        <div className="mb-1 flex items-center gap-2">
-          <Badge status="pending">Audio change pending review</Badge>
+      <div className="-order-1 mb-4 flex basis-full flex-col gap-3 rounded-lg border border-line bg-surface-2 p-4 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1.5">
+            <Badge status="pending">Audio change pending review</Badge>
+          </div>
+          <p className="text-xs text-muted">
+            <span className="font-bold text-paper">Your reason:</span> {pending.reason}
+          </p>
+          {error && <p className="mt-1.5 text-xs text-[#ff6b6b]">{error}</p>}
         </div>
-        <p className="mb-2 text-xs text-muted">
-          <span className="font-bold text-paper">Your reason:</span> {pending.reason}
-        </p>
-        {error && <p className="mb-2 text-xs text-[#ff6b6b]">{error}</p>}
         <Button
           variant="outline"
           disabled={withdrawing}
           onClick={handleWithdraw}
-          className="!px-3 !py-1.5 text-xs"
+          className="!px-4 !py-2 text-xs flex-shrink-0 sm:ml-auto"
         >
           {withdrawing ? "Withdrawing…" : "Withdraw request"}
         </Button>

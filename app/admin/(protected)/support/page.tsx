@@ -17,7 +17,7 @@ export default async function AdminSupportPage() {
     supabase
       .from("track_change_requests")
       .select(
-        "id, reason, created_at, new_audio_path, tracks(title), drops(title), artists(stage_name)",
+        "id, reason, created_at, new_audio_path, drop_tracks(title), drops(title), artists(stage_name)",
       )
       .eq("status", "pending")
       .order("created_at", { ascending: true }),
@@ -77,7 +77,7 @@ export default async function AdminSupportPage() {
             {pendingAudioChanges?.map((r) => {
               type WithTitle = { title: string } | { title: string }[] | null;
               type WithName = { stage_name: string } | { stage_name: string }[] | null;
-              const track = r.tracks as WithTitle;
+              const track = r.drop_tracks as WithTitle;
               const drop = r.drops as WithTitle;
               const artist = r.artists as WithName;
               const trackTitle = Array.isArray(track) ? track[0]?.title : track?.title;
