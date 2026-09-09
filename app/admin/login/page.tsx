@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Nav } from "@/components/Nav";
+import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 
-export default function AdminSetupPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,43 +20,47 @@ export default function AdminSetupPage() {
     setError(null);
     setLoading(true);
 
-    const res = await fetch("/api/admin/setup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const body = await res.json();
+    const supabase = createClient();
+    const { data, error: signInError } =
+      await supabase.auth.signInWithPassword({ email, password });
 
-    if (!res.ok) {
-      setError(body.error ?? "Something went wrong.");
+    if (signInError || !data.user) {
+      setError("Incorrect email or password.");
       setLoading(false);
       return;
     }
 
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
 
-    if (signInError) {
-      setError(
-        "Account created, but automatic sign-in failed — sign in manually at /admin/login.",
-      );
+    if (roleRow?.role !== "admin") {
+      await supabase.auth.signOut();
+      setError("This sign-in is for Preem admins.");
+      setLoading(false);
       return;
     }
+
+    setLoading(false);
     router.push("/admin");
     router.refresh();
   }
 
   return (
     <>
-      <Nav role="admin" />
+      <Nav role="admin">
+        <NavLink href="/">← Home</NavLink>
+      </Nav>
       <main className="mx-auto w-full max-w-sm flex-1 px-5 py-10">
-        <h1 className="mb-2 text-2xl font-bold">Set up the admin account</h1>
+        <h1 className="mb-2 text-2xl font-bold">Admin sign in</h1>
         <p className="mb-6 text-sm text-muted">
-          One-time setup — this only works if no admin account exists yet.
+          Restricted to Preem staff. Artists sign in{" "}
+          <Link href="/artist/login" className="text-paper underline">
+            here
+          </Link>
+          .
         </p>
         <form onSubmit={handleSubmit}>
           <Field label="Email">
@@ -71,10 +76,9 @@ export default function AdminSetupPage() {
             <Input
               required
               type="password"
-              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
+              placeholder="••••••••"
             />
           </Field>
           {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
@@ -84,7 +88,7 @@ export default function AdminSetupPage() {
             className="w-full"
             disabled={loading}
           >
-            {loading ? "Creating…" : "Create admin account"}
+            {loading ? "Signing in…" : "Sign in"}
           </Button>
         </form>
       </main>

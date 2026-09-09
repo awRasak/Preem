@@ -15,7 +15,7 @@ export default async function AdminProtectedLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/artist/login");
+  if (!user) redirect("/admin/login");
 
   const { data: roleRow } = await supabase
     .from("user_roles")

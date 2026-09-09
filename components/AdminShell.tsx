@@ -64,7 +64,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           })}
         </div>
         <div className="justify-self-end">
-          <SignOutButton />
+          <SignOutButton redirectTo="/admin/login" />
         </div>
       </nav>
 
@@ -79,7 +79,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             priority
           />
         </Link>
-        <SignOutButton className="rounded-full border border-line-strong px-3 py-1.5 text-xs text-muted" />
+        <SignOutButton redirectTo="/admin/login" className="rounded-full border border-line-strong px-3 py-1.5 text-xs text-muted" />
       </nav>
 
       <div className="pb-16 sm:pb-0">{children}</div>

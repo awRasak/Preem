@@ -35,15 +35,26 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/artist/drops") ||
     path.startsWith("/artist/listeners") ||
     path.startsWith("/artist/profile");
-  const isAdminRoute = path.startsWith("/admin") && path !== "/admin/setup";
+  const isAdminLogin = path === "/admin/login";
+  const isAdminRoute =
+    path.startsWith("/admin") &&
+    path !== "/admin/setup" &&
+    !isAdminLogin;
 
-  if ((isArtistRoute || isAdminRoute) && !user) {
+  if (!user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/artist/login";
-    return NextResponse.redirect(url);
+    if (isAdminRoute) {
+      url.pathname = "/admin/login";
+      return NextResponse.redirect(url);
+    }
+    if (isArtistRoute) {
+      url.pathname = "/artist/login";
+      return NextResponse.redirect(url);
+    }
+    return response;
   }
 
-  if (user && (isArtistRoute || isAdminRoute)) {
+  if (isAdminLogin || isArtistRoute || isAdminRoute) {
     const { data: roleRow } = await supabase
       .from("user_roles")
       .select("role")
@@ -51,6 +62,13 @@ export async function proxy(request: NextRequest) {
       .maybeSingle();
     const role = roleRow?.role;
 
+    // Signed-in visitors don't need a login form -- send them where they
+    // belong instead of showing it.
+    if (isAdminLogin) {
+      const url = request.nextUrl.clone();
+      url.pathname = role === "admin" ? "/admin" : "/";
+      return NextResponse.redirect(url);
+    }
     if (isAdminRoute && role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/";
