@@ -127,7 +127,50 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // Warms bytes for the upcoming track without ever playing: assigned a src
   // + preload=auto the moment the current track can play, so advancing is a
   // cache hit instead of a cold network start.
-  const prefetchRef = useRef<HTMLAudioElement | null>(null);
+  //
+  // Gapless rotation: the standby element IS the second player. The prefetch
+  // effect below keeps it loaded with the deterministic next track; when
+  // advancing, loadAndPlay swaps it in instead of re-setting src on the
+  // active element, so there is no network/rebuffer gap between tracks.
+  // HTMLAudioElement can't do sample-accurate gapless, but a preloaded swap
+  // lands in the tens of ms rather than the hundreds.
+  const elementsRef = useRef<HTMLAudioElement[]>([]);
+  const standbyKeyRef = useRef<string | null>(null);
+
+  function cacheKeyFor(t: PlayerTrack): string {
+    return t.preview
+      ? `preview:${t.preview.dropId}:${t.preview.trackId ?? ""}`
+      : t.trackId;
+  }
+
+  // Crossfade window: the last seconds of a track overlap the preloaded
+  // standby instead of hard-swapping at `ended`. Tunable in one place.
+  const CROSSFADE_SECONDS = 3;
+  const volumeRef = useRef(volume);
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
+  const crossfadeRef = useRef<{ on: boolean; next: PlayerTrack | null; raf: number }>({
+    on: false,
+    next: null,
+    raf: 0,
+  });
+  // Set at `ended`, read at the next `play`: measures the real-world gap of
+  // hard swaps so we know the number crossfade is beating. DevTools only.
+  const gapMarkRef = useRef<number | null>(null);
+
+  const cancelCrossfade = useCallback(() => {
+    const cf = crossfadeRef.current;
+    if (!cf.on) return;
+    cf.on = false;
+    cf.next = null;
+    cancelAnimationFrame(cf.raf);
+    const v = volumeRef.current;
+    for (const el of elementsRef.current) {
+      if (el !== audioRef.current) el.pause();
+      el.volume = v;
+    }
+  }, []);
 
   function previewUrlFor(t: PlayerTrack): string {
     return `/api/preview/${t.preview!.dropId}${
@@ -149,11 +192,31 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const loadAndPlay = useCallback(async (nextTrack: PlayerTrack) => {
     const audio = audioRef.current;
     if (!audio) return;
+    cancelCrossfade();
     const epoch = ++loadEpochRef.current;
     setError(false);
     setLoading(true);
     setTrack(nextTrack);
+    const key = cacheKeyFor(nextTrack);
     try {
+      // Fast path: the standby element already has this track buffered
+      // (put there by the prefetch effect) -- swap it in and play at once.
+      const standby = elementsRef.current.find((el) => el !== audio);
+      if (standby && standbyKeyRef.current === key && standby.readyState >= 2) {
+        audio.pause();
+        standby.volume = audio.volume;
+        audioRef.current = standby;
+        // The old active element becomes the new standby, still holding the
+        // track we just left -- stepping back to it is instant too.
+        // (trackRef is still the previous track here: setTrack above hasn't
+        // re-rendered yet, which is exactly what we want.)
+        const prev = trackRef.current;
+        standbyKeyRef.current = audio.src && prev ? cacheKeyFor(prev) : null;
+        setCurrentTime(0);
+        setDuration(standby.duration || 0);
+        await standby.play();
+        return;
+      }
       const url = await resolveTrackUrl(nextTrack);
       if (loadEpochRef.current !== epoch) return;
       audio.src = url;
@@ -163,7 +226,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } finally {
       if (loadEpochRef.current === epoch) setLoading(false);
     }
-  }, [resolveTrackUrl]);
+  }, [resolveTrackUrl, cancelCrossfade]);
 
   // Moves within the active queue by `direction`; returns whether it moved —
   // false at either end (unless repeat-all wraps around), or with no active
@@ -198,77 +261,245 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     [loadAndPlay],
   );
 
-  useEffect(() => {
-    const audio = new Audio();
-    audio.preload = "auto";
-    audio.volume = initialVolumeRef.current;
-    audioRef.current = audio;
+  const seek = useCallback((time: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    cancelCrossfade();
+    const clamped = trackRef.current?.preview ? Math.min(time, PREVIEW_SECONDS) : time;
+    // Some browsers (notably Safari/iOS) implicitly pause the element while
+    // it rebuffers around the new position and won't resume on their own --
+    // re-issuing play() here is a no-op if it was already paused/never
+    // playing, but is required to actually resume when it was playing.
+    const wasPlaying = !audio.paused;
+    audio.currentTime = clamped;
+    setCurrentTime(clamped);
+    if (wasPlaying) audio.play().catch(() => {});
+  }, [cancelCrossfade]);
 
-    const onTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      if (trackRef.current?.preview && audio.currentTime >= PREVIEW_SECONDS) {
-        audio.pause();
-        audio.currentTime = 0;
+  useEffect(() => {
+    const makeEl = () => {
+      const el = new Audio();
+      el.preload = "auto";
+      el.volume = initialVolumeRef.current;
+      return el;
+    };
+    const [elA, elB] = [makeEl(), makeEl()];
+    elementsRef.current = [elA, elB];
+    audioRef.current = elA;
+
+    const isActive = (el: HTMLAudioElement) => audioRef.current === el;
+
+    const updatePositionState = (el: HTMLAudioElement) => {
+      if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+      try {
+        const d = el.duration;
+        if (!Number.isFinite(d) || d <= 0) return;
+        // Previews stop at the cap, so report the cap as the duration --
+        // otherwise the lock-screen progress bar runs past the cut-off.
+        const t = trackRef.current;
+        const duration = t?.preview ? Math.min(d, PREVIEW_SECONDS) : d;
+        navigator.mediaSession.setPositionState({
+          duration,
+          position: Math.min(el.currentTime, duration),
+          playbackRate: el.playbackRate || 1,
+        });
+      } catch {
+        // setPositionState throws if metadata isn't set yet -- harmless.
+      }
+    };
+
+    const onTimeUpdate = (el: HTMLAudioElement) => () => {
+      if (!isActive(el)) return;
+      setCurrentTime(el.currentTime);
+      updatePositionState(el);
+      maybeStartCrossfade(el);
+      if (trackRef.current?.preview && el.currentTime >= PREVIEW_SECONDS) {
+        el.pause();
+        el.currentTime = 0;
         step(1);
       }
     };
-    const onDuration = () => setDuration(audio.duration || 0);
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
-    const onEnded = () => {
+    const onLoadedMetadata = (el: HTMLAudioElement) => () => {
+      if (!isActive(el)) return;
+      setDuration(el.duration || 0);
+      updatePositionState(el);
+    };
+    const onDuration = (el: HTMLAudioElement) => () => {
+      if (!isActive(el)) return;
+      setDuration(el.duration || 0);
+    };
+    const onPlay = (el: HTMLAudioElement) => () => {
+      if (!isActive(el)) return;
+      setPlaying(true);
+      updatePositionState(el);
+      if (gapMarkRef.current !== null) {
+        const gap = performance.now() - gapMarkRef.current;
+        gapMarkRef.current = null;
+        console.debug(`[player] track gap: ${Math.round(gap)}ms`);
+      }
+    };
+    const onPause = (el: HTMLAudioElement) => () => {
+      if (!isActive(el)) return;
       setPlaying(false);
+    };
+    const onEnded = (el: HTMLAudioElement) => () => {
+      if (!isActive(el)) return;
+      setPlaying(false);
+      gapMarkRef.current = performance.now();
       if (repeatModeRef.current === "one") {
-        audio.currentTime = 0;
-        audio.play().catch(() => setError(true));
+        el.currentTime = 0;
+        el.play().catch(() => setError(true));
         return;
       }
       step(1);
     };
-    const onError = () => {
+    const onError = (el: HTMLAudioElement) => () => {
+      if (!isActive(el)) return;
       setError(true);
       setLoading(false);
     };
 
-    audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("durationchange", onDuration);
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onPause);
-    audio.addEventListener("ended", onEnded);
-    audio.addEventListener("error", onError);
+    const unsubs: (() => void)[] = [];
+    for (const el of [elA, elB]) {
+      const handlers: [string, () => void][] = [
+        ["timeupdate", onTimeUpdate(el)],
+        ["loadedmetadata", onLoadedMetadata(el)],
+        ["durationchange", onDuration(el)],
+        ["play", onPlay(el)],
+        ["pause", onPause(el)],
+        ["ended", onEnded(el)],
+        ["error", onError(el)],
+      ];
+      for (const [evt, fn] of handlers) {
+        el.addEventListener(evt, fn);
+        unsubs.push(() => el.removeEventListener(evt, fn));
+      }
+    }
+
+    const active = () => audioRef.current ?? elA;
+
+    // Crossfade: when the active track enters its final CROSSFADE_SECONDS
+    // with the next track already buffered on the standby element, start the
+    // standby at zero volume and ramp the two against each other. At the end
+    // of the ramp the swap bookkeeping runs (same as the instant fast path).
+    // Skipped for previews (hard cut at the cap), repeat-one (same track),
+    // and shuffle (next pick is random, nothing preloaded). Any manual
+    // intervention -- seek/pause/skip via cancelCrossfade -- aborts the fade
+    // and restores volumes, so the fade can never wedge playback.
+    const finishCrossfade = (el: HTMLAudioElement, standby: HTMLAudioElement) => {
+      const cf = crossfadeRef.current;
+      cf.on = false;
+      const next = cf.next;
+      cf.next = null;
+      const v = volumeRef.current;
+      el.volume = v;
+      standby.volume = v;
+      audioRef.current = standby;
+      const prev = trackRef.current;
+      standbyKeyRef.current = el.src && prev ? cacheKeyFor(prev) : null;
+      el.pause();
+      if (next) {
+        setCurrentTime(0);
+        setDuration(standby.duration || 0);
+        setTrack(next);
+      }
+      console.debug("[player] crossfade complete");
+    };
+
+    const maybeStartCrossfade = (el: HTMLAudioElement) => {
+      const cf = crossfadeRef.current;
+      if (cf.on) return;
+      const t = trackRef.current;
+      if (!t || t.preview) return;
+      if (repeatModeRef.current === "one" || shuffleRef.current) return;
+      const d = el.duration;
+      if (!Number.isFinite(d) || d <= 0) return;
+      const remaining = d - el.currentTime;
+      if (remaining > CROSSFADE_SECONDS || remaining <= 0.05) return;
+      const q = queueRef.current;
+      const idx = q.findIndex((x) => x.trackId === t.trackId);
+      if (idx === -1) return;
+      let next = q[idx + 1];
+      if (!next && repeatModeRef.current === "all" && q.length > 0) next = q[0];
+      if (!next || next.trackId === t.trackId) return;
+      const key = cacheKeyFor(next);
+      const standby = elementsRef.current.find((x) => x !== el);
+      if (!standby || standbyKeyRef.current !== key || standby.readyState < 2) return;
+      cf.on = true;
+      cf.next = next;
+      try {
+        standby.currentTime = 0;
+      } catch {
+        // Not yet seekable -- still at 0 from a fresh load.
+      }
+      standby.volume = 0;
+      standby.play().catch(() => {
+        cf.on = false;
+        cf.next = null;
+      });
+      const startedAt = performance.now();
+      const rampMs = Math.max(remaining * 1000, 1);
+      console.debug("[player] crossfade engaged");
+      const tick = () => {
+        if (!crossfadeRef.current.on) return;
+        const p = Math.min((performance.now() - startedAt) / rampMs, 1);
+        const v = volumeRef.current;
+        el.volume = v * (1 - p);
+        standby.volume = v * p;
+        if (p >= 1) finishCrossfade(el, standby);
+        else cf.raf = requestAnimationFrame(tick);
+      };
+      cf.raf = requestAnimationFrame(tick);
+    };
 
     // Lets iOS/Android show the track title, artist, and artwork on the
     // lock screen and Control Center instead of just the page title and a
     // generic app icon, and lets the hardware/lock-screen prev-next buttons
     // (rather than the generic 10s skip buttons browsers fall back to)
-    // drive the actual queue.
+    // drive the actual queue. seekto wires the lock-screen scrubber to our
+    // seek (clamped to the preview cap for previews); without it the
+    // scrubber renders but does nothing.
     if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-      navigator.mediaSession.setActionHandler("play", () => audio.play().catch(() => setError(true)));
-      navigator.mediaSession.setActionHandler("pause", () => audio.pause());
+      navigator.mediaSession.setActionHandler("play", () => active().play().catch(() => setError(true)));
+      navigator.mediaSession.setActionHandler("pause", () => active().pause());
+      navigator.mediaSession.setActionHandler("stop", () => active().pause());
       navigator.mediaSession.setActionHandler("previoustrack", () => step(-1));
       navigator.mediaSession.setActionHandler("nexttrack", () => step(1));
+      navigator.mediaSession.setActionHandler("seekto", (details) => {
+        if (typeof details.seekTime === "number") seek(details.seekTime);
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+        const el = active();
+        seek(el.currentTime - (details.seekOffset ?? 10));
+      });
+      navigator.mediaSession.setActionHandler("seekforward", (details) => {
+        const el = active();
+        seek(el.currentTime + (details.seekOffset ?? 10));
+      });
     }
 
     return () => {
-      audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("durationchange", onDuration);
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("ended", onEnded);
-      audio.removeEventListener("error", onError);
-      audio.pause();
+      unsubs.forEach((off) => off());
+      elA.pause();
+      elB.pause();
+      elementsRef.current = [];
       if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
         navigator.mediaSession.setActionHandler("play", null);
         navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("stop", null);
         navigator.mediaSession.setActionHandler("previoustrack", null);
         navigator.mediaSession.setActionHandler("nexttrack", null);
+        navigator.mediaSession.setActionHandler("seekto", null);
+        navigator.mediaSession.setActionHandler("seekbackward", null);
+        navigator.mediaSession.setActionHandler("seekforward", null);
       }
     };
-  }, [step]);
+  }, [step, seek]);
 
   // Prefetches the deterministic next track (skipped under shuffle, where
-  // the next pick is random) once the current one can play -- warming bytes
-  // early, but never at the expense of the song that's actually playing.
-  // No setState here, only refs: safe to run on every track/queue change.
+  // the next pick is random) once the current one can play -- loaded into
+  // the STANDBY element so advancing swaps it in with no rebuffer gap. No
+  // setState here, only refs: safe to run on every track/queue change.
   useEffect(() => {
     if (!track || queue.length === 0 || shuffle) return;
     const idx = queue.findIndex((t) => t.trackId === track.trackId);
@@ -276,19 +507,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     let next = queue[idx + 1];
     if (!next && repeatMode === "all" && queue.length > 0) next = queue[0];
     if (!next || next.trackId === track.trackId) return;
+    const key = cacheKeyFor(next);
 
     let cancelled = false;
     const warm = () => {
       resolveTrackUrl(next)
         .then((url) => {
           if (cancelled) return;
-          let spare = prefetchRef.current;
-          if (!spare) {
-            spare = new Audio();
-            spare.preload = "auto";
-            prefetchRef.current = spare;
+          const standby = elementsRef.current.find((el) => el !== audioRef.current);
+          if (!standby || cancelled) return;
+          if (standbyKeyRef.current === key) {
+            // Already assigned: leave it alone while it has data or is still
+            // loading, retry only if it previously errored out.
+            if (standby.readyState >= 2 || standby.networkState === 2) return;
+            if (standby.networkState !== 3 && standby.networkState !== 0) return;
           }
-          if (spare.src !== url) spare.src = url;
+          standbyKeyRef.current = key;
+          if (standby.src !== url) standby.src = url;
+          else standby.load();
         })
         .catch(() => {});
     };
@@ -352,23 +588,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (audio.paused) {
       audio.play().catch(() => setError(true));
     } else {
+      cancelCrossfade();
       audio.pause();
     }
-  }, [track]);
-
-  const seek = useCallback((time: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const clamped = trackRef.current?.preview ? Math.min(time, PREVIEW_SECONDS) : time;
-    // Some browsers (notably Safari/iOS) implicitly pause the element while
-    // it rebuffers around the new position and won't resume on their own --
-    // re-issuing play() here is a no-op if it was already paused/never
-    // playing, but is required to actually resume when it was playing.
-    const wasPlaying = !audio.paused;
-    audio.currentTime = clamped;
-    setCurrentTime(clamped);
-    if (wasPlaying) audio.play().catch(() => {});
-  }, []);
+  }, [track, cancelCrossfade]);
 
   const setVolume = useCallback((next: number) => {
     const clamped = Math.min(1, Math.max(0, next));
@@ -390,15 +613,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     step(-1);
   }, [step]);
 
-  // Dismissing the bar: stop playback and drop the audio element's source so
-  // the browser stops buffering, then wipe all visible state.
+  // Dismissing the bar: stop playback and drop the audio elements' sources
+  // so the browser stops buffering, then wipe all visible state.
   const close = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
+    cancelCrossfade();
+    for (const el of elementsRef.current) {
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
     }
+    standbyKeyRef.current = null;
     setTrack(null);
     setQueue([]);
     setCurrentTime(0);
@@ -406,7 +630,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setError(false);
     setLoading(false);
     setPlaying(false);
-  }, []);
+  }, [cancelCrossfade]);
 
   const cycleRepeat = useCallback(() => {
     setRepeatMode((m) => (m === "off" ? "all" : m === "all" ? "one" : "off"));
