@@ -3,25 +3,12 @@
 import { Field, Textarea } from "@/components/Field";
 import { GENRES } from "@/lib/genres";
 import { AUDIO_ACCEPT, newTrackDraft } from "./types";
-import type { DropType, ReleaseType, WizardState } from "./types";
+import type { ReleaseType, WizardState } from "./types";
 
 const RELEASE_TYPES: { value: ReleaseType; label: string }[] = [
   { value: "single", label: "Single" },
   { value: "ep", label: "EP" },
   { value: "album", label: "Album" },
-];
-
-const DROP_TYPES: { value: DropType; label: string; blurb: string }[] = [
-  {
-    value: "early-access",
-    label: "Early access",
-    blurb: "Window closes, then you distribute it elsewhere",
-  },
-  {
-    value: "exclusive",
-    label: "Exclusive",
-    blurb: "Stays on Preem only, for as long as you want",
-  },
 ];
 
 export function Step1ReleaseSetup({
@@ -97,26 +84,6 @@ export function Step1ReleaseSetup({
             </option>
           ))}
         </select>
-      </Field>
-
-      <Field label="Drop type">
-        <div className="flex gap-2">
-          {DROP_TYPES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => onChange({ dropType: t.value })}
-              className={`flex-1 rounded-lg border px-3 py-2.5 text-left text-xs ${
-                state.dropType === t.value
-                  ? "border-accent bg-surface-2"
-                  : "border-line bg-surface"
-              }`}
-            >
-              <div className="font-bold text-paper">{t.label}</div>
-              <div className="mt-0.5 text-muted">{t.blurb}</div>
-            </button>
-          ))}
-        </div>
       </Field>
 
       <Field label="Description (optional)">
