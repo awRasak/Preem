@@ -91,6 +91,16 @@ h2 {
   }
 }
 
+/* Bottom-sheet entrance: slides up from below the viewport. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Card design system: dark inset glow so card edges blend into the black page background */
 .card-inset-glow {
   box-shadow: inset 0 0 40px 6px rgba(0, 0, 0, 0.55);
