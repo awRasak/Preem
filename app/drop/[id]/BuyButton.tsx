@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { loadScript } from "@/lib/load-script";
 import {
   dismissNewestMonipayPopup,
@@ -102,6 +103,7 @@ export function BuyButton({
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const router = useRouter();
   // Synchronous double-submit guard. `step` is state, so two rapid taps on
   // Continue (slow network, nothing responds instantly) both pass the
   // `disabled` check before React re-renders -- each would mint a purchase
@@ -270,7 +272,7 @@ export function BuyButton({
     setOtpSubmitting(true);
     const { error: verifyError } = await createClient().auth.verifyOtp({
       email: fanEmail,
-      token: otpCode,
+      token: otpCode.replace(/\s/g, ""),
       type: "email",
     });
     if (verifyError) {
@@ -305,7 +307,13 @@ export function BuyButton({
           <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
             <button
               type="button"
-              onClick={() => setStep("closed")}
+              onClick={() => {
+                // Ownership is computed server-side at page load -- re-run it
+                // now that the purchase is linked, so "Buy access" flips to
+                // "Listen now" instead of staying stuck on preview.
+                if (step === "done") router.refresh();
+                setStep("closed");
+              }}
               aria-label="Close"
               className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-paper"
             >
@@ -325,7 +333,7 @@ export function BuyButton({
                     inputMode="numeric"
                     autoFocus
                     value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\s/g, ""))}
                     placeholder="123456"
                   />
                 </Field>
@@ -404,7 +412,10 @@ export function BuyButton({
                 <Button
                   variant="primary"
                   className="w-full"
-                  onClick={() => setStep("closed")}
+                  onClick={() => {
+                    setStep("closed");
+                    router.refresh();
+                  }}
                 >
                   Close
                 </Button>
