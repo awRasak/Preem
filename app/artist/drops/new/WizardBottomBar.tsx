@@ -20,9 +20,9 @@ export function WizardBottomBar({
   primaryLoading?: boolean;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-8">
-      <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-8">
+      <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-1 sm:gap-2">
+        <div className="flex min-w-0 items-center gap-0.5 sm:gap-2">
           {onBack ? (
             <Button type="button" variant="outline" className="!px-4 !py-2 text-xs" onClick={onBack}>
               Back
@@ -33,14 +33,14 @@ export function WizardBottomBar({
           <button
             type="button"
             onClick={onSaveAndClose}
-            className="rounded-full px-3 py-2 text-xs font-bold text-muted underline hover:text-paper"
+            className="whitespace-nowrap rounded-full px-2 py-2 text-xs font-bold text-muted underline hover:text-paper sm:px-3"
           >
             Save and Close
           </button>
           <button
             type="button"
             onClick={onPreview}
-            className="rounded-full px-3 py-2 text-xs font-bold text-muted underline hover:text-paper"
+            className="whitespace-nowrap rounded-full px-2 py-2 text-xs font-bold text-muted underline hover:text-paper sm:px-3"
           >
             Preview
           </button>
@@ -48,7 +48,7 @@ export function WizardBottomBar({
         <Button
           type="button"
           variant="primary"
-          className="!px-6 !py-2.5 text-sm"
+          className="!px-4 !py-2.5 text-sm whitespace-nowrap shrink-0 sm:!px-6"
           disabled={primaryDisabled}
           onClick={onPrimary}
         >

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { splitLyrics } from "@/lib/lrc";
 import { Nav } from "@/components/Nav";
+import { Button } from "@/components/Button";
 import { QuickCaptureModal } from "./QuickCaptureModal";
 import { Step1ReleaseSetup } from "./Step1ReleaseSetup";
 import { Step2TrackDetails } from "./Step2TrackDetails";
@@ -15,6 +16,13 @@ import { PreviewCard } from "./PreviewCard";
 import { WizardBottomBar } from "./WizardBottomBar";
 import { initialWizardState } from "./types";
 import type { WizardState } from "./types";
+import {
+  draftStorageKey,
+  isEmptyDraft,
+  parseDraft,
+  serializeDraft,
+  type RestoredDraft,
+} from "./types";
 
 type Step = "capture" | 1 | 2 | 3 | 4;
 
@@ -106,12 +114,85 @@ export default function CreateDropWizard() {
   const [progress, setProgress] = useState<{ label: string; percent: number | null } | null>(
     null,
   );
+  const [userId, setUserId] = useState<string | null>(null);
+  const [resumeOffer, setResumeOffer] = useState<RestoredDraft | null>(null);
+  const [restoredNotice, setRestoredNotice] = useState<string | null>(null);
+
+  // Look for an autosaved session once the session (and therefore the
+  // storage key) is known. Runs once -- later keystrokes only write.
+  useEffect(() => {
+    let cancelled = false;
+    createClient()
+      .auth.getUser()
+      .then(({ data: { user } }) => {
+        if (cancelled || !user) return;
+        setUserId(user.id);
+        try {
+          const raw = localStorage.getItem(draftStorageKey(user.id));
+          if (!raw) return;
+          const draft = parseDraft(raw);
+          if (draft) setResumeOffer(draft);
+        } catch {
+          // Private mode / disabled storage -- the wizard just won't resume.
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Persist every change (debounced) so an abandoned session is resumable.
+  // Empty shells clear the key so a finished/discarded draft never haunts
+  // the next visit.
+  useEffect(() => {
+    if (!userId) return;
+    const t = setTimeout(() => {
+      try {
+        if (isEmptyDraft(state)) {
+          localStorage.removeItem(draftStorageKey(userId));
+        } else {
+          localStorage.setItem(draftStorageKey(userId), serializeDraft(step, state));
+        }
+      } catch {
+        // Storage full or unavailable -- non-fatal.
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [state, step, userId]);
+
+  function clearAutosave() {
+    if (!userId) return;
+    try {
+      localStorage.removeItem(draftStorageKey(userId));
+    } catch {
+      // Non-fatal.
+    }
+  }
+
+  function resumeDraft() {
+    if (!resumeOffer) return;
+    setState(resumeOffer.state);
+    setStep(resumeOffer.step as Step);
+    setError(null);
+    if (resumeOffer.hadFiles) {
+      setRestoredNotice(
+        "Picked up where you left off — re-attach your audio and artwork files, browsers can't save those.",
+      );
+    }
+    setResumeOffer(null);
+  }
+
+  function discardResumeOffer() {
+    clearAutosave();
+    setResumeOffer(null);
+  }
 
   function patch(p: Partial<WizardState>) {
     setState((s) => ({ ...s, ...p }));
   }
 
   function handleDiscard() {
+    clearAutosave();
     router.push("/artist/dashboard");
   }
 
@@ -311,12 +392,44 @@ export default function CreateDropWizard() {
       }
 
       router.push(mode === "publish" ? `/artist/drops/${drop.id}` : "/artist/dashboard");
+      clearAutosave();
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setSubmitting(null);
       setProgress(null);
     }
+  }
+
+  if (resumeOffer) {
+    const when = resumeOffer.savedAt
+      ? new Date(resumeOffer.savedAt).toLocaleString("en-NG", {
+          day: "numeric",
+          month: "short",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "";
+    return (
+      <>
+        <Nav role="artist" />
+        <main className="mx-auto w-full max-w-sm flex-1 px-5 py-16 text-center">
+          <h1 className="mb-2 text-2xl font-bold">Unfinished drop</h1>
+          <p className="mb-6 text-sm text-muted">
+            {resumeOffer.state.title.trim() || "Untitled"}
+            {when ? ` · saved ${when}` : ""}
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button variant="primary" className="w-full" onClick={resumeDraft}>
+              Continue where I left off
+            </Button>
+            <Button variant="outline" className="w-full" onClick={discardResumeOffer}>
+              Start fresh
+            </Button>
+          </div>
+        </main>
+      </>
+    );
   }
 
   if (step === "capture") {
@@ -356,6 +469,19 @@ export default function CreateDropWizard() {
         <p className="mb-6 text-xs font-bold uppercase tracking-wide text-muted">
           Step {step} of 4 · {STEP_TITLES[step]}
         </p>
+        {restoredNotice && (
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-line bg-surface-2 p-4">
+            <p className="text-xs text-muted">{restoredNotice}</p>
+            <button
+              type="button"
+              onClick={() => setRestoredNotice(null)}
+              aria-label="Dismiss"
+              className="flex-shrink-0 text-muted hover:text-paper"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div className={`grid gap-8 ${step === 4 ? "" : "lg:grid-cols-[1fr_280px]"}`}>
           <div>
             {step === 1 && <Step1ReleaseSetup state={state} onChange={patch} />}
