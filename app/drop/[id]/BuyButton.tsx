@@ -31,11 +31,11 @@ declare global {
         key: string;
         email: string;
         amount: number;
-        // NOTE: reference/access_code are NOT forwarded by Monipay's inline
-        // script (it sends only public_key, email, amount to its checkout
-        // page) -- our reference travels via `metadata` for dashboard
-        // reconciliation, and confirmation uses the reference Monipay
-        // reports in onSuccess. See /api/checkout/verify-monipay.
+        // Our reference travels via `metadata` (the v2 inline script merges
+        // it as extra /popup query keys) and the popup creates the order
+        // under it -- so the server must NOT pre-register the same
+        // reference. Confirmation still goes through verify-monipay, which
+        // tries ours first, then the popup payload's references.
         metadata?: Record<string, string>;
         onLoad?: () => void;
         onSuccess?: (data: unknown) => void;

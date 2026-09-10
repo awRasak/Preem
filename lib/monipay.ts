@@ -30,16 +30,16 @@ async function monipayFetch<T>(
 
 // NOTE on the inline popup flow, verified by reading the served script
 // (https://js.monipay.ng/v2/inline.js): Monipay.prototype.checkout forwards
-// ONLY public_key, email and amount (+ name/metadata) to its checkout page.
-// It silently drops any client-supplied reference AND the access_code from
-// this call -- there is no resumeTransaction. So a completed popup payment
-// always lives under Monipay's own internal reference and
-// verify/{ourReference} comes back "Transaction not found" even though the
-// money moved. Confirmation therefore goes through
-// /api/checkout/verify-monipay, which verifies the reference Monipay itself
-// reports in the MONIPAY_SUCCESS postMessage payload. This initialize call
-// is kept (it registers the session and yields an access_code should
-// Monipay ever bind it), but it is NOT what links the popup payment to us.
+// key/email/amount plus `metadata` (merged as extra /popup query keys) to
+// its checkout page -- notably including our `reference`, under which the
+// popup CREATES the order. That means the order must be registered exactly
+// once, by the popup: calling this REST initialize with the same reference
+// beforehand makes the popup's creation fail with "Duplicate transaction:
+// order_id already exists" on every attempt (hit Sep 2026). So the checkout
+// initialize routes deliberately do NOT call this; it is retained for
+// explicit resume flows and manual checks only. Confirmation goes
+// through /api/checkout/verify-monipay, which verifies ours first, then
+// whatever references the popup payload carries.
 export async function initializeTransaction(params: {
   email: string;
   amountKobo: number;

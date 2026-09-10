@@ -6,7 +6,6 @@ import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
 import { countryFromRequest, gatewayForCountry } from "@/lib/geo";
-import { initializeTransaction as initializeMonipayTransaction } from "@/lib/monipay";
 
 const schema = z.object({
   dropId: z.string().uuid(),
@@ -138,26 +137,14 @@ export async function POST(req: Request) {
     );
   }
 
-  // Monipay only recognizes our reference for later verification if it was
-  // registered through this call first -- see initializeTransaction's
-  // comment in lib/monipay.ts. Paystack's Inline JS has no such requirement.
+  // NOTE: no server-side Monipay /transaction/initialize here -- the order
+  // must be registered exactly ONCE. The popup receives our reference via
+  // metadata (forwarded as /popup query keys by the v2 inline script) and
+  // creates the order under it. Pre-registering the same reference from this
+  // route first makes the popup's creation fail with "Duplicate transaction:
+  // order_id already exists" on every attempt -- verified Sep 2026, right
+  // after metadata.reference started reaching the popup.
   let accessCode: string | undefined;
-  if (gateway === "monipay") {
-    try {
-      const monipayTx = await initializeMonipayTransaction({
-        email: fanEmail,
-        amountKobo,
-        reference,
-      });
-      accessCode = monipayTx.access_code;
-    } catch (e) {
-      console.error(`monipay initialize failed for ${reference}:`, e instanceof Error ? e.message : e);
-      return NextResponse.json(
-        { error: "Could not start checkout." },
-        { status: 502 },
-      );
-    }
-  }
 
   return NextResponse.json({
     reference,

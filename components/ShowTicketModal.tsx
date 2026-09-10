@@ -28,9 +28,9 @@ declare global {
         key: string;
         email: string;
         amount: number;
-        // NOTE: reference/access_code are NOT forwarded by Monipay's inline
-        // script -- confirmation uses the reference Monipay reports in
-        // onSuccess. See /api/checkout/verify-monipay.
+        // Our reference travels via `metadata` and the popup creates the
+        // order under it -- the server must NOT pre-register the same
+        // reference. See /api/checkout/verify-monipay.
         metadata?: Record<string, string>;
         onLoad?: () => void;
         onSuccess?: (data: unknown) => void;

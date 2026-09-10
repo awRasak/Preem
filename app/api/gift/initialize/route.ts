@@ -5,7 +5,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { countryFromRequest, gatewayForCountry } from "@/lib/geo";
-import { initializeTransaction as initializeMonipayTransaction } from "@/lib/monipay";
 import { tooManyRequests } from "@/lib/rate-limit";
 
 const schema = z.object({
@@ -125,27 +124,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not start gift." }, { status: 500 });
   }
 
-  // Monipay only links the popup payment to our reference via the
-  // confirmation payload -- see /api/checkout/verify-monipay. The access
-  // code is returned for forward-compat; confirmation uses the reference
-  // Monipay itself reports.
+  // NOTE: no server-side Monipay /transaction/initialize -- the order must
+  // be registered exactly ONCE, by the popup under our metadata reference.
+  // Pre-registering here collides with the popup's creation ("Duplicate
+  // transaction: order_id already exists"). See checkout/initialize.
   let accessCode: string | undefined;
-  if (gateway === "monipay") {
-    try {
-      const monipayTx = await initializeMonipayTransaction({
-        email: fanEmail,
-        amountKobo,
-        reference,
-      });
-      accessCode = monipayTx.access_code;
-    } catch (e) {
-      console.error(`monipay initialize failed for ${reference}:`, e instanceof Error ? e.message : e);
-      return NextResponse.json(
-        { error: "Could not start gift." },
-        { status: 502 },
-      );
-    }
-  }
 
   return NextResponse.json({
     reference,
