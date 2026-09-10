@@ -117,6 +117,51 @@ export function monipayCandidateRefs(payload: unknown): string[] {
   return out;
 }
 
+// The inline popup reports checkout failures via onError({ message }). Our
+// own reference is dropped by the popup, so Monipay keys the order off the
+// stable inputs (merchant + email + amount) -- a second overlapping session
+// for the same details (double-tap on Continue, retry while the first is
+// still pending) dies with "Duplicate transaction: order_id already exists".
+// Surface that case with actionable copy instead of the generic load error,
+// so the fan knows to finish the open payment rather than hammering retry
+// (each retry mints another pending purchase row).
+export function monipayPopupErrorMessage(err: unknown): string {
+  const raw =
+    typeof err === "object" && err !== null && "message" in err
+      ? String((err as { message: unknown }).message ?? "")
+      : "";
+  if (/duplicate|already exists/i.test(raw)) {
+    return "A payment for these details is already open — finish it in the other window, or close everything, wait a minute and try again.";
+  }
+  return raw || "Payment failed to load — try again.";
+}
+
+// Monipay's inline script appends its overlay + iframe straight to
+// document.body and only unmounts them on success/close -- an errored popup
+// is left mounted (our modal's X doesn't touch it either). That used to let
+// a retry stack a second popup over the first, and the buried duplicate is
+// exactly what Monipay rejects with "order_id already exists". These helpers
+// manage that foreign DOM: never open over a live popup, and peel an errored
+// popup off to land the fan back on the still-open payment underneath.
+export function isMonipayPopupOpen(): boolean {
+  return (
+    typeof document !== "undefined" &&
+    document.querySelector('iframe[title="Monipay checkout"]') !== null
+  );
+}
+
+// Removes the newest overlay + iframe pair (the errored attempt) and reports
+// whether an older popup is still on screen -- i.e. whether the fan just
+// landed back on their open payment.
+export function dismissNewestMonipayPopup(): boolean {
+  if (typeof document === "undefined") return false;
+  const overlays = document.querySelectorAll("[data-monipay-overlay]");
+  overlays.item(overlays.length - 1)?.remove();
+  const frames = document.querySelectorAll('iframe[title="Monipay checkout"]');
+  frames.item(frames.length - 1)?.remove();
+  return isMonipayPopupOpen();
+}
+
 // Bank codes are the standard NIBSS/CBN interbank codes (Monipay's own docs
 // example uses "058" for GTBank, same as Paystack's) -- reusing an artist's
 // existing bank_code/account_number here is safe, and Monipay verifies the

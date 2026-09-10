@@ -1,7 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { loadScript } from "@/lib/load-script";
+import {
+  dismissNewestMonipayPopup,
+  isMonipayPopupOpen,
+  monipayPopupErrorMessage,
+} from "@/lib/monipay";
 import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -97,6 +102,14 @@ export function BuyButton({
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  // Synchronous double-submit guard. `step` is state, so two rapid taps on
+  // Continue (slow network, nothing responds instantly) both pass the
+  // `disabled` check before React re-renders -- each would mint a purchase
+  // row AND a Monipay session, and the second session dies with
+  // "Duplicate transaction: order_id already exists". A ref flips in the
+  // same task, so the second invocation is dead on arrival. Released on
+  // every path back to the form.
+  const payingRef = useRef(false);
 
   if (owned) {
     return (
@@ -146,13 +159,17 @@ export function BuyButton({
 
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
+    if (payingRef.current) return;
+    payingRef.current = true;
     setError(null);
     if (!pricePicked) {
       setError("Pick a price first.");
+      payingRef.current = false;
       return;
     }
     if (!amountValid) {
       setError(`Enter at least ${formatNaira(minPriceKobo)}.`);
+      payingRef.current = false;
       return;
     }
     setStep("submitting");
@@ -167,6 +184,7 @@ export function BuyButton({
     if (!res.ok) {
       setError(body.error ?? "Something went wrong.");
       setStep("form");
+      payingRef.current = false;
       return;
     }
 
@@ -178,22 +196,40 @@ export function BuyButton({
       } catch {
         setError("Payment failed to load — try again.");
         setStep("form");
+        payingRef.current = false;
         return;
       }
       if (!window.Monipay) {
         setError("Payment popup is still loading — try again in a second.");
         setStep("form");
+        payingRef.current = false;
         return;
       }
+      // Never stack popups: if one is already on screen (modal closed
+      // mid-payment, then Continue tapped again), it IS the open payment --
+      // leave it front and center instead of opening the duplicate Monipay
+      // would reject. Its own onCancel/onError will release the guard.
+      if (isMonipayPopupOpen()) return;
       new window.Monipay().checkout({
         key: body.publicKey,
         email: fanEmail,
         amount: body.amountKobo,
         metadata: { reference: body.reference },
-        onCancel: () => setStep("form"),
-        onError: () => {
-          setError("Payment failed to load — try again.");
+        onCancel: () => {
+          payingRef.current = false;
           setStep("form");
+        },
+        onError: (err) => {
+          // Peel the errored popup off: if a live payment sits underneath,
+          // the fan lands back on it instead of a dead error screen.
+          const rescued = dismissNewestMonipayPopup();
+          setError(
+            rescued
+              ? "You're back at your open payment — finish it there."
+              : monipayPopupErrorMessage(err),
+          );
+          setStep("form");
+          payingRef.current = false;
         },
         onSuccess: (data) => afterPaymentSuccess(body.reference, data),
       });
@@ -205,11 +241,13 @@ export function BuyButton({
     } catch {
       setError("Payment failed to load — try again.");
       setStep("form");
+      payingRef.current = false;
       return;
     }
     if (!window.PaystackPop) {
       setError("Payment popup is still loading — try again in a second.");
       setStep("form");
+      payingRef.current = false;
       return;
     }
 
@@ -218,7 +256,10 @@ export function BuyButton({
       email: fanEmail,
       amount: body.amountKobo,
       ref: body.reference,
-      onClose: () => setStep("form"),
+      onClose: () => {
+        payingRef.current = false;
+        setStep("form");
+      },
       callback: (transaction) => afterPaymentSuccess(transaction.reference),
     }).openIframe();
   }
@@ -249,7 +290,13 @@ export function BuyButton({
 
   return (
     <>
-      <Button variant="primary" onClick={() => setStep("form")}>
+      <Button
+        variant="primary"
+        onClick={() => {
+          payingRef.current = false;
+          setStep("form");
+        }}
+      >
         {label}
       </Button>
 

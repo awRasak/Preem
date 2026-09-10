@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { loadScript } from "@/lib/load-script";
+import {
+  dismissNewestMonipayPopup,
+  isMonipayPopupOpen,
+  monipayPopupErrorMessage,
+} from "@/lib/monipay";
 import { Button } from "@/components/Button";
 import { Field, Input } from "@/components/Field";
 import { formatNaira, formatShowDate } from "@/lib/format";
@@ -58,6 +63,10 @@ export function BuyTicketButton({
   const [fanEmail, setFanEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState("");
+  // Synchronous double-submit guard -- see BuyButton's payingRef for why
+  // state alone can't close the double-tap race. Released on every path
+  // back to the form.
+  const payingRef = useRef(false);
 
   const amountKobo = show.ticket_price_kobo;
 
@@ -88,6 +97,8 @@ export function BuyTicketButton({
 
   async function handlePay(e: React.FormEvent) {
     e.preventDefault();
+    if (payingRef.current) return;
+    payingRef.current = true;
     setError(null);
     setStep("submitting");
 
@@ -107,6 +118,7 @@ export function BuyTicketButton({
     if (!res.ok) {
       setError(body.error ?? "Something went wrong.");
       setStep("form");
+      payingRef.current = false;
       return;
     }
 
@@ -118,22 +130,37 @@ export function BuyTicketButton({
       } catch {
         setError("Payment failed to load — try again.");
         setStep("form");
+        payingRef.current = false;
         return;
       }
       if (!window.Monipay) {
         setError("Payment popup is still loading — try again in a second.");
         setStep("form");
+        payingRef.current = false;
         return;
       }
+      // Never stack popups: a live one on screen IS the open payment.
+      // Its own onCancel/onError will release the guard.
+      if (isMonipayPopupOpen()) return;
       new window.Monipay().checkout({
         key: body.publicKey,
         email: fanEmail,
         amount: body.amountKobo,
         metadata: { reference: body.reference },
-        onCancel: () => setStep("form"),
-        onError: () => {
-          setError("Payment failed to load — try again.");
+        onCancel: () => {
+          payingRef.current = false;
           setStep("form");
+        },
+        onError: (err) => {
+          // Peel the errored popup off to land back on the live one beneath.
+          const rescued = dismissNewestMonipayPopup();
+          setError(
+            rescued
+              ? "You're back at your open payment — finish it there."
+              : monipayPopupErrorMessage(err),
+          );
+          setStep("form");
+          payingRef.current = false;
         },
         onSuccess: (data) => afterPaymentSuccess(body.reference, data),
       });
@@ -145,11 +172,13 @@ export function BuyTicketButton({
     } catch {
       setError("Payment failed to load — try again.");
       setStep("form");
+      payingRef.current = false;
       return;
     }
     if (!window.PaystackPop) {
       setError("Payment popup is still loading — try again in a second.");
       setStep("form");
+      payingRef.current = false;
       return;
     }
 
@@ -158,14 +187,23 @@ export function BuyTicketButton({
       email: fanEmail,
       amount: body.amountKobo,
       ref: body.reference,
-      onClose: () => setStep("form"),
+      onClose: () => {
+        payingRef.current = false;
+        setStep("form");
+      },
       callback: (transaction) => afterPaymentSuccess(transaction.reference),
     }).openIframe();
   }
 
   return (
     <>
-      <Button variant="primary" onClick={() => setStep("form")}>
+      <Button
+        variant="primary"
+        onClick={() => {
+          payingRef.current = false;
+          setStep("form");
+        }}
+      >
         Buy ticket
       </Button>
 
