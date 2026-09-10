@@ -76,7 +76,34 @@ export async function GET(
           .select("role")
           .eq("user_id", user.id)
           .maybeSingle();
-        if (roleRow?.role === "admin") authorized = true;
+        if (roleRow?.role === "admin") {
+          authorized = true;
+        } else {
+          // Signed-in fan: purchases linked to their account, or matching
+          // their verified session email. Without this branch, guest
+          // purchases that skipped OTP linking (fan_user_id empty) -- and
+          // any fan without the phone cookie in this browser -- get 403 on
+          // songs they paid for.
+          const base = admin
+            .from("purchases")
+            .select("id", { count: "exact", head: true })
+            .eq("drop_id", track.drop_id)
+            .eq("status", "success")
+            .or(`track_id.eq.${trackId},track_id.is.null`);
+          const [{ count: byUser }, { count: byEmail }] = await Promise.all([
+            base.eq("fan_user_id", user.id),
+            user.email
+              ? admin
+                  .from("purchases")
+                  .select("id", { count: "exact", head: true })
+                  .eq("drop_id", track.drop_id)
+                  .eq("status", "success")
+                  .or(`track_id.eq.${trackId},track_id.is.null`)
+                  .ilike("fan_email", user.email)
+              : Promise.resolve({ count: 0 }),
+          ]);
+          if ((byUser ?? 0) + (byEmail ?? 0) > 0) authorized = true;
+        }
       }
     }
   }

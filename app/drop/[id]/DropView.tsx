@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/Badge";
 import { Avatar } from "@/components/Avatar";
 import { DropCard } from "@/components/DropCard";
@@ -59,20 +60,34 @@ export default async function DropView({
 
   // Signed-in fan (via post-purchase email OTP) already owning this drop —
   // checked so "Buy access" can become "Listen now" instead of asking them
-  // to pay again. RLS scopes this to the signed-in fan's own rows.
+  // to pay again. Matched by linked account AND verified session email, so
+  // guest purchases that skipped OTP linking still count. Reads go through
+  // the admin client constrained to this session's own identity, because
+  // user RLS only sees fan_user_id rows and would miss the email matches.
   const {
     data: { user: fan },
   } = await supabase.auth.getUser();
   let ownsBundle = false;
   const ownedTrackIds = new Set<string>();
   if (fan) {
-    const { data: owned } = await supabase
+    const admin = createAdminClient();
+    const base = admin
       .from("purchases")
       .select("track_id")
       .eq("drop_id", drop.id)
-      .eq("fan_user_id", fan.id)
       .eq("status", "success");
-    for (const o of owned ?? []) {
+    const [{ data: byUser }, { data: byEmail }] = await Promise.all([
+      base.eq("fan_user_id", fan.id),
+      fan.email
+        ? admin
+            .from("purchases")
+            .select("track_id")
+            .eq("drop_id", drop.id)
+            .eq("status", "success")
+            .ilike("fan_email", fan.email)
+        : Promise.resolve({ data: [] as { track_id: string | null }[] }),
+    ]);
+    for (const o of [...(byUser ?? []), ...(byEmail ?? [])]) {
       if (o.track_id) ownedTrackIds.add(o.track_id);
       else ownsBundle = true;
     }
