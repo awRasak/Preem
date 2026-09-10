@@ -10,10 +10,13 @@ import {
 } from "@/lib/monipay";
 import Image from "next/image";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { Badge } from "@/components/Badge";
 import { Field, Input } from "@/components/Field";
 import { formatNaira } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
+import { usePlayer } from "@/lib/player-context";
+import { useBuyerDetails } from "@/components/useBuyerDetails";
 
 declare global {
   interface Window {
@@ -68,6 +71,8 @@ export function BuyButton({
   thankYouMediaUrl,
   thankYouMediaType,
   owned = false,
+  artistId = "",
+  artworkUrl = null,
 }: {
   dropId: string;
   trackId?: string;
@@ -82,6 +87,10 @@ export function BuyButton({
   // Signed-in fan already owns this drop/track (checked server-side) — show
   // a way to listen instead of asking them to pay again.
   owned?: boolean;
+  // Carried for instant full-track autoplay the moment payment confirms --
+  // the page underneath flips via router.refresh() at the same time.
+  artistId?: string;
+  artworkUrl?: string | null;
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
@@ -94,15 +103,23 @@ export function BuyButton({
   }, [minPriceKobo]);
   const [priceMode, setPriceMode] = useState<number | "custom" | null>(null);
   const pricePicked = priceMode !== null;
-  const [fanName, setFanName] = useState("");
-  const [fanPhone, setFanPhone] = useState("");
-  const [fanEmail, setFanEmail] = useState("");
+  const {
+    fanName,
+    fanPhone,
+    fanEmail,
+    emailLocked,
+    setFanName,
+    setFanPhone,
+    setFanEmail,
+    prefill: prefillBuyerDetails,
+  } = useBuyerDetails();
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const { play } = usePlayer();
   const router = useRouter();
   // Synchronous double-submit guard. `step` is state, so two rapid taps on
   // Continue (slow network, nothing responds instantly) both pass the
@@ -140,8 +157,29 @@ export function BuyButton({
           });
     verifyCall
       .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
-      .then(({ ok, verifyBody }) => {
+      .then(async ({ ok, verifyBody }) => {
         if (ok && verifyBody.status === "success") {
+          // Signed-in fan paying with their account email: link + done, no
+          // OTP wall. Anything else falls through to the code step, which
+          // doubles as account creation for first-time buyers.
+          const {
+            data: { user },
+          } = await createClient().auth.getUser();
+          if (
+            user?.email &&
+            user.email.toLowerCase() === fanEmail.toLowerCase()
+          ) {
+            const linkRes = await fetch("/api/checkout/link-account", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reference: paidReference }),
+            });
+            if (linkRes.ok) {
+              setSignedIn(true);
+              confirmUnlocked();
+              return;
+            }
+          }
           setStep("otp");
           // Fire-and-forget: sends the code, creating the fan's account if
           // this is their first purchase. Entering it is optional — "Skip
@@ -157,6 +195,29 @@ export function BuyButton({
           setStep("error");
         }
       });
+  }
+
+  // The purchase is confirmed: flip the page underneath to owned state
+  // immediately (no reload needed) and, for a single track, start the full
+  // version playing right away. Autoplay may be blocked when the verify
+  // round trip outlasts the click gesture -- that failure is swallowed on
+  // purpose; the track is still unlocked underneath.
+  function confirmUnlocked() {
+    setStep("done");
+    router.refresh();
+    if (trackId) {
+      play(
+        {
+          trackId,
+          title,
+          artistName: artistName ?? "",
+          artistId,
+          artworkUrl,
+        },
+        undefined,
+        { silentAutoplay: true },
+      );
+    }
   }
 
   async function handlePay(e: React.FormEvent) {
@@ -297,6 +358,7 @@ export function BuyButton({
         onClick={() => {
           payingRef.current = false;
           setStep("form");
+          prefillBuyerDetails();
         }}
       >
         {label}
@@ -304,7 +366,7 @@ export function BuyButton({
 
       {step !== "closed" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+          <div className="relative max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
             <button
               type="button"
               onClick={() => {
@@ -353,7 +415,13 @@ export function BuyButton({
                     className="flex-1"
                     disabled={otpSubmitting}
                   >
-                    {otpSubmitting ? "…" : "Confirm"}
+                    {otpSubmitting ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size="xs" tone="current" /> Confirming…
+                      </span>
+                    ) : (
+                      "Confirm"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -528,7 +596,14 @@ export function BuyButton({
                     value={fanEmail}
                     onChange={(e) => setFanEmail(e.target.value)}
                     placeholder="you@email.com"
+                    readOnly={emailLocked}
+                    className={emailLocked ? "opacity-70" : ""}
                   />
+                  {emailLocked && (
+                    <p className="mt-1 text-[11px] text-muted">
+                      Signed in — receipt goes to your account email.
+                    </p>
+                  )}
                 </Field>
                 </div>
                 )}
@@ -542,11 +617,17 @@ export function BuyButton({
                     className="w-full !py-4 !text-base"
                     disabled={!pricePicked || step === "submitting" || step === "verifying"}
                   >
-                    {step === "submitting"
-                      ? "…"
-                      : step === "verifying"
-                        ? "Verifying…"
-                        : "Continue"}
+                    {step === "submitting" ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size="xs" tone="current" />
+                      </span>
+                    ) : step === "verifying" ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size="xs" tone="current" /> Verifying…
+                      </span>
+                    ) : (
+                      "Continue"
+                    )}
                   </Button>
                 </div>
               </form>

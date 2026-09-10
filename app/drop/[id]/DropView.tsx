@@ -226,6 +226,8 @@ export default async function DropView({
                   thankYouMediaUrl={drop.artist?.thank_you_media_url}
                   thankYouMediaType={drop.artist?.thank_you_media_type}
                   owned={isBundle ? ownsBundle : ownsBundle || (!!tracks[0] && ownedTrackIds.has(tracks[0].id))}
+                  artistId={artistId}
+                  artworkUrl={drop.artwork_path}
                 />
               ) : (
                 <p className="text-xs text-muted">
@@ -286,6 +288,8 @@ export default async function DropView({
                         thankYouMediaUrl={drop.artist?.thank_you_media_url}
                         thankYouMediaType={drop.artist?.thank_you_media_type}
                         owned={ownsBundle || ownedTrackIds.has(track.id)}
+                        artistId={artistId}
+                        artworkUrl={drop.artwork_path}
                       />
                     )}
                   </div>

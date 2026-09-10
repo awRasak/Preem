@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { loadScript } from "@/lib/load-script";
 import {
   dismissNewestMonipayPopup,
@@ -8,7 +9,9 @@ import {
   monipayPopupErrorMessage,
 } from "@/lib/monipay";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { Field, Input } from "@/components/Field";
+import { useBuyerDetails } from "@/components/useBuyerDetails";
 import { formatNaira, formatShowDate } from "@/lib/format";
 
 declare global {
@@ -58,11 +61,19 @@ export function BuyTicketButton({
   artistName: string;
 }) {
   const [step, setStep] = useState<Step>("closed");
-  const [fanName, setFanName] = useState("");
-  const [fanPhone, setFanPhone] = useState("");
-  const [fanEmail, setFanEmail] = useState("");
+  const {
+    fanName,
+    fanPhone,
+    fanEmail,
+    emailLocked,
+    setFanName,
+    setFanPhone,
+    setFanEmail,
+    prefill: prefillBuyerDetails,
+  } = useBuyerDetails();
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState("");
+  const router = useRouter();
   // Synchronous double-submit guard -- see BuyButton's payingRef for why
   // state alone can't close the double-tap race. Released on every path
   // back to the form.
@@ -85,7 +96,9 @@ export function BuyTicketButton({
       .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
       .then(({ ok, verifyBody }) => {
         if (ok && verifyBody.status === "success") {
+          // Flip any ownership UI underneath immediately -- no reload needed.
           setStep("done");
+          router.refresh();
         } else {
           setError(
             "We received your payment but couldn't confirm it yet — you'll still get a ticket. Keep your reference.",
@@ -202,6 +215,7 @@ export function BuyTicketButton({
         onClick={() => {
           payingRef.current = false;
           setStep("form");
+          prefillBuyerDetails();
         }}
       >
         Buy ticket
@@ -254,6 +268,9 @@ export function BuyTicketButton({
               </div>
             ) : step === "error" ? (
               <div className="mx-auto w-full max-w-xs text-center">
+                <span className="mb-3 inline-flex">
+                  <Spinner size="md" />
+                </span>
                 <h3 className="mb-2 text-lg font-bold">Confirming…</h3>
                 <p className="mb-4 text-sm text-muted">{error}</p>
                 <Button variant="primary" className="w-full" onClick={() => setStep("closed")}>
@@ -297,7 +314,14 @@ export function BuyTicketButton({
                     value={fanEmail}
                     onChange={(e) => setFanEmail(e.target.value)}
                     placeholder="you@email.com"
+                    readOnly={emailLocked}
+                    className={emailLocked ? "opacity-70" : ""}
                   />
+                  {emailLocked && (
+                    <p className="mt-1 text-[11px] text-muted">
+                      Signed in — ticket goes to your account email.
+                    </p>
+                  )}
                 </Field>
                 </div>
                 {error && <p className="mb-3 text-sm text-[#ff6b6b] sm:col-span-2 sm:mb-0">{error}</p>}
@@ -308,11 +332,17 @@ export function BuyTicketButton({
                     className="w-full !py-4 !text-base"
                     disabled={step === "submitting" || step === "verifying"}
                   >
-                    {step === "submitting"
-                      ? "…"
-                      : step === "verifying"
-                        ? "Verifying…"
-                        : `Pay ${formatNaira(amountKobo)}`}
+                    {step === "submitting" ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size="xs" tone="current" />
+                      </span>
+                    ) : step === "verifying" ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size="xs" tone="current" /> Verifying…
+                      </span>
+                    ) : (
+                      `Pay ${formatNaira(amountKobo)}`
+                    )}
                   </Button>
                 </div>
               </form>

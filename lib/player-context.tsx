@@ -46,7 +46,12 @@ type PlayerContextValue = {
   // `queue` sets the ordered list next()/previous() and end-of-track
   // auto-advance step through. Omit it to play a single track with no
   // neighbors (the default for one-off previews).
-  play: (track: PlayerTrack, queue?: PlayerTrack[]) => void;
+  // `silentAutoplay` swallows gesture-blocked play() rejections
+  // (NotAllowedError) without raising the error UI -- for programmatic
+  // starts after an async round trip (e.g. post-payment autoplay), where a
+  // block means "stay quiet", not "something broke". Real load failures
+  // still surface.
+  play: (track: PlayerTrack, queue?: PlayerTrack[], opts?: { silentAutoplay?: boolean }) => void;
   toggle: () => void;
   seek: (time: number) => void;
   volume: number;
@@ -189,7 +194,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return url;
   }, []);
 
-  const loadAndPlay = useCallback(async (nextTrack: PlayerTrack) => {
+  const loadAndPlay = useCallback(async (nextTrack: PlayerTrack, opts?: { silentAutoplay?: boolean }) => {
     const audio = audioRef.current;
     if (!audio) return;
     cancelCrossfade();
@@ -198,6 +203,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setTrack(nextTrack);
     const key = cacheKeyFor(nextTrack);
+    // A blocked programmatic start is silence, not failure -- but only when
+    // the caller explicitly asked for silent autoplay. Everything else
+    // (dead URLs, 403s, network drops) still raises the error UI.
+    const notePlayRejection = (e: unknown) => {
+      if (
+        opts?.silentAutoplay &&
+        e instanceof DOMException &&
+        e.name === "NotAllowedError"
+      )
+        return;
+      if (loadEpochRef.current === epoch) setError(true);
+    };
     try {
       // Fast path: the standby element already has this track buffered
       // (put there by the prefetch effect) -- swap it in and play at once.
@@ -214,13 +231,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         standbyKeyRef.current = audio.src && prev ? cacheKeyFor(prev) : null;
         setCurrentTime(0);
         setDuration(standby.duration || 0);
-        await standby.play();
+        await standby.play().catch(notePlayRejection);
         return;
       }
       const url = await resolveTrackUrl(nextTrack);
       if (loadEpochRef.current !== epoch) return;
       audio.src = url;
-      await audio.play();
+      await audio.play().catch(notePlayRejection);
     } catch {
       if (loadEpochRef.current === epoch) setError(true);
     } finally {
@@ -570,14 +587,21 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [playing]);
 
   const play = useCallback(
-    (nextTrack: PlayerTrack, nextQueue?: PlayerTrack[]) => {
+    (nextTrack: PlayerTrack, nextQueue?: PlayerTrack[], opts?: { silentAutoplay?: boolean }) => {
       setQueue(nextQueue ?? [nextTrack]);
       const audio = audioRef.current;
-      if (track?.trackId === nextTrack.trackId && audio?.src) {
+      // Preview and full versions share a trackId -- resume only when the
+      // mode matches too, otherwise a tap on the owned full track would just
+      // resume the 30s preview already playing (and vice versa).
+      if (
+        track?.trackId === nextTrack.trackId &&
+        !!track?.preview === !!nextTrack.preview &&
+        audio?.src
+      ) {
         audio.play().catch(() => setError(true));
         return;
       }
-      loadAndPlay(nextTrack);
+      loadAndPlay(nextTrack, opts);
     },
     [track, loadAndPlay],
   );
