@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { Textarea } from "@/components/Field";
 import { formatNaira } from "@/lib/format";
 
@@ -108,7 +109,13 @@ export function GiftRow({
               className="!px-3 !py-1.5 text-xs"
               disabled={loading}
             >
-              {loading ? "…" : "Send"}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="xs" tone="current" /> Sending…
+                </span>
+              ) : (
+                "Send"
+              )}
             </Button>
           </div>
         </form>

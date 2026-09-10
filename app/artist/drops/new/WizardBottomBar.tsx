@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 
 export function WizardBottomBar({
   onBack,
@@ -52,7 +53,13 @@ export function WizardBottomBar({
           disabled={primaryDisabled}
           onClick={onPrimary}
         >
-          {primaryLoading ? "…" : primaryLabel}
+          {primaryLoading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" tone="current" />
+            </span>
+          ) : (
+            primaryLabel
+          )}
         </Button>
       </div>
     </div>

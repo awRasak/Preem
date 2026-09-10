@@ -11,6 +11,7 @@ import {
 } from "@/lib/monipay";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { GiftIcon } from "@/components/Icons";
 import { formatNaira } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
@@ -273,7 +274,7 @@ export function GiftButton({
       {step !== "closed" &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-            <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+            <div className="relative max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
               <button
                 type="button"
                 onClick={() => setStep("closed")}
@@ -398,11 +399,17 @@ export function GiftButton({
                       className="w-full !py-4 !text-base"
                       disabled={!amountPicked || step === "submitting" || step === "verifying"}
                     >
-                      {step === "submitting"
-                        ? "…"
-                        : step === "verifying"
-                          ? "Verifying…"
-                          : `Send ${amountValid ? formatNaira(amountKobo) : ""}`}
+                      {step === "submitting" ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Spinner size="xs" tone="current" />
+                        </span>
+                      ) : step === "verifying" ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Spinner size="xs" tone="current" /> Verifying…
+                        </span>
+                      ) : (
+                        `Send ${amountValid ? formatNaira(amountKobo) : ""}`
+                      )}
                     </Button>
                   </div>
                 </form>

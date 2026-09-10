@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { Badge } from "@/components/Badge";
 
 export function SupportRequestRow({
@@ -59,7 +60,13 @@ export function SupportRequestRow({
           onClick={resolve}
           className="!px-3 !py-1.5 text-xs"
         >
-          {loading ? "…" : "Mark resolved"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" /> Resolving…
+            </span>
+          ) : (
+            "Mark resolved"
+          )}
         </Button>
       )}
     </div>

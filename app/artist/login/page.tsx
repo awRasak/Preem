@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -74,7 +75,13 @@ export default function LoginPage() {
             className="w-full"
             disabled={loading}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="xs" tone="current" /> Signing in…
+              </span>
+            ) : (
+              "Sign in"
+            )}
           </Button>
           <p className="mt-4 text-center text-xs text-muted">
             New artist?{" "}

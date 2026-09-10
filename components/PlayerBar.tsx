@@ -17,6 +17,7 @@ import {
   ShuffleIcon,
 } from "@/components/Icons";
 import { GiftButton } from "@/components/GiftButton";
+import { Spinner } from "@/components/Loader";
 
 // Calling seek() on every onChange tick during a drag -- which is what a
 // naive controlled range input does -- re-seeks the underlying (byte-range
@@ -171,7 +172,7 @@ export function PlayerBar() {
               className="flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-paper disabled:opacity-50 sm:h-9 sm:w-9"
             >
               {loading ? (
-                <span className="text-xs">…</span>
+                <Spinner size="xs" />
               ) : playing ? (
                 <PauseIcon className="h-4 w-4" />
               ) : (
@@ -389,7 +390,7 @@ function TransportControls() {
         className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-paper disabled:opacity-50"
       >
         {loading ? (
-          <span>…</span>
+          <Spinner size="sm" />
         ) : playing ? (
           <PauseIcon className="h-6 w-6" />
         ) : (

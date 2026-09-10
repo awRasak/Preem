@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/storage-upload";
 import { Avatar } from "@/components/Avatar";
 import { Field, Input, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { ProgressBar, Spinner } from "@/components/Loader";
 
 export function ProfileForm({
   artistId,
@@ -40,6 +42,7 @@ export function ProfileForm({
   const [facebookUrl, setFacebookUrl] = useState(currentFacebookUrl ?? "");
   const [snapchatUrl, setSnapchatUrl] = useState(currentSnapchatUrl ?? "");
   const [uploading, setUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -48,25 +51,32 @@ export function ProfileForm({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadPercent(0);
     setError(null);
 
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const path = `${artistId}/avatar-${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("artwork")
-      .upload(path, file);
-
-    if (uploadError) {
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Your session expired — sign in again.");
+      const path = await uploadFileWithProgress(
+        artistId,
+        session.access_token,
+        "artwork",
+        file,
+        "avatar",
+        (p) => setUploadPercent(p),
+      );
+      const publicUrl = supabase.storage.from("artwork").getPublicUrl(path).data
+        .publicUrl;
+      setAvatarUrl(publicUrl);
+    } catch {
       setError("Could not upload avatar.");
+    } finally {
       setUploading(false);
-      return;
+      setUploadPercent(null);
     }
-
-    const publicUrl = supabase.storage.from("artwork").getPublicUrl(path).data
-      .publicUrl;
-    setAvatarUrl(publicUrl);
-    setUploading(false);
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -105,7 +115,13 @@ export function ProfileForm({
         <div className="mb-4 flex items-center gap-4">
           <Avatar src={avatarUrl} seed={artistId} alt={stageName} size={64} />
           <label className="cursor-pointer text-xs font-bold text-paper underline">
-            {uploading ? "Uploading…" : "Change photo"}
+            {uploading ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Spinner size="xs" /> Uploading…
+              </span>
+            ) : (
+              "Change photo"
+            )}
             <input
               type="file"
               accept="image/*"
@@ -115,6 +131,9 @@ export function ProfileForm({
             />
           </label>
         </div>
+        {uploading && (
+          <ProgressBar label="Uploading photo" percent={uploadPercent} />
+        )}
         <Field label="Bio">
           <Textarea
             rows={3}
@@ -174,7 +193,13 @@ export function ProfileForm({
         {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
         {success && <p className="mb-3 text-sm text-[#34d399]">Saved.</p>}
         <Button type="submit" variant="outline" disabled={saving || uploading}>
-          {saving ? "Saving…" : "Save profile"}
+          {saving ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" /> Saving…
+            </span>
+          ) : (
+            "Save profile"
+          )}
         </Button>
       </form>
     </>

@@ -7,6 +7,7 @@ import { usePlayer, type PlayerTrack } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
 import { activeLrcLine, parseLrc } from "@/lib/lrc";
 import { DownloadIcon, PauseIcon, PlayIcon } from "@/components/Icons";
+import { Spinner } from "@/components/Loader";
 import { ShareDropButton } from "@/app/artist/drops/[id]/ShareDropButton";
 
 export function TrackDetailModal({
@@ -37,7 +38,8 @@ export function TrackDetailModal({
   onClose: () => void;
 }) {
   const { track, playing, loading, error, currentTime, seek, play, toggle } = usePlayer();
-  const isCurrent = track?.trackId === trackId;
+  // Full-track modal -- a playing preview of the same id is not "current".
+  const isCurrent = track?.trackId === trackId && !track?.preview;
   const isFailed = isCurrent && error;
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -141,7 +143,7 @@ export function TrackDetailModal({
                 !
               </span>
             ) : isCurrent && loading ? (
-              <span className="text-xs">…</span>
+              <Spinner size="xs" />
             ) : isCurrent && playing ? (
               <PauseIcon className="h-4 w-4" />
             ) : (
@@ -156,7 +158,7 @@ export function TrackDetailModal({
             title="Download"
             className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-paper text-sm disabled:opacity-50"
           >
-            {downloading ? <span className="text-xs">…</span> : <DownloadIcon className="h-4 w-4" />}
+            {downloading ? <Spinner size="xs" /> : <DownloadIcon className="h-4 w-4" />}
           </button>
         </div>
 

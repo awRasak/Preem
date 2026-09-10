@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Nav } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 
 export default function AdminSetupPage() {
   const router = useRouter();
@@ -84,7 +85,13 @@ export default function AdminSetupPage() {
             className="w-full"
             disabled={loading}
           >
-            {loading ? "Creating…" : "Create admin account"}
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="xs" tone="current" /> Creating…
+              </span>
+            ) : (
+              "Create admin account"
+            )}
           </Button>
         </form>
       </main>

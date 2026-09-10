@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Spinner } from "@/components/Loader";
 
 export function SignOutButton({
   className = "rounded-full border border-line-strong px-3.5 py-1.5 text-center text-[13px] text-muted transition-all duration-150 ease-out hover:scale-[1.04] hover:border-line-strong hover:bg-surface-2 hover:text-paper active:scale-95",
@@ -24,7 +25,7 @@ export function SignOutButton({
 
   return (
     <button type="button" onClick={handleClick} disabled={loading} className={className}>
-      {loading ? "…" : children}
+      {loading ? <Spinner size="xs" /> : children}
     </button>
   );
 }

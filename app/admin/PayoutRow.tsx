@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { formatNaira } from "@/lib/format";
 
 export function PayoutRow({
@@ -51,11 +52,15 @@ export function PayoutRow({
           onClick={trigger}
           className="!px-3 !py-1.5 text-xs"
         >
-          {loading
-            ? "…"
-            : !hasBankDetails
-              ? "No bank details"
-              : "Trigger payout"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" tone="current" />
+            </span>
+          ) : !hasBankDetails ? (
+            "No bank details"
+          ) : (
+            "Trigger payout"
+          )}
         </Button>
       </td>
     </tr>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePlayer, type PlayerTrack } from "@/lib/player-context";
 import { artworkFallback } from "@/lib/placeholder";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
+import { Spinner } from "@/components/Loader";
 import { TrackDetailModal } from "./TrackDetailModal";
 
 export function PlayerRow({
@@ -34,7 +35,9 @@ export function PlayerRow({
   queue?: PlayerTrack[];
 }) {
   const { track, playing, loading, error, play, toggle } = usePlayer();
-  const isCurrent = track?.trackId === trackId;
+  // This row plays the owned FULL track -- a playing preview of the same id
+  // is not "current" here; tapping must load the full stream, not toggle it.
+  const isCurrent = track?.trackId === trackId && !track?.preview;
   const isFailed = isCurrent && error;
   const [showModal, setShowModal] = useState(false);
 
@@ -86,7 +89,7 @@ export function PlayerRow({
               !
             </span>
           ) : isCurrent && loading ? (
-            <span className="text-xs">…</span>
+            <Spinner size="xs" />
           ) : isCurrent && playing ? (
             <PauseIcon className="h-3.5 w-3.5" />
           ) : (

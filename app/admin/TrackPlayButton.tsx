@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
+import { Spinner } from "@/components/Loader";
 
 // On-demand full-track playback for admin surfaces. The stream URL is
 // fetched lazily (the /api/stream route already authorizes admins) so
@@ -56,7 +57,7 @@ export function TrackPlayButton({
         }`}
       >
         {loading ? (
-          <span className="text-[10px] font-bold">…</span>
+          <Spinner size="xs" />
         ) : open ? (
           <PauseIcon className="h-3 w-3" />
         ) : (

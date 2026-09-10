@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/storage-upload";
 import { Field, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { ProgressBar, Spinner } from "@/components/Loader";
 
 type MediaType = "image" | "video" | null;
 
@@ -25,6 +27,7 @@ export function ThankYouForm({
   const [mediaUrl, setMediaUrl] = useState(currentMediaUrl);
   const [mediaType, setMediaType] = useState<MediaType>(currentMediaType);
   const [uploading, setUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -34,26 +37,33 @@ export function ThankYouForm({
     if (!file) return;
     const nextType: MediaType = file.type.startsWith("video/") ? "video" : "image";
     setUploading(true);
+    setUploadPercent(0);
     setError(null);
 
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const path = `${artistId}/thankyou-${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("thankyou")
-      .upload(path, file);
-
-    if (uploadError) {
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Your session expired — sign in again.");
+      const path = await uploadFileWithProgress(
+        artistId,
+        session.access_token,
+        "thankyou",
+        file,
+        "media",
+        (p) => setUploadPercent(p),
+      );
+      const publicUrl = supabase.storage.from("thankyou").getPublicUrl(path).data
+        .publicUrl;
+      setMediaUrl(publicUrl);
+      setMediaType(nextType);
+    } catch {
       setError("Could not upload file.");
+    } finally {
       setUploading(false);
-      return;
+      setUploadPercent(null);
     }
-
-    const publicUrl = supabase.storage.from("thankyou").getPublicUrl(path).data
-      .publicUrl;
-    setMediaUrl(publicUrl);
-    setMediaType(nextType);
-    setUploading(false);
   }
 
   function handleRemoveMedia() {
@@ -118,7 +128,15 @@ export function ThankYouForm({
             ))}
           <div className="flex flex-col items-start gap-2">
             <label className="cursor-pointer text-xs font-bold text-paper underline">
-              {uploading ? "Uploading…" : mediaUrl ? "Replace" : "Upload"}
+              {uploading ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Spinner size="xs" /> Uploading…
+                </span>
+              ) : mediaUrl ? (
+                "Replace"
+              ) : (
+                "Upload"
+              )}
               <input
                 type="file"
                 accept="image/*,video/*"
@@ -142,8 +160,17 @@ export function ThankYouForm({
 
       {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
       {success && <p className="mb-3 text-sm text-[#34d399]">Saved.</p>}
+      {uploading && (
+        <ProgressBar label="Uploading media" percent={uploadPercent} />
+      )}
       <Button type="submit" variant="outline" disabled={saving || uploading}>
-        {saving ? "Saving…" : "Save"}
+        {saving ? (
+          <span className="inline-flex items-center gap-2">
+            <Spinner size="xs" /> Saving…
+          </span>
+        ) : (
+          "Save"
+        )}
       </Button>
     </form>
   );

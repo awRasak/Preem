@@ -5,12 +5,15 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileWithProgress } from "@/lib/storage-upload";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field, Input, Textarea } from "@/components/Field";
 import { DateTimePicker } from "@/components/DateTimePicker";
 import { formatNaira, formatShowDate } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
+import { ProgressBar, Spinner } from "@/components/Loader";
 
 export type ManagedShow = {
   id: string;
@@ -40,29 +43,39 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
   const [totalTickets, setTotalTickets] = useState("");
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [pendingShow, setPendingShow] = useState<ManagedShow | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadPercent(0);
     setError(null);
 
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const path = `${artistId}/show-${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("artwork")
-      .upload(path, file);
-
-    if (uploadError) {
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Your session expired — sign in again.");
+      const path = await uploadFileWithProgress(
+        artistId,
+        session.access_token,
+        "artwork",
+        file,
+        "show art",
+        (p) => setUploadPercent(p),
+      );
+      const publicUrl = supabase.storage.from("artwork").getPublicUrl(path).data.publicUrl;
+      setCoverPath(publicUrl);
+    } catch {
       setError("Could not upload the show art.");
+    } finally {
       setUploading(false);
-      return;
+      setUploadPercent(null);
     }
-
-    const publicUrl = supabase.storage.from("artwork").getPublicUrl(path).data.publicUrl;
-    setCoverPath(publicUrl);
-    setUploading(false);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -124,7 +137,13 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
   }
 
   async function handleCancel(show: ManagedShow) {
-    if (!confirm(`Cancel "${show.title}"? Ticket sales will stop immediately.`)) return;
+    setPendingShow(show);
+  }
+
+  async function confirmCancel() {
+    const show = pendingShow;
+    if (!show) return;
+    setCancelling(true);
     setError(null);
     try {
       const res = await fetch(`/api/artist/shows/${show.id}`, { method: "PATCH" });
@@ -133,14 +152,19 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
         setError(body.error ?? "Could not cancel the show.");
         return;
       }
+      setPendingShow(null);
       router.refresh();
     } catch {
       setError("Could not cancel the show.");
+    } finally {
+      setCancelling(false);
     }
   }
 
   return (
-    <div className="rounded-xl border border-line">
+    <div>
+      {error && !adding && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
+      <div className="rounded-xl border border-line">
       {shows.map((show) => (
         <div
           key={show.id}
@@ -263,7 +287,15 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
                 )}
                 <label className="cursor-pointer">
                   <span className="text-xs font-bold text-accent underline">
-                    {uploading ? "Uploading…" : coverPath ? "Replace art" : "Upload art"}
+                    {uploading ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Spinner size="xs" /> Uploading…
+                      </span>
+                    ) : coverPath ? (
+                      "Replace art"
+                    ) : (
+                      "Upload art"
+                    )}
                   </span>
                   <input
                     type="file"
@@ -275,6 +307,9 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
                 </label>
               </div>
             </Field>
+            {uploading && (
+              <ProgressBar label="Uploading show art" percent={uploadPercent} />
+            )}
             {error && <p className="text-sm text-[#ff6b6b]">{error}</p>}
             <div className="flex gap-2">
               <Button
@@ -294,12 +329,33 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
                 className="flex-1"
                 disabled={saving || uploading}
               >
-                {saving ? "Saving…" : "Publish show"}
+                {saving ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner size="xs" tone="current" /> Saving…
+                  </span>
+                ) : (
+                  "Publish show"
+                )}
               </Button>
             </div>
           </form>
         )}
       </div>
+      </div>
+
+      <ConfirmDialog
+        open={pendingShow !== null}
+        title="Cancel show?"
+        description={
+          pendingShow
+            ? `Cancel "${pendingShow.title}"? Ticket sales will stop immediately. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Cancel show"
+        onConfirm={confirmCancel}
+        onCancel={() => !cancelling && setPendingShow(null)}
+        loading={cancelling}
+      />
     </div>
   );
 }

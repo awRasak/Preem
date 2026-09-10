@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 
 type Phase = "checking" | "ready" | "done" | "invalid";
 
@@ -145,7 +146,13 @@ export default function ResetPasswordPage() {
               className="w-full"
               disabled={loading}
             >
-              {loading ? "Saving…" : "Set password"}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="xs" tone="current" /> Saving…
+                </span>
+              ) : (
+                "Set password"
+              )}
             </Button>
           </form>
         )}

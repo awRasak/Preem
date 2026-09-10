@@ -7,6 +7,7 @@ import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Field, Textarea } from "@/components/Field";
 import { AUDIO_ACCEPT } from "../new/types";
+import { ProgressBar, Spinner } from "@/components/Loader";
 import type { TrackChangeRequest } from "@/lib/types";
 
 // supabase-js upload() reports no progress, so large audio files upload
@@ -150,7 +151,13 @@ export function TrackAudioChange({
           onClick={handleWithdraw}
           className="!px-4 !py-2 text-xs flex-shrink-0 sm:ml-auto"
         >
-          {withdrawing ? "Withdrawing…" : "Withdraw request"}
+          {withdrawing ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" /> Withdrawing…
+            </span>
+          ) : (
+            "Withdraw request"
+          )}
         </Button>
       </div>
     );
@@ -193,21 +200,7 @@ export function TrackAudioChange({
       </Field>
       {error && <p className="mb-2 text-xs text-[#ff6b6b]">{error}</p>}
       {submitting && (
-        <div className="mb-3" role="status" aria-label="Uploading replacement audio">
-          <div className="h-1.5 overflow-hidden rounded-full bg-surface">
-            {progress === null ? (
-              <div className="h-full w-full animate-pulse rounded-full bg-accent/60" />
-            ) : (
-              <div
-                className="h-full rounded-full bg-accent transition-[width] duration-150"
-                style={{ width: `${progress}%` }}
-              />
-            )}
-          </div>
-          <p className="mt-1.5 text-xs text-muted">
-            {progress === null ? "Uploading…" : `Uploading… ${progress}%`}
-          </p>
-        </div>
+        <ProgressBar label="Uploading replacement audio" percent={progress} />
       )}
       <div className="flex gap-2">
         <Button
@@ -215,7 +208,13 @@ export function TrackAudioChange({
           disabled={submitting}
           className="!px-4 !py-1.5 text-xs"
         >
-          {submitting ? "Sending…" : "Send for approval"}
+          {submitting ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" tone="current" /> Sending…
+            </span>
+          ) : (
+            "Send for approval"
+          )}
         </Button>
         <Button
           variant="outline"

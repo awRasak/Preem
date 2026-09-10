@@ -12,6 +12,7 @@ import { Step3Pricing } from "@/app/artist/drops/new/Step3Pricing";
 import { Step4Review } from "@/app/artist/drops/new/Step4Review";
 import { PreviewCard } from "@/app/artist/drops/new/PreviewCard";
 import { WizardBottomBar } from "@/app/artist/drops/new/WizardBottomBar";
+import { ProgressBar } from "@/components/Loader";
 import {
   initialWizardState,
   type WizardState,
@@ -312,22 +313,7 @@ export function AdminDropWizard({
             {step === 3 && <Step3Pricing state={state} onChange={patch} />}
             {step === 4 && <Step4Review state={state} />}
             {progress && (
-              <div className="mt-4" aria-live="polite">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted">
-                  {progress.label}
-                  {progress.percent !== null ? ` · ${progress.percent}%` : "…"}
-                </p>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-                  {progress.percent !== null ? (
-                    <div
-                      className="h-full rounded-full bg-paper transition-all duration-200"
-                      style={{ width: `${progress.percent}%` }}
-                    />
-                  ) : (
-                    <div className="h-full w-full animate-pulse rounded-full bg-paper/40" />
-                  )}
-                </div>
-              </div>
+              <ProgressBar label={progress.label} percent={progress.percent} />
             )}
             {error && <p className="mt-4 text-sm text-[#ff6b6b]">{error}</p>}
           </div>

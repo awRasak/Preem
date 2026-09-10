@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { Badge } from "@/components/Badge";
 
 const OUTCOME_BADGE = {
@@ -95,7 +96,13 @@ export function AudioChangeRequestRow({
             onClick={() => review("rejected")}
             className="!px-3 !py-1.5 text-xs"
           >
-            {loading === "rejected" ? "…" : "Reject"}
+            {loading === "rejected" ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="xs" /> Rejecting…
+              </span>
+            ) : (
+              "Reject"
+            )}
           </Button>
           <Button
             variant="primary"
@@ -103,7 +110,13 @@ export function AudioChangeRequestRow({
             onClick={() => review("approved")}
             className="!px-3 !py-1.5 text-xs"
           >
-            {loading === "approved" ? "…" : "Approve & swap"}
+            {loading === "approved" ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="xs" tone="current" /> Approving…
+              </span>
+            ) : (
+              "Approve & swap"
+            )}
           </Button>
         </div>
       ) : (

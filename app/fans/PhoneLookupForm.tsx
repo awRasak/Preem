@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "phone" | "email" | "otp";
@@ -94,7 +96,13 @@ export function PhoneLookupForm() {
             </Field>
             {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
             <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-              {loading ? "…" : "Send code"}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="xs" tone="current" /> Sending…
+                </span>
+              ) : (
+                "Send code"
+              )}
             </Button>
           </form>
         ) : (
@@ -111,7 +119,13 @@ export function PhoneLookupForm() {
             </Field>
             {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
             <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-              {loading ? "…" : "Verify"}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="xs" tone="current" /> Verifying…
+                </span>
+              ) : (
+                "Verify"
+              )}
             </Button>
           </form>
         )}
@@ -125,6 +139,9 @@ export function PhoneLookupForm() {
         >
           ← Back to phone lookup
         </button>
+        <Link href="/artist/login" className="mt-2 block text-xs text-muted underline">
+          Are you an artist? Log in
+        </Link>
       </div>
     );
   }
@@ -156,7 +173,13 @@ export function PhoneLookupForm() {
         </Field>
         {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
         <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-          {loading ? "…" : "View my music collections"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" tone="current" /> Looking up…
+            </span>
+          ) : (
+            "View my music collections"
+          )}
         </Button>
       </form>
       <button
@@ -169,6 +192,9 @@ export function PhoneLookupForm() {
       >
         Have an account? Sign in with email
       </button>
+      <Link href="/artist/login" className="mt-2 block text-xs text-muted underline">
+        Are you an artist? Log in
+      </Link>
     </div>
   );
 }

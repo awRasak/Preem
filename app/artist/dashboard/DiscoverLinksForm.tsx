@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import type { ArtistLink } from "@/lib/types";
 
 const PLATFORM_LABEL: Record<ArtistLink["platform"], string> = {
@@ -86,7 +87,13 @@ export function DiscoverLinksForm({ links }: { links: ArtistLink[] }) {
           </Field>
         </div>
         <Button type="submit" variant="outline" disabled={loading} className="mb-4">
-          {loading ? "Adding…" : "Add"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" /> Adding…
+            </span>
+          ) : (
+            "Add"
+          )}
         </Button>
       </form>
       {error && <p className="text-sm text-[#ff6b6b]">{error}</p>}

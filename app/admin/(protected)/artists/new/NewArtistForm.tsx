@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { Field, Input } from "@/components/Field";
 
 export function NewArtistForm() {
@@ -101,7 +102,13 @@ export function NewArtistForm() {
       </Field>
       {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
       <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-        {loading ? "Creating…" : "Create artist"}
+        {loading ? (
+          <span className="inline-flex items-center gap-2">
+            <Spinner size="xs" tone="current" /> Creating…
+          </span>
+        ) : (
+          "Create artist"
+        )}
       </Button>
       <p className="mt-3 text-xs text-muted">
         The artist is approved immediately and can publish right away.

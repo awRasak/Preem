@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Spinner } from "@/components/Loader";
 
 export function DeleteDropButton({
   dropId,

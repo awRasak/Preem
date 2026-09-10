@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlayer, type PlayerTrack } from "@/lib/player-context";
+import { Spinner } from "@/components/Loader";
 import { PauseIcon, PlayIcon } from "@/components/Icons";
 
 export function PreviewButton({
@@ -28,7 +29,9 @@ export function PreviewButton({
 }) {
   const { track, playing, loading, error, play, toggle } = usePlayer();
   const key = trackId ?? dropId;
-  const isCurrent = track?.trackId === key;
+  // Preview and full versions share a trackId -- this button owns the
+  // preview side only, so a playing full track is NOT "current" here.
+  const isCurrent = track?.trackId === key && !!track?.preview;
   const isFailed = isCurrent && error;
 
   function handleClick(e: React.MouseEvent) {
@@ -76,7 +79,7 @@ export function PreviewButton({
           !
         </span>
       ) : isCurrent && loading ? (
-        <span className="text-xs">…</span>
+        <Spinner size="xs" />
       ) : isCurrent && playing ? (
         <PauseIcon className={iconClassName} />
       ) : (

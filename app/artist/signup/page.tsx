@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { Badge } from "@/components/Badge";
 
 export default function ArtistSignupPage() {
@@ -115,7 +116,13 @@ export default function ArtistSignupPage() {
               className="w-full"
               disabled={loading}
             >
-              {loading ? "Submitting…" : "Submit for review"}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="xs" tone="current" /> Submitting…
+                </span>
+              ) : (
+                "Submit for review"
+              )}
             </Button>
 
             <p className="mt-4 text-center text-xs text-muted">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePlayer } from "@/lib/player-context";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 import { DownloadIcon, PauseIcon, PlayIcon } from "@/components/Icons";
 
 export function OwnerControls({
@@ -74,7 +75,11 @@ export function OwnerControls({
           disabled={downloading}
           className="!px-4 !py-2 text-xs"
         >
-          {downloading ? "…" : (
+          {downloading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" /> Downloading…
+            </span>
+          ) : (
             <>
               <DownloadIcon className="h-3.5 w-3.5" /> Download
             </>

@@ -8,10 +8,13 @@ import { dropPath } from "@/lib/slug";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Field, Input, Textarea } from "@/components/Field";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import { GENRES } from "@/lib/genres";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { prepareArtworkFile } from "@/lib/client-image";
+import { uploadFileWithProgress } from "@/lib/storage-upload";
+import { ProgressBar, Spinner } from "@/components/Loader";
 import { OwnerControls } from "./OwnerControls";
 import { ShareDropButton } from "./ShareDropButton";
 import { TrackAudioChange } from "./TrackAudioChange";
@@ -56,6 +59,8 @@ export function DropHeaderEditable({
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveLabel, setSaveLabel] = useState("Saving changes");
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
@@ -98,23 +103,30 @@ export function DropHeaderEditable({
 
   async function handleSave() {
     setSaving(true);
+    setUploadPercent(null);
     setError(null);
     try {
       let artworkPath: string | undefined;
       if (artworkFile) {
         const supabase = createClient();
         const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error("Your session expired — sign in again.");
-        const ext = artworkFile.name.split(".").pop();
-        const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("artwork")
-          .upload(path, artworkFile);
-        if (uploadError) throw new Error("Could not upload artwork.");
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) throw new Error("Your session expired — sign in again.");
+        setSaveLabel("Uploading artwork");
+        setUploadPercent(0);
+        const path = await uploadFileWithProgress(
+          session.user.id,
+          session.access_token,
+          "artwork",
+          artworkFile,
+          "artwork",
+          (p) => setUploadPercent(p),
+        );
         artworkPath = supabase.storage.from("artwork").getPublicUrl(path).data.publicUrl;
+        setUploadPercent(null);
       }
+      setSaveLabel("Saving changes");
 
       // Singles don't get a separate track-title field — the drop title
       // doubles as the track title, same as at creation time.
@@ -194,28 +206,31 @@ export function DropHeaderEditable({
                 {drop.release_type} · {tracks.length} track{tracks.length === 1 ? "" : "s"}
               </span>
             </div>
-            {(drop.status === "published" || (!isBundle && tracks[0])) && (
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                {drop.status === "published" && (
-                  <ShareDropButton
-                    dropId={drop.id}
-                    path={dropPath(artistName, drop.title)}
-                    title={drop.title}
-                  />
-                )}
-                {!isBundle && tracks[0] && (
-                  <OwnerControls
-                    trackId={tracks[0].id}
-                    title={tracks[0].title}
-                    artistName={artistName}
-                    artistId={drop.artist_id}
-                    artworkUrl={drop.artwork_path}
-                  />
-                )}
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Full-width action row: inside the title column above, these pills
+            only fit one per line on mobile and stack vertically. */}
+        {(drop.status === "published" || (!isBundle && tracks[0])) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {drop.status === "published" && (
+              <ShareDropButton
+                dropId={drop.id}
+                path={dropPath(artistName, drop.title)}
+                title={drop.title}
+              />
+            )}
+            {!isBundle && tracks[0] && (
+              <OwnerControls
+                trackId={tracks[0].id}
+                title={tracks[0].title}
+                artistName={artistName}
+                artistId={drop.artist_id}
+                artworkUrl={drop.artwork_path}
+              />
+            )}
+          </div>
+        )}
 
         {drop.description && (
           <p className="mb-4 text-sm text-muted">{drop.description}</p>
@@ -356,12 +371,11 @@ export function DropHeaderEditable({
             hasSales ? "Public release date (locked — this drop has sales)" : "Public release date"
           }
         >
-          <Input
-            type="date"
+          <DateTimePicker
+            mode="date"
             value={releaseDate}
+            onChange={setReleaseDate}
             disabled={hasSales}
-            onChange={(e) => setReleaseDate(e.target.value)}
-            className="disabled:opacity-50"
           />
         </Field>
       )}
@@ -430,9 +444,22 @@ export function DropHeaderEditable({
 
       {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
 
+      {saving && (
+        <ProgressBar
+          label={saveLabel}
+          percent={uploadPercent}
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={handleSave} disabled={saving} className="!px-5 !py-2.5 text-xs">
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" tone="current" /> Saving…
+            </span>
+          ) : (
+            "Save changes"
+          )}
         </Button>
         <Button
           variant="outline"

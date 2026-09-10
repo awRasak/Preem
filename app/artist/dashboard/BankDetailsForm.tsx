@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 
 type Bank = { name: string; code: string };
 
@@ -94,7 +95,13 @@ export function BankDetailsForm({
         {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
         {success && <p className="mb-3 text-sm text-[#34d399]">{success}</p>}
         <Button type="submit" variant="outline" disabled={loading}>
-          {loading ? "Verifying…" : "Save bank account"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="xs" /> Verifying…
+            </span>
+          ) : (
+            "Save bank account"
+          )}
         </Button>
       </form>
     </>

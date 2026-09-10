@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
+import { Spinner } from "@/components/Loader";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -75,7 +76,13 @@ export default function ForgotPasswordPage() {
                 className="w-full"
                 disabled={loading}
               >
-                {loading ? "Sending…" : "Send reset link"}
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner size="xs" tone="current" /> Sending…
+                  </span>
+                ) : (
+                  "Send reset link"
+                )}
               </Button>
               <p className="mt-4 text-center text-xs text-muted">
                 <Link href="/artist/login" className="text-paper underline">
