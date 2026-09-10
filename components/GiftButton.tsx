@@ -272,7 +272,7 @@ export function GiftButton({
           bottom of the screen with its buttons clipped out of reach. */}
       {step !== "closed" &&
         createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
             <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
               <button
                 type="button"
@@ -304,31 +304,51 @@ export function GiftButton({
                   <p className="mb-4 text-xs text-muted">
                     Straight to the artist — no track unlocked, no strings attached.
                   </p>
-                  <div className="mb-3 grid grid-cols-4 gap-2 sm:grid-cols-2">
-                    {PRESET_AMOUNTS_NAIRA.map((n) => (
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    {PRESET_AMOUNTS_NAIRA.map((n, i) => (
                       <button
                         key={n}
                         type="button"
                         onClick={() => setSelectedNaira(n)}
-                        className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
+                        aria-pressed={selectedNaira === n}
+                        className={`rounded-xl border px-3 py-3 text-left transition-colors ${
                           selectedNaira === n
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-line-strong text-muted hover:text-paper"
+                            ? "border-accent bg-accent/10"
+                            : "border-line-strong bg-surface-2 hover:border-accent/50"
                         }`}
                       >
-                        ₦{n.toLocaleString()}
+                        <span
+                          className={`block text-base font-bold ${
+                            selectedNaira === n ? "text-accent" : "text-paper"
+                          }`}
+                        >
+                          ₦{n.toLocaleString()}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                          {["Kind", "Solid", "Iconic"][i]}
+                        </span>
                       </button>
                     ))}
                     <button
                       type="button"
                       onClick={() => setSelectedNaira("custom")}
-                      className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
+                      aria-pressed={selectedNaira === "custom"}
+                      className={`rounded-xl border px-3 py-3 text-left transition-colors ${
                         selectedNaira === "custom"
-                          ? "border-accent bg-accent/10 text-accent"
-                          : "border-line-strong text-muted hover:text-paper"
+                          ? "border-accent bg-accent/10"
+                          : "border-line-strong bg-surface-2 hover:border-accent/50"
                       }`}
                     >
-                      Custom
+                      <span
+                        className={`block text-base font-bold ${
+                          selectedNaira === "custom" ? "text-accent" : "text-paper"
+                        }`}
+                      >
+                        Custom
+                      </span>
+                      <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                        Your call
+                      </span>
                     </button>
                   </div>
                   {selectedNaira === "custom" && (

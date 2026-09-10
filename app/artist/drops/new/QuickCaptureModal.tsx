@@ -31,7 +31,7 @@ export function QuickCaptureModal({
   return (
     // Mobile: a plain full-screen step, no dark backdrop or floating card
     // chrome. Desktop (sm+): the modal-over-backdrop treatment.
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg px-5 py-6 sm:items-center sm:justify-center sm:bg-black/60 sm:p-4">
+    <div className="fixed inset-0 z-50 flex flex-col bg-bg px-5 py-6 sm:items-center sm:justify-center sm:bg-black/70 sm:p-4 sm:backdrop-blur-sm">
       <div className="flex flex-1 flex-col sm:flex-none sm:w-full sm:max-w-sm sm:rounded-xl sm:border sm:border-line-strong sm:bg-surface sm:p-6">
         <h2 className="mb-4 text-lg font-bold">New drop</h2>
         <label className="relative mb-4 block aspect-square w-full cursor-pointer overflow-hidden rounded-xl bg-surface-2">

@@ -50,7 +50,7 @@ export function ApprovalCelebration() {
   if (!stage) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       {stage === "congrats" && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           {confetti.map((p) => (

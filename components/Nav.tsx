@@ -94,7 +94,7 @@ export function Nav({
         <>
           {/* Backdrop */}
           <div
-            className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-300 lg:hidden ${
+            className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
               open ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
             onClick={() => setOpen(false)}

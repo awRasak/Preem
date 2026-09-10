@@ -134,7 +134,7 @@ export function ShareDropButton({
             aria-label="Share this drop"
           >
             <div
-              className="absolute inset-0 bg-black/60"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setOpen(false)}
               aria-hidden="true"
             />

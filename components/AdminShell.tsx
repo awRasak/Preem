@@ -158,7 +158,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {moreOpen && (
         <div className="fixed inset-0 z-50 sm:hidden" role="dialog" aria-modal="true" aria-label="More sections">
           <div
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMoreOpen(false)}
             aria-hidden="true"
           />

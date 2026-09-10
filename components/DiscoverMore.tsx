@@ -121,7 +121,7 @@ export function DiscoverMore({
     <div className="mt-10">
       <button
         onClick={handleToggle}
-        className="rounded-full border border-line-strong px-4 py-2 text-sm font-bold text-paper transition-colors hover:border-accent"
+        className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-line-strong px-4 py-2 text-sm font-bold text-paper transition-colors hover:border-accent"
       >
         {showEmbeds ? "Hide" : "Discover more"} from {artistName}
       </button>

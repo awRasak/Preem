@@ -301,7 +301,7 @@ export function BuyButton({
       </Button>
 
       {step !== "closed" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
             <button
               type="button"
@@ -337,7 +337,7 @@ export function BuyButton({
                     className="flex-1"
                     onClick={() => setStep("done")}
                   >
-                    Skip for now
+                    Skip
                   </Button>
                   <Button
                     type="submit"
@@ -426,7 +426,7 @@ export function BuyButton({
                     : " No refunds once access is granted."}
                 </p>
                 <Field label="Your price">
-                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {priceChipsNaira.map((n, i) => (
                       <button
                         key={n}
@@ -435,32 +435,45 @@ export function BuyButton({
                           setPriceMode(n);
                           setAmountNaira(String(n));
                         }}
-                        className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
+                        aria-pressed={priceMode === n}
+                        className={`rounded-xl border px-3 py-3 text-left transition-colors ${
                           priceMode === n
-                            ? "border-accent bg-accent/10 text-accent"
-                            : "border-line-strong text-muted hover:text-paper"
+                            ? "border-accent bg-accent/10"
+                            : "border-line-strong bg-surface-2 hover:border-accent/50"
                         }`}
                       >
-                        {i === priceChipsNaira.length - 1 ? (
-                          <>
-                            ₦{n.toLocaleString()}
-                            <span className="block font-normal opacity-70">Biggest fan</span>
-                          </>
-                        ) : (
-                          `₦${n.toLocaleString()}`
-                        )}
+                        <span
+                          className={`block text-base font-bold ${
+                            priceMode === n ? "text-accent" : "text-paper"
+                          }`}
+                        >
+                          ₦{n.toLocaleString()}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                          {["Minimum", "Supporter", "Biggest fan"][i]}
+                        </span>
                       </button>
                     ))}
                     <button
                       type="button"
                       onClick={() => setPriceMode("custom")}
-                      className={`rounded-lg border py-2 text-xs font-bold transition-colors ${
+                      aria-pressed={priceMode === "custom"}
+                      className={`rounded-xl border px-3 py-3 text-left transition-colors ${
                         priceMode === "custom"
-                          ? "border-accent bg-accent/10 text-accent"
-                          : "border-line-strong text-muted hover:text-paper"
+                          ? "border-accent bg-accent/10"
+                          : "border-line-strong bg-surface-2 hover:border-accent/50"
                       }`}
                     >
-                      Custom
+                      <span
+                        className={`block text-base font-bold ${
+                          priceMode === "custom" ? "text-accent" : "text-paper"
+                        }`}
+                      >
+                        Custom
+                      </span>
+                      <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                        Your call
+                      </span>
                     </button>
                   </div>
                 </Field>
