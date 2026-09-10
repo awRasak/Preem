@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { Children, useEffect, useState, type ReactNode } from "react";
 
 export type NavRole = "artist" | "admin" | "fan";
 
@@ -49,6 +49,12 @@ export function Nav({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
+  // A lone nav item (the usual back link) is shown inline at every
+  // viewport -- burying a single link in a hamburger drawer just hides it.
+  // Counts top-level children only, so wrap multiple links in one element
+  // if they must stay together.
+  const singleChild = Children.count(children) <= 1;
+
   return (
     <>
       {/* Sticky (not fixed) below lg so it pins to the top while scrolling
@@ -74,7 +80,11 @@ export function Nav({
           )}
         </div>
 
-        {children && (
+        {children && singleChild && (
+          <div className="flex items-center gap-4">{children}</div>
+        )}
+
+        {children && !singleChild && (
           <>
             <div className="hidden items-center gap-4 lg:flex">{children}</div>
 
@@ -90,7 +100,7 @@ export function Nav({
         )}
       </nav>
 
-      {children && (
+      {children && !singleChild && (
         <>
           {/* Backdrop */}
           <div

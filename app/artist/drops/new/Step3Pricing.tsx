@@ -1,6 +1,7 @@
 "use client";
 
 import { Field, Input } from "@/components/Field";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import type { WizardState } from "./types";
 
 export function Step3Pricing({
@@ -50,12 +51,11 @@ export function Step3Pricing({
 
       {!isExclusive && (
         <Field label="Public release date">
-          <Input
-            required
-            type="date"
-            min={new Date().toISOString().slice(0, 10)}
+          <DateTimePicker
+            mode="date"
             value={state.releaseDate}
-            onChange={(e) => onChange({ releaseDate: e.target.value })}
+            onChange={(releaseDate) => onChange({ releaseDate })}
+            min={new Date().toISOString().slice(0, 10)}
           />
           <p className="mt-1.5 text-[11px] text-muted">
             When you plan to release this elsewhere. Preem stays exclusive to this drop until then.

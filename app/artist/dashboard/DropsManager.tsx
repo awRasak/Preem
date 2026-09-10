@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/Badge";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 
@@ -24,6 +25,8 @@ export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [pendingIds, setPendingIds] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -42,15 +45,13 @@ export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
 
   async function deleteDrops(ids: string[]) {
     if (ids.length === 0) return;
-    const label =
-      ids.length === 1 ? "this drop" : `these ${ids.length} drops`;
-    if (
-      !confirm(
-        `Delete ${label}? Fans who already bought keep their access. This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    setError(null);
+    setPendingIds(ids);
+  }
+
+  async function confirmDelete() {
+    const ids = pendingIds;
+    if (!ids || ids.length === 0) return;
     setDeleting(true);
     try {
       const supabase = createClient();
@@ -66,13 +67,19 @@ export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
       const { error } = await supabase.from("drops").delete().in("id", ids);
       if (error) throw new Error(error.message);
       setSelected(new Set());
+      setPendingIds(null);
       router.refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Could not delete.");
+      setError(e instanceof Error ? e.message : "Could not delete.");
+      setPendingIds(null);
     } finally {
       setDeleting(false);
     }
   }
+
+  const pendingCount = pendingIds?.length ?? 0;
+  const pendingLabel =
+    pendingCount === 1 ? "this drop" : `these ${pendingCount} drops`;
 
   const allSelected = drops.length > 0 && selected.size === drops.length;
 
@@ -110,7 +117,13 @@ export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
                   disabled={deleting}
                   className="rounded-full bg-[#ff6b6b] px-3 py-1.5 text-xs font-bold text-[#2a0a0a] disabled:opacity-50"
                 >
-                  {deleting ? "Deleting…" : `Delete (${selected.size})`}
+                  {deleting ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Spinner size="xs" tone="current" /> Deleting…
+                    </span>
+                  ) : (
+                    `Delete (${selected.size})`
+                  )}
                 </button>
               </div>
             </>
@@ -202,6 +215,18 @@ export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
           Select all
         </button>
       )}
+
+      {error && <p className="mt-3 text-sm text-[#ff6b6b]">{error}</p>}
+
+      <ConfirmDialog
+        open={pendingIds !== null}
+        title="Delete drop?"
+        description={`Delete ${pendingLabel}? Fans who already bought keep their access. This cannot be undone.`}
+        confirmLabel={deleting ? "Deleting…" : pendingCount > 1 ? `Delete (${pendingCount})` : "Delete"}
+        onConfirm={confirmDelete}
+        onCancel={() => !deleting && setPendingIds(null)}
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -44,7 +44,15 @@ function defaultDraft(): Draft {
   };
 }
 
-function displayText(v: string): string | null {
+function displayText(v: string, mode: PickerMode): string | null {
+  if (mode === "date") {
+    const p = parseDateValue(v);
+    if (!p) return null;
+    const weekday = new Date(p.y, p.mo, p.d).toLocaleDateString("en-US", {
+      weekday: "short",
+    });
+    return `${weekday}, ${MONTHS_SHORT[p.mo]} ${p.d}, ${p.y}`;
+  }
   const p = parseValue(v);
   if (!p) return null;
   const weekday = new Date(p.y, p.mo, p.d).toLocaleDateString("en-US", {
@@ -55,12 +63,42 @@ function displayText(v: string): string | null {
   return `${weekday}, ${MONTHS_SHORT[p.mo]} ${p.d} · ${h12}:${pad(p.mi)} ${ampm}`;
 }
 
+type PickerMode = "datetime" | "date";
+
+function parseDateValue(v: string): { y: number; mo: number; d: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+  if (!m) return null;
+  return { y: Number(m[1]), mo: Number(m[2]) - 1, d: Number(m[3]) };
+}
+
+function toDateValue(y: number, mo: number, d: number) {
+  return `${y}-${pad(mo + 1)}-${pad(d)}`;
+}
+
+function isBeforeDay(
+  y: number,
+  mo: number,
+  d: number,
+  min: { y: number; mo: number; d: number },
+) {
+  if (y !== min.y) return y < min.y;
+  if (mo !== min.mo) return mo < min.mo;
+  return d < min.d;
+}
+
 export function DateTimePicker({
   value,
   onChange,
+  mode = "datetime",
+  disabled = false,
+  min,
 }: {
   value: string;
   onChange: (v: string) => void;
+  mode?: PickerMode;
+  disabled?: boolean;
+  // Earliest selectable day, YYYY-MM-DD. Only applies in date mode.
+  min?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(defaultDraft);
@@ -68,6 +106,18 @@ export function DateTimePicker({
   const [viewMo, setViewMo] = useState(draft.mo);
 
   function handleOpen() {
+    if (disabled) return;
+    if (mode === "date") {
+      const p = parseDateValue(value) ?? (() => {
+        const t = new Date();
+        return { y: t.getFullYear(), mo: t.getMonth(), d: t.getDate() };
+      })();
+      setDraft({ ...defaultDraft(), y: p.y, mo: p.mo, d: p.d });
+      setViewY(p.y);
+      setViewMo(p.mo);
+      setOpen(true);
+      return;
+    }
     const p = parseValue(value) ?? defaultDraft();
     setDraft(p);
     setViewY(p.y);
@@ -109,15 +159,28 @@ export function DateTimePicker({
     viewMo === today.getMonth() &&
     d === today.getDate();
 
-  const selected = parseValue(value);
+  const selected =
+    mode === "date" ? parseDateValue(value) : parseValue(value);
   const isSelected = (d: number) =>
     !!selected &&
     selected.y === viewY &&
     selected.mo === viewMo &&
     selected.d === d;
 
+  const minDay = mode === "date" && min ? parseDateValue(min) : null;
+  const isDisabledDay = (d: number) =>
+    !!minDay && isBeforeDay(viewY, viewMo, d, minDay);
+
   const h12 = draft.h % 12 === 0 ? 12 : draft.h % 12;
   const ampm = draft.h < 12 ? "AM" : "PM";
+
+  function pickDay(d: number) {
+    if (mode === "date") {
+      onChange(toDateValue(viewY, viewMo, d));
+      return;
+    }
+    commit({ ...draft, y: viewY, mo: viewMo, d });
+  }
 
   return (
     <div
@@ -128,15 +191,18 @@ export function DateTimePicker({
     >
       <button
         type="button"
+        disabled={disabled}
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-left text-base text-paper focus:border-line-strong focus:outline-none"
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-left text-base text-paper focus:border-line-strong focus:outline-none disabled:opacity-50"
       >
-        {displayText(value) ? (
-          <span>{displayText(value)}</span>
+        {displayText(value, mode) ? (
+          <span>{displayText(value, mode)}</span>
         ) : (
-          <span className="text-muted">mm/dd/yyyy, --:-- --</span>
+          <span className="text-muted">
+            {mode === "date" ? "Pick a date" : "mm/dd/yyyy, --:-- --"}
+          </span>
         )}
         <CalendarDays className="h-4 w-4 flex-shrink-0 text-muted" />
       </button>
@@ -152,8 +218,8 @@ export function DateTimePicker({
           />
           <div
             role="dialog"
-            aria-label="Pick a date and time"
-            className="absolute left-0 z-50 mt-2 w-[19rem] rounded-xl border border-line bg-surface p-4 shadow-xl"
+            aria-label={mode === "date" ? "Pick a date" : "Pick a date and time"}
+            className="absolute left-0 z-50 mt-2 w-[19rem] rounded-xl border border-line-strong bg-surface p-4 shadow-xl"
           >
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-bold text-paper">
@@ -195,10 +261,8 @@ export function DateTimePicker({
                 <button
                   key={c.key}
                   type="button"
-                  disabled={!c.inMonth}
-                  onClick={() =>
-                    commit({ ...draft, y: viewY, mo: viewMo, d: c.d })
-                  }
+                  disabled={!c.inMonth || (c.inMonth && isDisabledDay(c.d))}
+                  onClick={() => pickDay(c.d)}
                   className={`flex h-9 items-center justify-center rounded-lg text-sm transition-colors ${
                     isSelected(c.d)
                       ? "bg-accent font-bold text-[#1a0d05]"
@@ -214,6 +278,7 @@ export function DateTimePicker({
               ))}
             </div>
 
+            {mode === "datetime" && (
             <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
               <Clock className="h-4 w-4 flex-shrink-0 text-muted" />
               <select
@@ -268,7 +333,7 @@ export function DateTimePicker({
                 ))}
               </div>
             </div>
-
+            )}
             <div className="mt-3 flex items-center border-t border-line pt-3">
               <button
                 type="button"
@@ -284,12 +349,16 @@ export function DateTimePicker({
                 type="button"
                 onClick={() => {
                   const t = new Date();
-                  commit({
-                    ...draft,
-                    y: t.getFullYear(),
-                    mo: t.getMonth(),
-                    d: t.getDate(),
-                  });
+                  if (mode === "date") {
+                    onChange(toDateValue(t.getFullYear(), t.getMonth(), t.getDate()));
+                  } else {
+                    commit({
+                      ...draft,
+                      y: t.getFullYear(),
+                      mo: t.getMonth(),
+                      d: t.getDate(),
+                    });
+                  }
                   setViewY(t.getFullYear());
                   setViewMo(t.getMonth());
                 }}
