@@ -65,6 +65,9 @@ type PlayerContextValue = {
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
 
+// Signed URLs live 5 minutes -- cache them just short of that.
+const URL_FRESH_MS = 4 * 60 * 1000;
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [track, setTrack] = useState<PlayerTrack | null>(null);
@@ -115,6 +118,34 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // overwriting the audio src after a newer one already resolved.
   const loadEpochRef = useRef(0);
 
+  // Signed URLs live 5 minutes, so cache them just short of that -- pressing
+  // play on an already-queued track then starts instantly instead of paying
+  // auth + DB + sign round trips first. Previews need no resolution (their
+  // URL is deterministic) and are deliberately NOT cached: they're tiny.
+  const urlCacheRef = useRef(new Map<string, { url: string; at: number }>());
+
+  // Warms bytes for the upcoming track without ever playing: assigned a src
+  // + preload=auto the moment the current track can play, so advancing is a
+  // cache hit instead of a cold network start.
+  const prefetchRef = useRef<HTMLAudioElement | null>(null);
+
+  function previewUrlFor(t: PlayerTrack): string {
+    return `/api/preview/${t.preview!.dropId}${
+      t.preview!.trackId ? `?track=${t.preview!.trackId}` : ""
+    }`;
+  }
+
+  const resolveTrackUrl = useCallback(async (t: PlayerTrack): Promise<string> => {
+    if (t.preview) return previewUrlFor(t);
+    const cached = urlCacheRef.current.get(t.trackId);
+    if (cached && Date.now() - cached.at < URL_FRESH_MS) return cached.url;
+    const res = await fetch(`/api/stream/${t.trackId}`);
+    if (!res.ok) throw new Error("stream failed");
+    const { url } = (await res.json()) as { url: string };
+    urlCacheRef.current.set(t.trackId, { url, at: Date.now() });
+    return url;
+  }, []);
+
   const loadAndPlay = useCallback(async (nextTrack: PlayerTrack) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -123,28 +154,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setTrack(nextTrack);
     try {
-      if (nextTrack.preview) {
-        // The preview route streams (byte-capped) audio directly, so the
-        // element can point straight at it — no signed URL to resolve first.
-        const url = `/api/preview/${nextTrack.preview.dropId}${
-          nextTrack.preview.trackId ? `?track=${nextTrack.preview.trackId}` : ""
-        }`;
-        audio.src = url;
-        await audio.play();
-      } else {
-        const res = await fetch(`/api/stream/${nextTrack.trackId}`);
-        if (!res.ok) throw new Error("stream failed");
-        const { url: signedUrl } = await res.json();
-        if (loadEpochRef.current !== epoch) return;
-        audio.src = signedUrl;
-        await audio.play();
-      }
+      const url = await resolveTrackUrl(nextTrack);
+      if (loadEpochRef.current !== epoch) return;
+      audio.src = url;
+      await audio.play();
     } catch {
       if (loadEpochRef.current === epoch) setError(true);
     } finally {
       if (loadEpochRef.current === epoch) setLoading(false);
     }
-  }, []);
+  }, [resolveTrackUrl]);
 
   // Moves within the active queue by `direction`; returns whether it moved —
   // false at either end (unless repeat-all wraps around), or with no active
@@ -181,6 +200,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const audio = new Audio();
+    audio.preload = "auto";
     audio.volume = initialVolumeRef.current;
     audioRef.current = audio;
 
@@ -244,6 +264,48 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, [step]);
+
+  // Prefetches the deterministic next track (skipped under shuffle, where
+  // the next pick is random) once the current one can play -- warming bytes
+  // early, but never at the expense of the song that's actually playing.
+  // No setState here, only refs: safe to run on every track/queue change.
+  useEffect(() => {
+    if (!track || queue.length === 0 || shuffle) return;
+    const idx = queue.findIndex((t) => t.trackId === track.trackId);
+    if (idx === -1) return;
+    let next = queue[idx + 1];
+    if (!next && repeatMode === "all" && queue.length > 0) next = queue[0];
+    if (!next || next.trackId === track.trackId) return;
+
+    let cancelled = false;
+    const warm = () => {
+      resolveTrackUrl(next)
+        .then((url) => {
+          if (cancelled) return;
+          let spare = prefetchRef.current;
+          if (!spare) {
+            spare = new Audio();
+            spare.preload = "auto";
+            prefetchRef.current = spare;
+          }
+          if (spare.src !== url) spare.src = url;
+        })
+        .catch(() => {});
+    };
+
+    const main = audioRef.current;
+    if (main && main.readyState >= 3) {
+      warm();
+    } else if (main) {
+      main.addEventListener("canplay", warm, { once: true });
+    } else {
+      warm();
+    }
+    return () => {
+      cancelled = true;
+      main?.removeEventListener("canplay", warm);
+    };
+  }, [track, queue, shuffle, repeatMode, resolveTrackUrl]);
 
   // Refreshes the lock-screen/Control Center metadata whenever the active
   // track changes -- falls back to the same deterministic artwork used
