@@ -15,6 +15,9 @@ const schema = z.object({
     .trim()
     .regex(/^[0-9+][0-9\s-]{6,19}$/, "Enter a valid phone number")
     .optional(),
+  // Optional contact email (used by the public fan-signup page) -- stored
+  // alongside guest phone follows for the artist's list.
+  email: z.string().trim().email().optional(),
 });
 
 export async function POST(req: Request) {
@@ -52,7 +55,11 @@ export async function POST(req: Request) {
       fan_email: identity.session.email.toLowerCase(),
     };
   } else if (parsed.data.phone) {
-    row = { artist_id: artistId, fan_phone: parsed.data.phone };
+    row = {
+      artist_id: artistId,
+      fan_phone: parsed.data.phone,
+      ...(parsed.data.email ? { fan_email: parsed.data.email.toLowerCase() } : {}),
+    };
   } else {
     return NextResponse.json(
       { error: "Enter your phone number to follow." },
