@@ -20,7 +20,7 @@ import { getFanIdentity } from "@/lib/fan-identity";
 import { FollowButton } from "@/components/FollowButton";
 import { ShowCard } from "@/components/ShowCard";
 import { artistShareMetadata } from "@/lib/seo";
-import type { Artist, ArtistLink, Drop } from "@/lib/types";
+import type { Artist, ArtistLink, BioLink, Drop } from "@/lib/types";
 
 // Monday 00:00 UTC of the current week -- "Top gifters" resets on this
 // boundary, matching the existing weekly payout cycle's semantics.
@@ -108,6 +108,12 @@ export default async function ArtistProfilePage({
     .select("*")
     .eq("artist_id", artist.id)
     .order("created_at", { ascending: false });
+
+  const { data: bioLinks } = await supabase
+    .from("bio_links")
+    .select("*")
+    .eq("artist_id", artist.id)
+    .order("sort_order", { ascending: true });
 
   // Upcoming shows: two reads -- the published shows themselves go through
   // the anon client (RLS public policy), but ticket-sold counts must come
@@ -282,6 +288,26 @@ export default async function ArtistProfilePage({
               ))}
             </div>
           </div>
+        )}
+
+        {(bioLinks ?? []).length > 0 && (
+          <>
+            <h2 className="mb-4 text-lg font-bold">Link In Bio</h2>
+            <div className="mb-10 space-y-2">
+              {(bioLinks as BioLink[]).map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between rounded-xl border border-line bg-surface px-5 py-3.5 text-sm font-bold transition-colors hover:border-line-strong hover:bg-paper/5"
+                >
+                  <span>{link.label}</span>
+                  <span className="text-xs font-bold text-muted">Open →</span>
+                </a>
+              ))}
+            </div>
+          </>
         )}
 
         {(shows ?? []).length > 0 && (

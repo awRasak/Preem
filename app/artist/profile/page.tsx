@@ -7,13 +7,15 @@ import { Tabs } from "@/components/Tabs";
 import { ProfileForm } from "../dashboard/ProfileForm";
 import { BankDetailsForm } from "../dashboard/BankDetailsForm";
 import { DiscoverLinksForm } from "../dashboard/DiscoverLinksForm";
+import { BioLinksForm } from "../dashboard/BioLinksForm";
 import { ThankYouForm } from "../dashboard/ThankYouForm";
-import type { ArtistLink } from "@/lib/types";
+import type { ArtistLink, BioLink } from "@/lib/types";
 
 const SECTION_BLURBS: Record<string, string> = {
   profile: "Photo, bio and social links",
   payout: "Where weekly payouts go",
   discover: "Links shown under Discover more",
+  biolinks: "Tappable slots on your public page",
   thankyou: "Message fans see after buying",
 };
 
@@ -41,6 +43,12 @@ export default async function ArtistProfilePage({
     .select("*")
     .eq("artist_id", user.id)
     .order("created_at", { ascending: false });
+
+  const { data: bioLinks } = await supabase
+    .from("bio_links")
+    .select("*")
+    .eq("artist_id", user.id)
+    .order("sort_order", { ascending: true });
 
   const tabs = [
     {
@@ -70,6 +78,11 @@ export default async function ArtistProfilePage({
       id: "discover",
       label: "Discover More",
       content: <DiscoverLinksForm links={(links ?? []) as ArtistLink[]} />,
+    },
+    {
+      id: "biolinks",
+      label: "Link In Bio",
+      content: <BioLinksForm links={(bioLinks ?? []) as BioLink[]} />,
     },
     {
       id: "thankyou",

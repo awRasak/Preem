@@ -67,6 +67,15 @@ export type DropTrack = {
   created_at: string;
 };
 
+export type BioLink = {
+  id: string;
+  artist_id: string;
+  label: string;
+  url: string;
+  sort_order: number;
+  created_at: string;
+};
+
 export type ArtistLink = {
   id: string;
   artist_id: string;
