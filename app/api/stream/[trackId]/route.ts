@@ -24,7 +24,7 @@ export async function GET(
     .eq("id", trackId)
     .single();
 
-  const track = data as
+  let track = data as
     | {
         id: string;
         drop_id: string;
@@ -34,8 +34,27 @@ export async function GET(
     | null;
 
   if (!track) {
+    // The id may be a DROP id -- admins stream a drop's first track through
+    // this route (card preview buttons only know the drop, not a track).
+    // Mirrors the preview route's "first track, ascending" rule so both
+    // endpoints resolve the same track for the same id.
+    const { data: byDrop } = await admin
+      .from("drop_tracks")
+      .select("id, drop_id, audio_file_path, drop:drops(artist_id)")
+      .eq("drop_id", trackId)
+      .order("track_number", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    track = (byDrop as typeof track) ?? null;
+  }
+
+  if (!track) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  // When the id was a drop (field-resolved above), purchases are matched
+  // against the actual first track, not the drop id.
+  const resolvedTrackId = track.id;
 
   const artistId = Array.isArray(track.drop) ? track.drop[0]?.artist_id : track.drop?.artist_id;
 
@@ -58,7 +77,7 @@ export async function GET(
       .eq("fan_phone", session.phone)
       .ilike("fan_email", session.email)
       .eq("status", "success")
-      .or(`track_id.eq.${trackId},track_id.is.null`);
+      .or(`track_id.eq.${resolvedTrackId},track_id.is.null`);
     if ((count ?? 0) > 0) authorized = true;
   }
 
@@ -89,7 +108,7 @@ export async function GET(
             .select("id", { count: "exact", head: true })
             .eq("drop_id", track.drop_id)
             .eq("status", "success")
-            .or(`track_id.eq.${trackId},track_id.is.null`);
+            .or(`track_id.eq.${resolvedTrackId},track_id.is.null`);
           const [{ count: byUser }, { count: byEmail }] = await Promise.all([
             base.eq("fan_user_id", user.id),
             user.email
@@ -98,7 +117,7 @@ export async function GET(
                   .select("id", { count: "exact", head: true })
                   .eq("drop_id", track.drop_id)
                   .eq("status", "success")
-                  .or(`track_id.eq.${trackId},track_id.is.null`)
+                  .or(`track_id.eq.${resolvedTrackId},track_id.is.null`)
                   .ilike("fan_email", user.email)
               : Promise.resolve({ count: 0 }),
           ]);
