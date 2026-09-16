@@ -22,6 +22,8 @@ export default async function AdminProtectedLayout({
     .select("role")
     .eq("user_id", user.id)
     .maybeSingle();
+  if (roleRow?.role === "artist") redirect("/artist/dashboard");
+  if (roleRow?.role === "fan") redirect("/fans");
   if (roleRow?.role !== "admin") redirect("/");
 
   return <AdminShell>{children}</AdminShell>;

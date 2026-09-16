@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { formatNaira } from "@/lib/format";
@@ -18,6 +19,7 @@ const PAGE_SIZE = 20;
 export function TransactionsTable({ transactions }: { transactions: Transaction[] }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [copiedRef, setCopiedRef] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -38,6 +40,19 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
   function handleQueryChange(value: string) {
     setQuery(value);
     setPage(1);
+  }
+
+  async function handleCopyRef(ref: string) {
+    try {
+      await navigator.clipboard.writeText(ref);
+    } catch {
+      // Clipboard unavailable (permissions) -- still show feedback; the
+      // full ref remains searchable above and visible via the title tooltip.
+    }
+    setCopiedRef(ref);
+    setTimeout(() => {
+      setCopiedRef((current) => (current === ref ? null : current));
+    }, 1500);
   }
 
   return (
