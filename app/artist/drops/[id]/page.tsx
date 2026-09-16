@@ -1,9 +1,11 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Nav, NavLink } from "@/components/Nav";
 import { DistributionGuidance } from "@/components/DistributionGuidance";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { DropHeaderEditable } from "./DropHeaderEditable";
+import { PreSavePanel } from "./PreSavePanel";
 import type { Drop, DropTrack, TrackChangeRequest } from "@/lib/types";
 
 export default async function ArtistDropDetailPage({
@@ -57,6 +59,18 @@ export default async function ArtistDropDetailPage({
   const isBundle = drop.release_type !== "single" && tracks.length > 1;
   const trackTitleById = new Map(tracks.map((t) => [t.id, t.title]));
 
+  // Pre-save counts (drafts only) come from the admin client -- drop_presaves
+  // is RLS-locked and only server routes may read it.
+  let presaveCount = 0;
+  if (drop.status === "draft") {
+    const admin = createAdminClient();
+    const { count } = await admin
+      .from("drop_presaves")
+      .select("id", { count: "exact", head: true })
+      .eq("drop_id", id);
+    presaveCount = count ?? 0;
+  }
+
   return (
     <>
       <Nav role="artist">
@@ -75,6 +89,15 @@ export default async function ArtistDropDetailPage({
           <div className="mb-8">
             <DistributionGuidance />
           </div>
+        )}
+
+        {drop.status === "draft" && (
+          <PreSavePanel
+            dropId={drop.id}
+            presaveEnabled={Boolean(drop.presave_enabled)}
+            presaveCount={presaveCount}
+            releaseDate={drop.window_end}
+          />
         )}
 
         <h2 className="mb-3 text-lg font-bold">Buyers ({buyers?.length ?? 0})</h2>

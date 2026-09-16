@@ -8,6 +8,13 @@ export function sanitizeBio(bio: string): string {
     .trim();
 }
 
+export function formatReleaseDate(iso: string): string {
+  const d = new Date(iso);
+  // window_end is stored as end-of-day UTC (T23:59:59), so the UTC date
+  // part is the release date itself.
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+}
+
 export function formatNaira(kobo: number): string {
   return `₦${(kobo / 100).toLocaleString("en-NG", {
     maximumFractionDigits: 0,

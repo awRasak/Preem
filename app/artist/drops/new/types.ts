@@ -35,6 +35,10 @@ export type WizardState = {
   tracks: TrackDraft[];
   minPriceNaira: string;
   releaseDate: string;
+  // Pre-save: open a public "coming soon" page on this draft so fans can
+  // leave their number before release. Defaults to ON in the wizard but can
+  // be skipped, and can be toggled later from the drop's owner page.
+  presaveEnabled: boolean;
 };
 
 export function defaultReleaseDate(): string {
@@ -69,6 +73,7 @@ export function initialWizardState(): WizardState {
     tracks: [],
     minPriceNaira: "",
     releaseDate: defaultReleaseDate(),
+    presaveEnabled: true,
   };
 }
 

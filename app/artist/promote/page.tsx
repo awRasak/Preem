@@ -6,8 +6,8 @@ import { ArtistShell } from "@/components/ArtistShell";
 import { CopyLinkButton } from "./CopyLinkButton";
 
 // Promote hub: every link an artist shares off-platform in one place.
-// v1 is link distribution (fan signup, release links) over data the app
-// already has. Bio-link pages and pre-saves build on top later.
+// v1 is link distribution (fan signup, pre-save pages, release links) over
+// data the app already has. Bio-link pages build on top later.
 export default async function ArtistPromotePage() {
   const supabase = await createClient();
   const {
@@ -23,19 +23,28 @@ export default async function ArtistPromotePage() {
   if (!artist || artist.approval_status !== "approved") redirect("/artist/dashboard");
 
   const admin = createAdminClient();
-  const [{ count: followerCount }, { data: drops }] = await Promise.all([
-    admin
-      .from("artist_follows")
-      .select("id", { count: "exact", head: true })
-      .eq("artist_id", user.id),
-    admin
-      .from("drops")
-      .select("id, title")
-      .eq("artist_id", user.id)
-      .eq("status", "published")
-      .order("created_at", { ascending: false })
-      .limit(5),
-  ]);
+  const [{ count: followerCount }, { data: drops }, { data: presaveDrops }] =
+    await Promise.all([
+      admin
+        .from("artist_follows")
+        .select("id", { count: "exact", head: true })
+        .eq("artist_id", user.id),
+      admin
+        .from("drops")
+        .select("id, title")
+        .eq("artist_id", user.id)
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      admin
+        .from("drops")
+        .select("id, title, window_end")
+        .eq("artist_id", user.id)
+        .eq("status", "draft")
+        .eq("presave_enabled", true)
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
 
   const publicId = artist.slug || artist.id;
 
@@ -63,6 +72,28 @@ export default async function ArtistPromotePage() {
             </Link>
           </p>
           <CopyLinkButton path={`/artist/${publicId}/join`} label="fan signup" />
+        </section>
+
+        <section className="mb-8">
+          <h2 className="mb-1 text-base font-bold">Pre-save pages</h2>
+          <p className="mb-3 text-xs text-muted">
+            Coming-soon pages for your drafts. Fans leave a number and are
+            pinged the day the drop goes live.
+          </p>
+          {(presaveDrops ?? []).length === 0 ? (
+            <p className="text-sm text-muted">
+              No open pre-save pages — start one from a draft drop.
+            </p>
+          ) : (
+            <ul className="space-y-4">
+              {(presaveDrops ?? []).map((drop) => (
+                <li key={drop.id}>
+                  <p className="mb-1.5 truncate text-sm font-medium">{drop.title}</p>
+                  <CopyLinkButton path={`/drop/${drop.id}`} label={`${drop.title} pre-save`} />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section>

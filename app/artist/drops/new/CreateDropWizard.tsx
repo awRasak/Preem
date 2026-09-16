@@ -274,12 +274,16 @@ export default function CreateDropWizard() {
 
       const releaseMinPriceKobo = Math.round((Number(state.minPriceNaira) || 0) * 100) || 1;
       const isExclusive = state.dropType === "exclusive";
+      // window_end doubles as the release date: end-of-day on the chosen
+      // day. Drafts saved with pre-save on keep it too so the public
+      // "coming soon" page can show when the drop goes live; exclusive
+      // drops (no release date) get none either way.
+      const hasReleaseDate = !isExclusive && Boolean(state.releaseDate);
       const windowEnd =
-        mode === "publish" && isExclusive
-          ? null
-          : mode === "publish" && state.releaseDate
-            ? new Date(`${state.releaseDate}T23:59:59`).toISOString()
-            : null;
+        (mode === "publish" || (mode === "save" && state.presaveEnabled && hasReleaseDate)) &&
+        hasReleaseDate
+          ? new Date(`${state.releaseDate}T23:59:59`).toISOString()
+          : null;
 
       const dropInsert = {
         artist_id: user.id,
@@ -293,6 +297,7 @@ export default function CreateDropWizard() {
         artwork_path: artworkPublicUrl,
         window_end: windowEnd,
         is_exclusive: isExclusive,
+        presave_enabled: mode === "save" && !isExclusive && state.presaveEnabled,
       };
 
       let { data: drop, error: dropError } = await supabase

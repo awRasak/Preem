@@ -49,6 +49,7 @@ const GHOST_DROPS: Drop[] = [
     artwork_path: null,
     window_start: new Date().toISOString(),
     window_end: null,
+    presave_enabled: false,
     is_exclusive: false,
     created_at: new Date().toISOString(),
     artist: { id: "ghost-artist-1", stage_name: "Artist name", avatar_url: null },
@@ -65,11 +66,11 @@ const GHOST_DROPS: Drop[] = [
     secondary_genre: null,
     min_price_kobo: 50000,
     artwork_path: null,
-    window_start: new Date().toISOString(),
+window_start: new Date().toISOString(),
     window_end: null,
+    presave_enabled: false,
     is_exclusive: false,
     created_at: new Date().toISOString(),
-    artist: { id: "ghost-artist-2", stage_name: "Artist name", avatar_url: null },
   },
 ];
 

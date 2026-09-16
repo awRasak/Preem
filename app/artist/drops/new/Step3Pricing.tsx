@@ -62,6 +62,28 @@ export function Step3Pricing({
           </p>
         </Field>
       )}
+
+      {/* Only early-access drops carry a release date, and only they can be
+          opened for pre-save -- exclusive drops go straight to market. */}
+      {!isExclusive && (
+        <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface px-3.5 py-3">
+          <input
+            type="checkbox"
+            checked={state.presaveEnabled}
+            onChange={(e) => onChange({ presaveEnabled: e.target.checked })}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+          />
+          <span>
+            <span className="block text-sm font-bold text-paper">
+              Start a pre-save page
+            </span>
+            <span className="mt-0.5 block text-[11px] text-muted">
+              Fans see this drop as &quot;coming soon&quot;, leave their number, and get pinged
+              the day it goes live. Skip unless you&apos;re teasing an upcoming release.
+            </span>
+          </span>
+        </label>
+      )}
     </div>
   );
 }

@@ -46,6 +46,7 @@ export type Drop = {
   artwork_path: string | null;
   window_start: string;
   window_end: string | null;
+  presave_enabled: boolean;
   is_exclusive: boolean;
   created_at: string;
   artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;
