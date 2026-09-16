@@ -8,7 +8,7 @@ export default async function AdminTransactionsPage() {
 
   const { data: recentPurchases } = await supabase
     .from("purchases")
-    .select("fan_email, amount_kobo, paystack_ref, status, purchased_at, drops(title)")
+    .select("fan_email, amount_kobo, paystack_ref, status, purchased_at, created_at, drops(title)")
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -22,6 +22,7 @@ export default async function AdminTransactionsPage() {
       amountKobo: p.amount_kobo,
       status: p.status,
       paystackRef: p.paystack_ref,
+      createdAt: p.created_at,
     };
   });
 

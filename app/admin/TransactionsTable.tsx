@@ -12,26 +12,66 @@ export type Transaction = {
   amountKobo: number;
   status: string;
   paystackRef: string;
+  createdAt: string;
 };
 
 const PAGE_SIZE = 20;
+const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+
+function duplicateKey(t: Transaction) {
+  return `${t.fanEmail.toLowerCase()}|${t.dropTitle.toLowerCase()}|${t.amountKobo}`;
+}
+
+function isStale(t: Transaction, now: number) {
+  const created = new Date(t.createdAt).getTime();
+  return Number.isFinite(created) && now - created > STALE_AFTER_MS;
+}
 
 export function TransactionsTable({ transactions }: { transactions: Transaction[] }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [copiedRef, setCopiedRef] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+
+  // Pendings the admin usually doesn't need: abandoned retries (same fan +
+  // drop + amount already succeeded) and checkouts stale over 24h. Success
+  // history is never hidden.
+  // Snapshot "now" once per mount -- staleness is judged against page load,
+  // not each re-render.
+  const [now] = useState(() => Date.now());
+  const hiddenRefs = useMemo(() => {
+    const succeeded = new Set(
+      transactions.filter((t) => t.status === "success").map(duplicateKey),
+    );
+    const hidden = new Set<string>();
+    for (const t of transactions) {
+      if (t.status !== "pending") continue;
+      if (succeeded.has(duplicateKey(t)) || isStale(t, now)) {
+        hidden.add(t.paystackRef);
+      }
+    }
+    return hidden;
+  }, [transactions, now]);
+
+  const visible = useMemo(
+    () =>
+      showHidden
+        ? transactions
+        : transactions.filter((t) => !hiddenRefs.has(t.paystackRef)),
+    [transactions, hiddenRefs, showHidden],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return transactions;
-    return transactions.filter(
+    if (!q) return visible;
+    return visible.filter(
       (t) =>
         t.fanEmail.toLowerCase().includes(q) ||
         t.dropTitle.toLowerCase().includes(q) ||
         t.paystackRef.toLowerCase().includes(q) ||
         t.status.toLowerCase().includes(q),
     );
-  }, [transactions, query]);
+  }, [visible, query]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const page_ = Math.min(page, totalPages);
@@ -62,8 +102,23 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
         value={query}
         onChange={(e) => handleQueryChange(e.target.value)}
         placeholder="Search by fan, drop, status, or ref"
-        className="mb-4 w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-base text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
+        className="mb-3 w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-base text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
       />
+
+      {hiddenRefs.size > 0 && (
+        <label className="mb-4 flex cursor-pointer items-center gap-2.5 text-xs text-muted">
+          <input
+            type="checkbox"
+            checked={showHidden}
+            onChange={(e) => {
+              setShowHidden(e.target.checked);
+              setPage(1);
+            }}
+            className="h-4 w-4 shrink-0 accent-accent"
+          />
+          Show {hiddenRefs.size} hidden — duplicates of paid orders and pendings over 24h old
+        </label>
+      )}
 
       {pageItems.length === 0 ? (
         <p className="text-sm text-muted">No matching transactions.</p>
@@ -80,10 +135,15 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
           </thead>
           <tbody>
             {pageItems.map((t, i) => (
-              <tr key={t.paystackRef || i} className="border-b border-line text-sm last:border-none">
-                <td className="py-2.5 pr-4 text-muted">{t.fanEmail}</td>
-                <td className="py-2.5 pr-4">{t.dropTitle}</td>
-                <td className="py-2.5 pr-4 font-mono">{formatNaira(t.amountKobo)}</td>
+              <tr
+                key={t.paystackRef || i}
+                className={`border-b border-line text-sm last:border-none ${
+                  showHidden && hiddenRefs.has(t.paystackRef) ? "opacity-50" : ""
+                }`}
+              >
+                <td className="max-w-52 truncate py-2.5 pr-4 text-muted" title={t.fanEmail}>{t.fanEmail}</td>
+                <td className="max-w-36 truncate whitespace-nowrap py-2.5 pr-4" title={t.dropTitle}>{t.dropTitle}</td>
+                <td className="whitespace-nowrap py-2.5 pr-4 font-mono">{formatNaira(t.amountKobo)}</td>
                 <td className="py-2.5 pr-4">
                   <Badge
                     status={t.status === "success" ? "live" : t.status === "pending" ? "pending" : "closed"}
@@ -91,7 +151,28 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
                     {t.status}
                   </Badge>
                 </td>
-                <td className="py-2.5 font-mono text-xs text-muted">{t.paystackRef}</td>
+                <td className="py-2.5">
+                  <span className="flex items-center gap-1.5">
+                    <span className="truncate font-mono text-xs text-muted" title={t.paystackRef}>
+                      {t.paystackRef.length > 14
+                        ? `${t.paystackRef.slice(0, 14)}…`
+                        : t.paystackRef}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyRef(t.paystackRef)}
+                      aria-label={`Copy reference ${t.paystackRef}`}
+                      title="Copy full reference"
+                      className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-paper"
+                    >
+                      {copiedRef === t.paystackRef ? (
+                        <Check className="h-3.5 w-3.5 text-[#34d399]" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
