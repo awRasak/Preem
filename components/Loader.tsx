@@ -9,12 +9,18 @@ export function Spinner({
   tone = "accent",
   label,
 }: {
-  size?: "xs" | "sm" | "md";
+  size?: "xs" | "sm" | "md" | "lg";
   tone?: "accent" | "current";
   label?: string;
 }) {
   const dims =
-    size === "xs" ? "h-3.5 w-3.5" : size === "md" ? "h-5 w-5" : "h-4 w-4";
+    size === "xs"
+      ? "h-3.5 w-3.5"
+      : size === "md"
+        ? "h-5 w-5"
+        : size === "lg"
+          ? "h-10 w-10"
+          : "h-4 w-4";
   return (
     <span
       role="status"
