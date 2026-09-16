@@ -59,7 +59,13 @@ body {
    default 100% zoom. */
 @media (min-width: 1280px) {
   body {
-    zoom: 1.125;
+    /* Single source for the visual scale: the zoom below AND the cancel —
+       out in layouts that want an element to fill the actual visible window
+       (e.g. AdminShell's sidebar uses h-[calc(100dvh/var(--app-zoom))],
+       otherwise a 100dvh panel renders 12.5% taller than the viewport and
+       its sticky bottom -- sign out -- ends up below the fold). */
+    --app-zoom: 1.125;
+    zoom: var(--app-zoom);
   }
 }
 
