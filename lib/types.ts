@@ -148,4 +148,5 @@ export type Purchase = {
   purchased_at: string | null;
   access_granted_at: string | null;
   paid_out: boolean;
+  created_at: string;
 };

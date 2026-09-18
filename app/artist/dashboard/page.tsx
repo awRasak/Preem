@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { Wallet, Users, Radio } from "lucide-react";
+import { Wallet, Users, Radio, BarChart3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ArtistShell } from "@/components/ArtistShell";
 import { ApprovalCelebration } from "./ApprovalCelebration";
@@ -80,6 +80,7 @@ export default async function ArtistDashboardPage() {
     (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
     0,
   );
+  const totalSales = successPurchasesList.length;
   const buyerCount = new Set(purchases.map((p) => p.fan_phone)).size;
   const liveDropCount = (drops ?? []).filter(
     (d) => d.status === "published" && isDropLive(d.window_end),
@@ -142,7 +143,7 @@ export default async function ArtistDashboardPage() {
           </Button>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatBox
             icon={<Wallet className="h-4 w-4" />}
             value={formatNaira(revenueKobo)}
@@ -150,6 +151,12 @@ export default async function ArtistDashboardPage() {
           />
           <StatBox icon={<Users className="h-4 w-4" />} value={String(buyerCount)} label="Buyers" />
           <StatBox icon={<Radio className="h-4 w-4" />} value={String(liveDropCount)} label="Live drops" />
+          <StatBox
+            icon={<BarChart3 className="h-4 w-4" />}
+            value={String(totalSales)}
+            label="Sales"
+            href="/artist/analytics"
+          />
         </div>
 
         {topDrops.length > 0 && (
