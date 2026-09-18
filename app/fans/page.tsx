@@ -1,22 +1,18 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
-import Image from "next/image";
 import { Nav, NavLink } from "@/components/Nav";
 import { Button } from "@/components/Button";
 import { SignOutButton } from "@/components/SignOutButton";
 import { DropCard } from "@/components/DropCard";
-import { FollowButton } from "@/components/FollowButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { PHONE_SESSION_COOKIE, verifyPhoneSessionCookieValue } from "@/lib/phone-session";
 import { PhoneLookupForm } from "./PhoneLookupForm";
 import { PlayerRow } from "./PlayerRow";
-import { ReportProblemButton } from "@/components/ReportProblemButton";
 import { formatNaira } from "@/lib/format";
-import { artworkFallback } from "@/lib/placeholder";
 import type { PlayerTrack } from "@/lib/player-context";
 import type { Artist, Drop } from "@/lib/types";
-import { trackPath, dropPath } from "@/lib/slug";
+import { trackPath } from "@/lib/slug";
 import { type FanIdentity } from "@/lib/fan-identity";
 import {
   NewDropNotifications,
@@ -103,54 +99,6 @@ export default async function MyDropsPage({
       : null;
   const notifications = identity ? await getNotifications(identity) : [];
 
-  const admin = createAdminClient();
-  const [{ data: liveDrops }, { data: artistsData }, { data: followRows }] =
-    await Promise.all([
-      admin
-        .from("drops")
-        .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url)")
-        .eq("status", "published")
-        .order("created_at", { ascending: false })
-        .limit(10),
-      admin
-        .from("artists")
-        .select("id, stage_name, avatar_url, approval_status")
-        .eq("approval_status", "approved")
-        .order("created_at", { ascending: false })
-        .limit(20),
-      identity
-        ? identity.kind === "user"
-          ? admin
-              .from("artist_follows")
-              .select("artist_id")
-              .eq("fan_user_id", identity.userId)
-          : admin
-              .from("artist_follows")
-              .select("artist_id")
-              .eq("fan_phone", identity.session.phone)
-        : Promise.resolve({ data: [] as { artist_id: string }[] }),
-    ]);
-
-  const followedIds = new Set((followRows ?? []).map((f) => f.artist_id));
-  const artists = ((artistsData ?? []) as Artist[]).filter((a) => a.approval_status === "approved");
-  const followed = artists.filter((a) => followedIds.has(a.id));
-  const suggested = artists.filter((a) => !followedIds.has(a.id)).slice(0, 10);
-  const artistSection = [...followed, ...suggested].slice(0, 12);
-
-  const followerCounts = new Map<string, number>();
-  if (artistSection.length > 0) {
-    const { data: followCounts } = await admin
-      .from("artist_follows")
-      .select("artist_id")
-      .in(
-        "artist_id",
-        artistSection.map((a) => a.id),
-      );
-    for (const f of followCounts ?? []) {
-      followerCounts.set(f.artist_id, (followerCounts.get(f.artist_id) ?? 0) + 1);
-    }
-  }
-
   return (
     <>
       <Nav role="fan">
@@ -159,12 +107,6 @@ export default async function MyDropsPage({
       </Nav>
       <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
         <NewDropNotifications items={notifications} />
-        <Link
-          href="/fans/search"
-          className="mb-8 flex items-center gap-2 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-base text-muted transition-colors hover:border-line-strong hover:text-paper"
-        >
-          Search artists or songs…
-        </Link>
 
         {fan ? (
           <MyDropsLibrary userId={fan.id} sortMode={sortMode} continueSection />
@@ -178,61 +120,6 @@ export default async function MyDropsPage({
             continueSection
           />
         )}
-
-        {(liveDrops ?? []).length > 0 && (
-          <section className="mb-10 mt-10">
-            <h2 className="mb-4 text-lg font-bold">New drops</h2>
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {((liveDrops ?? []) as Drop[]).map((drop) => (
-                <div key={drop.id} className="w-40 flex-shrink-0 sm:w-48">
-                  <DropCard drop={drop} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {artistSection.length > 0 && (
-          <section className="mb-10">
-            <h2 className="mb-4 text-lg font-bold">
-              {followed.length > 0 ? "Your artists" : "Artists to follow"}
-            </h2>
-            <div className="divide-y divide-line rounded-xl border border-line">
-              {artistSection.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 p-3">
-                  <Link
-                    href={`/artist/${a.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-3"
-                  >
-                    <span className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-full bg-surface-2">
-                      <Image
-                        src={a.avatar_url || artworkFallback(a.id)}
-                        alt={a.stage_name}
-                        fill
-                        className="object-cover"
-                        sizes="44px"
-                      />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {a.stage_name}
-                    </span>
-                  </Link>
-                  <FollowButton
-                    artistId={a.id}
-                    artistName={a.stage_name}
-                    followerCount={followerCounts.get(a.id) ?? 0}
-                    initialFollowing={followedIds.has(a.id)}
-                    hasIdentity={!!identity}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="mt-10 text-center">
-          <ReportProblemButton defaultPhone={phoneSession?.phone ?? ""} />
-        </div>
       </main>
     </>
   );

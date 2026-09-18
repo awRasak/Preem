@@ -21,6 +21,7 @@ declare global {
         key: string;
         email: string;
         amount: number;
+        currency?: string;
         ref: string;
         onClose?: () => void;
         callback?: (transaction: { reference: string }) => void;
@@ -199,6 +200,9 @@ export function BuyTicketButton({
       key: body.publicKey,
       email: fanEmail,
       amount: body.amountKobo,
+      // Pin NGN: without this Paystack bills international cards in USD
+      // (cents), which breaks the kobo-amount check in ticket verify.
+      currency: "NGN",
       ref: body.reference,
       onClose: () => {
         payingRef.current = false;

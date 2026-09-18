@@ -12,6 +12,9 @@ type Props = {
   // Whether the visitor already carries a fan identity (auth session or
   // phone-session cookie). When false, following asks for a phone number.
   hasIdentity: boolean;
+  // Card grids center the button + count; the default left-aligns on sm+
+  // for row layouts (artist page, lists).
+  align?: "start" | "center";
 };
 
 export function FollowButton({
@@ -20,6 +23,7 @@ export function FollowButton({
   followerCount,
   initialFollowing,
   hasIdentity,
+  align = "start",
 }: Props) {
   const [following, setFollowing] = useState(initialFollowing);
   const [count, setCount] = useState(followerCount);
@@ -80,7 +84,9 @@ export function FollowButton({
 
   return (
     <>
-      <div className="flex flex-col items-center gap-1 sm:items-start">
+      <div
+        className={`flex flex-col items-center gap-1 ${align === "center" ? "" : "sm:items-start"}`}
+      >
         <Button
           onClick={handleClick}
           variant={following ? "outline" : "primary"}
