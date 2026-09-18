@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Nav, NavLink } from "@/components/Nav";
 import { Avatar } from "@/components/Avatar";
+import { Badge } from "@/components/Badge";
 import { DropCard } from "@/components/DropCard";
 import { DiscoverMore } from "@/components/DiscoverMore";
 import { GiftButton } from "@/components/GiftButton";
@@ -14,8 +17,9 @@ import {
   TiktokIcon,
   TwitterIcon,
 } from "@/components/SocialIcons";
-import { sanitizeBio } from "@/lib/format";
-import { isUuid } from "@/lib/slug";
+import { sanitizeBio, formatNaira, isDropLive } from "@/lib/format";
+import { artworkFallback } from "@/lib/placeholder";
+import { isUuid, dropPath } from "@/lib/slug";
 import { getFanIdentity } from "@/lib/fan-identity";
 import { FollowButton } from "@/components/FollowButton";
 import { ShowCard } from "@/components/ShowCard";
@@ -114,6 +118,18 @@ export default async function ArtistProfilePage({
     .select("*")
     .eq("artist_id", artist.id)
     .order("sort_order", { ascending: true });
+
+  // Pinned "current single" -- hero slot above everything else. Only goes
+  // out while published; a draft pin or a cleared pin falls back to the
+  // plain newest-first grid below.
+  const { data: featuredDrop } = (artist as Artist).featured_drop_id
+    ? await supabase
+        .from("drops")
+        .select("id, title, is_exclusive, min_price_kobo, artwork_path, window_end")
+        .eq("id", (artist as Artist).featured_drop_id!)
+        .eq("status", "published")
+        .maybeSingle()
+    : { data: null };
 
   // Upcoming shows: two reads -- the published shows themselves go through
   // the anon client (RLS public policy), but ticket-sold counts must come
@@ -273,6 +289,37 @@ export default async function ArtistProfilePage({
             </div>
           </div>
         </div>
+
+        {featuredDrop && (
+          <Link
+            href={dropPath(artist.stage_name, featuredDrop.title)}
+            className="mb-10 flex items-center gap-4 rounded-xl border border-accent/40 bg-surface p-4 transition-colors hover:border-accent"
+          >
+            <Image
+              src={featuredDrop.artwork_path || artworkFallback(featuredDrop.id)}
+              alt={featuredDrop.title}
+              width={96}
+              height={96}
+              className="h-24 w-24 flex-shrink-0 rounded-lg object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-accent">
+                Featured drop
+              </p>
+              <p className="truncate text-lg font-bold">{featuredDrop.title}</p>
+              <p className="mt-0.5 text-xs text-muted">
+                Min. {formatNaira(featuredDrop.min_price_kobo)}
+              </p>
+            </div>
+            {featuredDrop.is_exclusive ? (
+              <Badge status="exclusive">EXCLUSIVE</Badge>
+            ) : isDropLive(featuredDrop.window_end) ? (
+              <Badge status="live">LIVE</Badge>
+            ) : (
+              <Badge status="closed">Closed</Badge>
+            )}
+          </Link>
+        )}
 
         {topGifters.length > 0 && (
           <div className="mb-10 rounded-xl border border-line p-4">

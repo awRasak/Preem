@@ -926,3 +926,9 @@ create policy "bio_links artist update own"
 
 create policy "bio_links artist delete own"
   on public.bio_links for delete using (auth.uid() = artist_id);
+
+-- 0031_featured_drop: the artist's pinned "current single" for the Promote
+-- hub and the hero slot on the public artist page. One pin at a time.
+alter table public.artists
+  add column if not exists featured_drop_id uuid
+  references public.drops (id) on delete set null;

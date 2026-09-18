@@ -26,6 +26,9 @@ export type Artist = {
   snapchat_url: string | null;
   approval_status: ApprovalStatus;
   approval_seen: boolean;
+  // Pinned "current single" for the Promote hub + public page hero.
+  // Null = newest-first ordering. (0031_featured_drop)
+  featured_drop_id: string | null;
   thank_you_text: string | null;
   thank_you_media_url: string | null;
   thank_you_media_type: "image" | "video" | null;
