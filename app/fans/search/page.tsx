@@ -53,14 +53,14 @@ export default async function FanSearchPage({
           .limit(8),
         admin
           .from("drops")
-          .select("id, title, artwork_path, artist:artists(id, stage_name)")
+          .select("id, title, artwork_path, artist:artists!drops_artist_id_fkey(id, stage_name)")
           .eq("status", "published")
           .ilike("title", like)
           .order("created_at", { ascending: false })
           .limit(8),
         admin
           .from("drop_tracks")
-          .select("id, title, drop_id, drops(id, title, artist:artists(id, stage_name))")
+          .select("id, title, drop_id, drops(id, title, artist:artists!drops_artist_id_fkey(id, stage_name))")
           .ilike("title", like)
           .order("created_at", { ascending: false })
           .limit(8),

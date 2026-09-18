@@ -22,7 +22,7 @@ export default async function DropEntry({
   const { data: drop } = await supabase
     .from("drops")
     .select(
-      "id, title, description, artwork_path, status, presave_enabled, is_exclusive, release_type, genre, min_price_kobo, window_end, artist:artists(id, stage_name, avatar_url, approval_status)",
+      "id, title, description, artwork_path, status, presave_enabled, is_exclusive, release_type, genre, min_price_kobo, window_end, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status)",
     )
     .eq("id", id)
     .maybeSingle();

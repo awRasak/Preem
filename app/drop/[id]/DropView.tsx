@@ -32,7 +32,7 @@ export default async function DropView({
   const { data } = await supabase
     .from("drops")
     .select(
-      "*, artist:artists(id, stage_name, avatar_url, approval_status, thank_you_text, thank_you_media_url, thank_you_media_type)",
+      "*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status, thank_you_text, thank_you_media_url, thank_you_media_type)",
     )
     .eq("id", id)
     .eq("status", "published")
@@ -120,7 +120,7 @@ export default async function DropView({
 
   const { data: moreData } = await supabase
     .from("drops")
-    .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
+    .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status)")
     .eq("artist_id", drop.artist_id)
     .eq("status", "published")
     .neq("id", drop.id)

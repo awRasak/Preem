@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   // and the artist approved so the page is genuinely public.
   const { data: drop } = await admin
     .from("drops")
-    .select("status, artist_id, artist:artists(approval_status)")
+    .select("status, artist_id, artist:artists!drops_artist_id_fkey(approval_status)")
     .eq("id", dropId)
     .eq("status", "draft")
     .eq("presave_enabled", true)

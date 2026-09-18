@@ -22,7 +22,7 @@ export default async function ArtistDropDetailPage({
 
   const { data: drop } = await supabase
     .from("drops")
-    .select("*, artist:artists(stage_name)")
+    .select("*, artist:artists!drops_artist_id_fkey(stage_name)")
     .eq("id", id)
     .eq("artist_id", user.id)
     .single();

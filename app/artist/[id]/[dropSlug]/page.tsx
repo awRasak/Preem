@@ -45,7 +45,7 @@ export async function generateMetadata({
   const supabase = await createClient();
   const { data: drop } = await supabase
     .from("drops")
-    .select("title, description, artwork_path, artist:artists(stage_name)")
+    .select("title, description, artwork_path, artist:artists!drops_artist_id_fkey(stage_name)")
     .eq("id", resolved.dropId)
     .maybeSingle();
   const artist = drop?.artist as { stage_name: string } | null | undefined;

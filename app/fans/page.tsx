@@ -108,7 +108,7 @@ export default async function MyDropsPage({
     await Promise.all([
       admin
         .from("drops")
-        .select("*, artist:artists(id, stage_name, avatar_url)")
+        .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url)")
         .eq("status", "published")
         .order("created_at", { ascending: false })
         .limit(10),
@@ -253,7 +253,7 @@ async function getNotifications(identity: FanIdentity): Promise<FanNotification[
 
   const { data: notifications } = await admin
     .from("fan_notifications")
-    .select("id, drop_id, drops(title, artist:artists(stage_name))")
+    .select("id, drop_id, drops(title, artist:artists!drops_artist_id_fkey(stage_name))")
     .in("follow_id", followIds)
     .is("seen_at", null)
     .order("created_at", { ascending: false })
@@ -370,7 +370,7 @@ async function MyDropsLibrary({
 
   const { data: dropsData } = await admin
     .from("drops")
-    .select("id, title, artwork_path, artist:artists(id, stage_name)")
+    .select("id, title, artwork_path, artist:artists!drops_artist_id_fkey(id, stage_name)")
     .in("id", dropIdsInOrder);
   const dropById = new Map((dropsData as DropInfo[] | null ?? []).map((d) => [d.id, d]));
 

@@ -16,7 +16,7 @@ export async function markPurchaseSuccess(
 ) {
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("*, drops(title, artist:artists(stage_name))")
+    .select("*, drops(title, artist:artists!drops_artist_id_fkey(stage_name))")
     .eq("paystack_ref", reference)
     .single();
 

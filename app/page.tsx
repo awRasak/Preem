@@ -34,7 +34,7 @@ export default async function MarketplacePage() {
   }, settings] = await Promise.all([
     supabase
       .from("drops")
-      .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
+      .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status)")
       .eq("status", "published")
       .or(`window_end.is.null,window_end.gt.${new Date().toISOString()}`)
       .order("created_at", { ascending: false }),

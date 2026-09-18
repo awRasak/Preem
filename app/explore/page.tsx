@@ -13,7 +13,7 @@ export default async function ExplorePage() {
 
   const { data: dropsData } = await supabase
     .from("drops")
-    .select("*, artist:artists(id, stage_name, avatar_url, approval_status)")
+    .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status)")
     .eq("status", "published")
     .order("created_at", { ascending: false });
 
@@ -39,7 +39,7 @@ export default async function ExplorePage() {
   const admin = createAdminClient();
   const { data: showsData } = await supabase
     .from("shows")
-    .select("*, artist:artists(id, stage_name, avatar_url)")
+    .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url)")
     .eq("status", "published")
     .gte("start_at", new Date().toISOString())
     .order("start_at", { ascending: true });

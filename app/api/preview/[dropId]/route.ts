@@ -62,7 +62,7 @@ export async function GET(
 
   const { data: drop } = await admin
     .from("drops")
-    .select("id, status, artist:artists(approval_status)")
+    .select("id, status, artist:artists!drops_artist_id_fkey(approval_status)")
     .eq("id", dropId)
     .single();
 
