@@ -12,6 +12,7 @@ const schema = z
     paystackEnabled: z.boolean(),
     monipayEnabled: z.boolean(),
     waitlistModeEnabled: z.boolean(),
+    ngnPerUsd: z.number().int().min(1).max(1000000),
   })
   .refine((v) => v.paystackEnabled || v.monipayEnabled, {
     message: "At least one payment gateway must stay on.",
@@ -46,6 +47,7 @@ export async function PATCH(req: Request) {
       paystack_enabled: parsed.data.paystackEnabled,
       monipay_enabled: parsed.data.monipayEnabled,
       waitlist_mode_enabled: parsed.data.waitlistModeEnabled,
+      ngn_per_usd: parsed.data.ngnPerUsd,
       updated_at: new Date().toISOString(),
     })
     .eq("id", true);

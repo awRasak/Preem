@@ -6,6 +6,9 @@ export type PlatformSettings = {
   paystackEnabled: boolean;
   monipayEnabled: boolean;
   waitlistModeEnabled: boolean;
+  // Naira per US$1 -- display only (USD equivalent next to naira prices).
+  // Charging and settlement stay in NGN.
+  ngnPerUsd: number;
 };
 
 // Falls back to today's rates (20% drops, 5% gifts), Paystack-only, and
@@ -18,6 +21,7 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   paystackEnabled: true,
   monipayEnabled: false,
   waitlistModeEnabled: true,
+  ngnPerUsd: 1500,
 };
 
 // Short-lived in-process cache: settings are read on nearly every page but
@@ -42,7 +46,7 @@ export async function getPlatformSettings(
   const { data } = await supabase
     .from("platform_settings")
     .select(
-      "drop_commission_bps, gift_commission_bps, paystack_enabled, monipay_enabled, waitlist_mode_enabled",
+      "drop_commission_bps, gift_commission_bps, paystack_enabled, monipay_enabled, waitlist_mode_enabled, ngn_per_usd",
     )
     .eq("id", true)
     .maybeSingle();
@@ -54,6 +58,7 @@ export async function getPlatformSettings(
     paystackEnabled: data.paystack_enabled,
     monipayEnabled: data.monipay_enabled,
     waitlistModeEnabled: data.waitlist_mode_enabled,
+    ngnPerUsd: data.ngn_per_usd,
   };
   settingsCache = { data: settings, at: Date.now() };
   return settings;

@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/expire-pendings",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/update-fx-rate",
+      "schedule": "5 6 * * *"
     }
   ]
 }

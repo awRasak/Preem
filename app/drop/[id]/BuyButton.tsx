@@ -13,7 +13,7 @@ import { Button } from "@/components/Button";
 import { Spinner } from "@/components/Loader";
 import { Badge } from "@/components/Badge";
 import { Field, Input } from "@/components/Field";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatUsd } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { usePlayer } from "@/lib/player-context";
 import { useBuyerDetails } from "@/components/useBuyerDetails";
@@ -74,6 +74,7 @@ export function BuyButton({
   owned = false,
   artistId = "",
   artworkUrl = null,
+  usdRate = null,
 }: {
   dropId: string;
   trackId?: string;
@@ -92,6 +93,9 @@ export function BuyButton({
   // the page underneath flips via router.refresh() at the same time.
   artistId?: string;
   artworkUrl?: string | null;
+  // Naira-per-$1 display rate (null hides it). Shows a live USD equivalent
+  // next to naira amounts for diaspora fans -- charging stays in NGN.
+  usdRate?: number | null;
 }) {
   const [step, setStep] = useState<Step>("closed");
   const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
@@ -536,6 +540,11 @@ export function BuyButton({
                         <span className="mt-0.5 block text-[11px] font-normal text-muted">
                           {["Minimum", "Supporter", "Biggest fan"][i]}
                         </span>
+                        {usdRate ? (
+                          <span className="mt-0.5 block text-[11px] font-normal text-muted">
+                            ≈ {formatUsd(n * 100, usdRate)}
+                          </span>
+                        ) : null}
                       </button>
                     ))}
                     <button
@@ -572,6 +581,12 @@ export function BuyButton({
                       onChange={(e) => setAmountNaira(e.target.value)}
                       autoFocus
                     />
+                    {usdRate && amountValid ? (
+                      <p className="mt-1.5 text-[11px] text-muted">
+                        ≈ {formatUsd(amountKobo, usdRate)} — you&apos;ll be
+                        charged in naira; your bank converts.
+                      </p>
+                    ) : null}
                   </Field>
                 )}
                 </div>

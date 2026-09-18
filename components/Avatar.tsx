@@ -31,11 +31,15 @@ export function Avatar({
   seed,
   alt,
   size = 64,
+  fluid = false,
 }: {
   src: string | null;
   seed: string;
   alt: string;
   size?: number;
+  // Fill the parent (which sets the box, e.g. aspect-square) instead of
+  // fixed pixels -- for responsive circle grids.
+  fluid?: boolean;
 }) {
   // No photo on file (nothing uploaded, no thumbnail resolved from a
   // profile link) -- a generic initials badge reads as "no photo yet"
@@ -47,7 +51,11 @@ export function Avatar({
         role="img"
         aria-label={alt}
         className="flex flex-shrink-0 items-center justify-center rounded-full font-bold text-[#1a0d05]"
-        style={{ width: size, height: size, backgroundColor: color, fontSize: size * 0.36 }}
+        style={
+          fluid
+            ? { width: "100%", height: "100%", backgroundColor: color, fontSize: "1.75rem" }
+            : { width: size, height: size, backgroundColor: color, fontSize: size * 0.36 }
+        }
       >
         {initialsFor(alt)}
       </div>
@@ -57,9 +65,9 @@ export function Avatar({
   return (
     <div
       className="relative flex-shrink-0 overflow-hidden rounded-full bg-surface-2"
-      style={{ width: size, height: size }}
+      style={fluid ? { width: "100%", height: "100%" } : { width: size, height: size }}
     >
-      <Image src={src} alt={alt} fill className="object-cover" sizes={`${size}px`} />
+      <Image src={src} alt={alt} fill className="object-cover" sizes={fluid ? "50vw" : `${size}px`} />
     </div>
   );
 }

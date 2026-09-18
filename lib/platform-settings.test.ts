@@ -40,6 +40,7 @@ describe("getPlatformSettings", () => {
       paystack_enabled: true,
       monipay_enabled: false,
       waitlist_mode_enabled: false,
+      ngn_per_usd: 1500,
     });
     const settings = await getPlatformSettings(supabase);
     expect(settings).toEqual({
@@ -48,6 +49,7 @@ describe("getPlatformSettings", () => {
       paystackEnabled: true,
       monipayEnabled: false,
       waitlistModeEnabled: false,
+      ngnPerUsd: 1500,
     });
   });
 
@@ -68,6 +70,7 @@ describe("getPlatformSettings", () => {
       paystack_enabled: true,
       monipay_enabled: true,
       waitlist_mode_enabled: false,
+      ngn_per_usd: 1500,
     });
     await getPlatformSettings(supabase);
     await getPlatformSettings(supabase);
@@ -81,6 +84,7 @@ describe("getPlatformSettings", () => {
       paystack_enabled: true,
       monipay_enabled: true,
       waitlist_mode_enabled: false,
+      ngn_per_usd: 1500,
     });
     await getPlatformSettings(supabase);
     invalidatePlatformSettings();

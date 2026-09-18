@@ -932,3 +932,9 @@ create policy "bio_links artist delete own"
 alter table public.artists
   add column if not exists featured_drop_id uuid
   references public.drops (id) on delete set null;
+
+-- 0032_ngn_per_usd: naira per US$1, display-only rate for the USD
+-- equivalent shown next to naira prices. Charging stays in NGN.
+alter table public.platform_settings
+  add column if not exists ngn_per_usd integer not null default 1500
+  check (ngn_per_usd > 0);

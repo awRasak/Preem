@@ -15,6 +15,7 @@ import { PreviewButton } from "@/components/PreviewButton";
 import { DiscoverMore } from "@/components/DiscoverMore";
 import { ScrollToTrack } from "./ScrollToTrack";
 import { genreLabel } from "@/lib/genres";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import type { PlayerTrack } from "@/lib/player-context";
 import type { ArtistLink, Drop, DropTrack } from "@/lib/types";
 
@@ -53,6 +54,9 @@ export default async function DropView({
     | null;
 
   if (!drop || drop.artist?.approval_status !== "approved") notFound();
+
+  // Display-only USD rate for the checkout form (diaspora fans).
+  const settings = await getPlatformSettings(supabase);
 
   const live = isDropLive(drop.window_end);
   const artistId = drop.artist?.id ?? drop.artist_id;
@@ -228,6 +232,7 @@ export default async function DropView({
                   owned={isBundle ? ownsBundle : ownsBundle || (!!tracks[0] && ownedTrackIds.has(tracks[0].id))}
                   artistId={artistId}
                   artworkUrl={drop.artwork_path}
+                  usdRate={settings.ngnPerUsd}
                 />
               ) : (
                 <p className="text-xs text-muted">
@@ -290,6 +295,7 @@ export default async function DropView({
                         owned={ownsBundle || ownedTrackIds.has(track.id)}
                         artistId={artistId}
                         artworkUrl={drop.artwork_path}
+                        usdRate={settings.ngnPerUsd}
                       />
                     )}
                   </div>

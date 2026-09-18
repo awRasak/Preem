@@ -17,6 +17,7 @@ export default async function AdminSettingsPage() {
         paystackEnabled={settings.paystackEnabled}
         monipayEnabled={settings.monipayEnabled}
         waitlistModeEnabled={settings.waitlistModeEnabled}
+        ngnPerUsd={settings.ngnPerUsd}
       />
     </main>
   );

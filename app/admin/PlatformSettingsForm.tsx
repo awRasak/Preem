@@ -13,12 +13,14 @@ export function PlatformSettingsForm({
   paystackEnabled,
   monipayEnabled,
   waitlistModeEnabled,
+  ngnPerUsd,
 }: {
   dropCommissionBps: number;
   giftCommissionBps: number;
   paystackEnabled: boolean;
   monipayEnabled: boolean;
   waitlistModeEnabled: boolean;
+  ngnPerUsd: number;
 }) {
   const router = useRouter();
   const [dropPercent, setDropPercent] = useState(String(dropCommissionBps / 100));
@@ -26,6 +28,7 @@ export function PlatformSettingsForm({
   const [paystackOn, setPaystackOn] = useState(paystackEnabled);
   const [monipayOn, setMonipayOn] = useState(monipayEnabled);
   const [waitlistOn, setWaitlistOn] = useState(waitlistModeEnabled);
+  const [usdRate, setUsdRate] = useState(String(ngnPerUsd));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,6 +51,7 @@ export function PlatformSettingsForm({
         paystackEnabled: paystackOn,
         monipayEnabled: monipayOn,
         waitlistModeEnabled: waitlistOn,
+        ngnPerUsd: Math.max(1, Math.round(Number(usdRate) || 0)),
       }),
     });
     setLoading(false);
@@ -97,6 +101,28 @@ export function PlatformSettingsForm({
       </div>
       <div className="mb-4">
         <Switch checked={monipayOn} onChange={setMonipayOn} label="Monipay" />
+      </div>
+
+      <p className="mb-3 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
+        Dollar display rate
+      </p>
+      <p className="mb-3 text-xs text-muted">
+        Naira per $1, shown next to naira prices at checkout so diaspora fans
+        see a familiar number. Display only — charging stays in naira.
+        Auto-refreshed daily to 5 naira below the market rate; a manual edit
+        here lasts until the next refresh.
+      </p>
+      <div className="mb-4">
+        <Field label="₦ per $1">
+          <Input
+            required
+            type="number"
+            min={1}
+            step="1"
+            value={usdRate}
+            onChange={(e) => setUsdRate(e.target.value)}
+          />
+        </Field>
       </div>
 
       <p className="mb-3 mt-5 text-xs font-bold uppercase tracking-wide text-muted">

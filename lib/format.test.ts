@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatNaira, formatTimeLeft, isDropLive, isEndingSoon, sanitizeBio } from "./format";
+import { formatNaira, formatTimeLeft, formatUsd, isDropLive, isEndingSoon, sanitizeBio } from "./format";
 
 describe("formatNaira", () => {
   it("converts kobo to a naira display string", () => {
@@ -12,6 +12,17 @@ describe("formatNaira", () => {
 
   it("adds thousands separators", () => {
     expect(formatNaira(100_000_00)).toBe("₦100,000");
+  });
+});
+
+describe("formatUsd", () => {
+  it("converts a kobo amount at the given rate", () => {
+    // ₦3,060 at ₦1500/$1 -> $2.04
+    expect(formatUsd(306_000, 1500)).toBe("$2.04");
+  });
+
+  it("always shows two decimals with separators", () => {
+    expect(formatUsd(150_000_00, 1500)).toBe("$100.00");
   });
 });
 

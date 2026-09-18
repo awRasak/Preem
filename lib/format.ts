@@ -21,6 +21,17 @@ export function formatNaira(kobo: number): string {
   })}`;
 }
 
+// Display-only USD equivalent of a kobo amount at the given naira-per-$1
+// rate. Charging stays in NGN -- this just gives diaspora fans a familiar
+// number next to the naira price.
+export function formatUsd(amountKobo: number, ngnPerUsd: number): string {
+  const dollars = amountKobo / 100 / ngnPerUsd;
+  return `$${dollars.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 export function isDropLive(windowEnd: string | null): boolean {
   if (windowEnd === null) return true;
   return new Date(windowEnd).getTime() > Date.now();
