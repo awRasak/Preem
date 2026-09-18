@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/expire-pendings",
+      "schedule": "0 5 * * *"
+    }
+  ]
+}

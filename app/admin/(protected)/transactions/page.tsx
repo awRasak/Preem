@@ -26,9 +26,18 @@ export default async function AdminTransactionsPage() {
     };
   });
 
+  const salesCount = transactions.filter((t) => t.status === "success").length;
+  const pendingCount = transactions.filter((t) => t.status === "pending").length;
+  const failedCount = transactions.filter((t) => t.status === "failed").length;
+
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
-      <h1 className="mb-6 text-xl font-bold">Transactions</h1>
+      <h1 className="mb-1 text-xl font-bold">Transactions</h1>
+      <p className="mb-6 text-xs leading-relaxed text-muted">
+        {salesCount} paid · {pendingCount} pending · {failedCount} failed from the
+        latest 500. Abandoned checkouts (pending over 24h) auto-fail on the daily
+        janitor run.
+      </p>
       <TransactionsTable transactions={transactions} />
     </main>
   );
