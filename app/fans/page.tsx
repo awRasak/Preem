@@ -11,8 +11,8 @@ import { PhoneLookupForm } from "./PhoneLookupForm";
 import { PlayerRow } from "./PlayerRow";
 import { formatNaira } from "@/lib/format";
 import type { PlayerTrack } from "@/lib/player-context";
-import type { Artist, Drop } from "@/lib/types";
-import { trackPath } from "@/lib/slug";
+import type { Drop } from "@/lib/types";
+import { trackPath, dropPath } from "@/lib/slug";
 import { type FanIdentity } from "@/lib/fan-identity";
 import {
   NewDropNotifications,
