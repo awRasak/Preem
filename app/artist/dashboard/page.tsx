@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import { Wallet, Users, Radio, BarChart3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ArtistShell } from "@/components/ArtistShell";
 import { ApprovalCelebration } from "./ApprovalCelebration";
+import { WithdrawCard } from "./WithdrawCard";
+import { MIN_PAYOUT_KOBO } from "@/lib/payouts";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
@@ -60,6 +63,44 @@ export default async function ArtistDashboardPage() {
   ]);
 
   if (!artist) redirect("/artist/login");
+
+  // Withdrawable balance: unpaid success rows across both gateways, minus
+  // commission. Admin client, artist-scoped by user.id in every filter --
+  // the artist's own client can't reliably read payouts history under RLS.
+  const admin = createAdminClient();
+  const [{ data: unpaidPurchases }, { data: unpaidGifts }, { data: payoutHistory }] =
+    await Promise.all([
+      admin
+        .from("purchases")
+        .select("amount_kobo, drops!inner(artist_id)")
+        .eq("status", "success")
+        .eq("paid_out", false)
+        .eq("drops.artist_id", user.id),
+      admin
+        .from("gifts")
+        .select("amount_kobo")
+        .eq("artist_id", user.id)
+        .eq("status", "success")
+        .eq("paid_out", false),
+      admin
+        .from("payouts")
+        .select("amount_kobo, status, created_at")
+        .eq("artist_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
+  const withdrawableKobo =
+    (unpaidPurchases ?? []).reduce(
+      (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
+      0,
+    ) +
+    (unpaidGifts ?? []).reduce(
+      (sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps),
+      0,
+    );
+  const hasBankDetails = Boolean(
+    artist.bank_code && artist.account_number && artist.account_name,
+  );
 
   const purchases = (successPurchases ?? []) as unknown as Purchase[];
 
@@ -158,6 +199,17 @@ export default async function ArtistDashboardPage() {
             href="/artist/analytics"
           />
         </div>
+
+        <WithdrawCard
+          availableKobo={withdrawableKobo}
+          minimumKobo={MIN_PAYOUT_KOBO}
+          hasBankDetails={hasBankDetails}
+          payouts={(payoutHistory ?? []).map((p) => ({
+            amount_kobo: p.amount_kobo,
+            status: p.status,
+            created_at: p.created_at,
+          }))}
+        />
 
         {topDrops.length > 0 && (
           <div className="mb-8">
