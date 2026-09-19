@@ -65,7 +65,7 @@ export function WithdrawCard({
 
       {!hasBankDetails ? (
         <p className="mt-2 text-sm text-muted">
-          <Link href="/artist/profile" className="text-paper underline">
+          <Link href="/artist/profile?tab=payout" className="text-paper underline">
             Add your payout bank details
           </Link>{" "}
           to withdraw.
