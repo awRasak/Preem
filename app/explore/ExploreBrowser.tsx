@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { Input } from "@/components/Field";
 import { DropCard } from "@/components/DropCard";
-import { Avatar } from "@/components/Avatar";
+import { ArtistCircle } from "@/components/ArtistCircle";
 import { GENRES } from "@/lib/genres";
 import { isDropLive, isEndingSoon } from "@/lib/format";
 import type { Artist, Drop, Genre } from "@/lib/types";
@@ -132,21 +131,14 @@ export function ExploreBrowser({
       {artists.length === 0 ? (
         <p className="text-sm text-muted">No artists yet.</p>
       ) : (
-        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
+        <div className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-6">
           {artists.map((artist) => (
-            <Link
+            <ArtistCircle
               key={artist.id}
-              href={`/artist/${artist.id}`}
-              className="flex flex-col items-center gap-2 text-center"
-            >
-              <Avatar
-                src={artist.avatar_url}
-                seed={artist.id}
-                alt={artist.stage_name}
-                size={72}
-              />
-              <span className="truncate text-xs font-medium">{artist.stage_name}</span>
-            </Link>
+              id={artist.id}
+              stageName={artist.stage_name}
+              avatarUrl={artist.avatar_url}
+            />
           ))}
         </div>
       )}

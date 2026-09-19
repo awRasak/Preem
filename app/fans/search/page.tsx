@@ -5,6 +5,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { artworkFallback } from "@/lib/placeholder";
+import { ArtistCircle } from "@/components/ArtistCircle";
 import { dropPath } from "@/lib/slug";
 
 export const revalidate = 0;
@@ -112,26 +113,14 @@ export default async function FanSearchPage({
         {artists.length > 0 && (
           <section className="mb-8">
             <h2 className="mb-3 text-lg font-bold">Artists</h2>
-            <div className="divide-y divide-line rounded-xl border border-line">
+            <div className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-6">
               {artists.map((a) => (
-                <Link
+                <ArtistCircle
                   key={a.id}
-                  href={`/artist/${a.id}`}
-                  className="flex items-center gap-3 p-3 transition-colors hover:bg-surface-2/50"
-                >
-                  <span className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-full bg-surface-2">
-                    <Image
-                      src={a.avatar_url || artworkFallback(a.id)}
-                      alt={a.stage_name}
-                      fill
-                      className="object-cover"
-                      sizes="44px"
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {a.stage_name}
-                  </span>
-                </Link>
+                  id={a.id}
+                  stageName={a.stage_name}
+                  avatarUrl={a.avatar_url}
+                />
               ))}
             </div>
           </section>
