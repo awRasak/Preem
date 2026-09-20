@@ -87,7 +87,10 @@ export function WithdrawCard({
         </div>
       ) : (
         <div className="mt-3">
-          <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+          <Button variant="primary" disabled title="Unlocks at ₦10,000">
+            Withdraw {formatNaira(availableKobo)}
+          </Button>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
             <div
               className="h-full rounded-full bg-accent transition-all"
               style={{ width: `${Math.max(progress * 100, 2)}%` }}
