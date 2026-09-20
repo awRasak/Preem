@@ -76,30 +76,38 @@ export function WithdrawCard({
         </p>
       ) : meetsMinimum ? (
         <div className="mt-3">
-          <Button onClick={withdraw} variant="primary" disabled={busy}>
-            {busy ? "Sending…" : `Withdraw ${formatNaira(availableKobo)}`}
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <p className="min-w-0 flex-1 text-[11px] text-muted">
+              One transfer straight to your bank. Diaspora sales settle in
+              first, so the available balance can lag new sales by a day.
+            </p>
+            <div className="flex-shrink-0 self-end">
+              <Button onClick={withdraw} variant="primary" disabled={busy}>
+                {busy ? "Sending…" : `Withdraw ${formatNaira(availableKobo)}`}
+              </Button>
+            </div>
+          </div>
           {error && <p className="mt-2 text-sm text-[#ff6b6b]">{error}</p>}
-          <p className="mt-2 text-[11px] text-muted">
-            One transfer straight to your bank. Diaspora sales settle in first,
-            so the available balance can lag new sales by a day.
-          </p>
         </div>
       ) : (
-        <div className="mt-3">
-          <Button variant="primary" disabled title="Unlocks at ₦10,000">
-            Withdraw {formatNaira(availableKobo)}
-          </Button>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
-            <div
-              className="h-full rounded-full bg-accent transition-all"
-              style={{ width: `${Math.max(progress * 100, 2)}%` }}
-            />
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+              <div
+                className="h-full rounded-full bg-accent transition-all"
+                style={{ width: `${Math.max(progress * 100, 2)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              {formatNaira(availableKobo)} of {formatNaira(minimumKobo)} minimum
+              — keep selling.
+            </p>
           </div>
-          <p className="mt-2 text-xs text-muted">
-            {formatNaira(availableKobo)} of {formatNaira(minimumKobo)} minimum
-            — keep selling.
-          </p>
+          <div className="flex-shrink-0 self-end">
+            <Button variant="primary" disabled title="Unlocks at ₦10,000">
+              Withdraw {formatNaira(availableKobo)}
+            </Button>
+          </div>
           {error && <p className="mt-2 text-sm text-[#ff6b6b]">{error}</p>}
         </div>
       )}
