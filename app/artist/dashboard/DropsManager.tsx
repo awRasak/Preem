@@ -132,7 +132,7 @@ export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
         </div>
       )}
 
-      <div className="divide-y divide-line rounded-xl border border-line">
+      <div className="divide-y divide-line overflow-hidden rounded-xl border border-line">
         {drops.length === 0 && (
           <p className="p-5 text-sm text-muted">
             No drops yet — publish your first one.

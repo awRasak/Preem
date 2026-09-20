@@ -129,7 +129,7 @@ export default async function FanSearchPage({
         {drops.length > 0 && (
           <section className="mb-8">
             <h2 className="mb-3 text-lg font-bold">Drops</h2>
-            <div className="divide-y divide-line rounded-xl border border-line">
+            <div className="divide-y divide-line overflow-hidden rounded-xl border border-line">
               {drops.map((d) => {
                 const artist = Array.isArray(d.artist) ? d.artist[0] : d.artist;
                 return (
@@ -169,7 +169,7 @@ export default async function FanSearchPage({
         {tracks.length > 0 && (
           <section className="mb-8">
             <h2 className="mb-3 text-lg font-bold">Songs</h2>
-            <div className="divide-y divide-line rounded-xl border border-line">
+            <div className="divide-y divide-line overflow-hidden rounded-xl border border-line">
               {tracks.map((t) => {
                 const drop = Array.isArray(t.drops) ? t.drops[0] : t.drops;
                 const artist = drop && (Array.isArray(drop.artist) ? drop.artist[0] : drop.artist);

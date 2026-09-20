@@ -214,7 +214,7 @@ export default async function ArtistDashboardPage() {
         {topDrops.length > 0 && (
           <div className="mb-8">
             <h2 className="mb-4 text-lg font-bold">Top drops</h2>
-            <div className="divide-y divide-line rounded-xl border border-line">
+            <div className="divide-y divide-line overflow-hidden rounded-xl border border-line">
               {topDrops.map(({ drop, sales }, i) => (
                 <a
                   key={drop.id}
