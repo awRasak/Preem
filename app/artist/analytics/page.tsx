@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { TrendingUp, TrendingDown, Wallet, Users, ShoppingBag, PiggyBank } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ArtistShell } from "@/components/ArtistShell";
@@ -12,7 +13,19 @@ import type { Purchase } from "@/lib/types";
 // this product is built for — not the server's or the fan's local timezone.
 const LAGOS_OFFSET_MS = 1 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WINDOW_DAYS = 30;
+
+type RangeId = "7d" | "30d" | "90d" | "all";
+
+const RANGES: { id: RangeId; label: string; days: number | null; heading: string }[] = [
+  { id: "7d", label: "7D", days: 7, heading: "Last 7 days" },
+  { id: "30d", label: "30D", days: 30, heading: "Last 30 days" },
+  { id: "90d", label: "90D", days: 90, heading: "Last 90 days" },
+  { id: "all", label: "All time", days: null, heading: "All time" },
+];
+
+function parseRange(raw: string | undefined): RangeId {
+  return RANGES.some((r) => r.id === raw) ? (raw as RangeId) : "30d";
+}
 
 function dayKey(iso: string): string {
   const d = new Date(new Date(iso).getTime() + LAGOS_OFFSET_MS);
@@ -28,7 +41,29 @@ function keyForOffsetDaysAgo(daysAgo: number): string {
   return `${d.getUTCFullYear()}-${mm}-${dd}`;
 }
 
-export default async function ArtistAnalyticsPage() {
+// Monday (Lagos) of the week containing `iso`, as YYYY-MM-DD — the bucket
+// key for the all-time weekly chart.
+function weekKey(iso: string): string {
+  const shifted = new Date(iso).getTime() + LAGOS_OFFSET_MS;
+  const d = new Date(shifted);
+  const dow = (d.getUTCDay() + 6) % 7; // Monday = 0
+  const monday = new Date(shifted - dow * DAY_MS);
+  const mm = String(monday.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(monday.getUTCDate()).padStart(2, "0");
+  return `${monday.getUTCFullYear()}-${mm}-${dd}`;
+}
+
+type Bar = { key: string; title: string; revenueKobo: number; isToday: boolean };
+
+export default async function ArtistAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const { range: rawRange } = await searchParams;
+  const range = parseRange(rawRange);
+  const rangeDef = RANGES.find((r) => r.id === range)!;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,7 +89,7 @@ export default async function ArtistAnalyticsPage() {
       .select("*")
       .eq("artist_id", user.id)
       .order("payout_week", { ascending: false })
-      .limit(10),
+      .limit(20),
     supabase
       .from("drops")
       .select("id, title, created_at")
@@ -64,7 +99,7 @@ export default async function ArtistAnalyticsPage() {
 
   if (!artist) redirect("/artist/login");
 
-  const purchases = (successPurchases ?? []) as unknown as (Purchase & {
+  const allPurchases = (successPurchases ?? []) as unknown as (Purchase & {
     drops: { title: string } | { title: string }[] | null;
   })[];
   const dropTitle = new Map<string, string>(
@@ -72,54 +107,84 @@ export default async function ArtistAnalyticsPage() {
   );
 
   const netOf = (amountKobo: number) => applyCommission(amountKobo, settings.dropCommissionBps);
+  const atOf = (p: Purchase) => p.purchased_at ?? p.created_at;
+
+  // Everything below (except the momentum line) is scoped to the range.
+  const cutoff = rangeDef.days === null ? null : Date.now() - rangeDef.days * DAY_MS;
+  const purchases =
+    cutoff === null ? allPurchases : allPurchases.filter((p) => new Date(atOf(p)).getTime() >= cutoff);
+
   const totalSales = purchases.length;
   const revenueKobo = purchases.reduce((sum, p) => sum + netOf(p.amount_kobo), 0);
   const buyers = new Set(purchases.map((p) => p.fan_phone)).size;
   const avgPerBuyer = buyers > 0 ? Math.round(revenueKobo / buyers) : 0;
 
-  // Daily revenue over the last 30 days.
-  const revenueByDay = new Map<string, number>();
-  for (const p of purchases) {
-    const key = dayKey(p.purchased_at ?? p.created_at);
-    revenueByDay.set(key, (revenueByDay.get(key) ?? 0) + netOf(p.amount_kobo));
-  }
-  const days: { key: string; label: string; revenueKobo: number; isToday: boolean }[] = [];
-  for (let i = WINDOW_DAYS - 1; i >= 0; i--) {
-    const key = keyForOffsetDaysAgo(i);
-    const d = new Date(Date.now() - i * DAY_MS + LAGOS_OFFSET_MS);
-    days.push({
+  // Revenue chart: daily buckets for bounded ranges, weekly for all-time.
+  let bars: Bar[];
+  if (rangeDef.days !== null) {
+    const revenueByDay = new Map<string, number>();
+    for (const p of purchases) {
+      const key = dayKey(atOf(p));
+      revenueByDay.set(key, (revenueByDay.get(key) ?? 0) + netOf(p.amount_kobo));
+    }
+    bars = [];
+    for (let i = rangeDef.days - 1; i >= 0; i--) {
+      const key = keyForOffsetDaysAgo(i);
+      bars.push({
+        key,
+        title: `${key} · ${formatNaira(revenueByDay.get(key) ?? 0)}`,
+        revenueKobo: revenueByDay.get(key) ?? 0,
+        isToday: i === 0,
+      });
+    }
+  } else {
+    const revenueByWeek = new Map<string, number>();
+    for (const p of purchases) {
+      const key = weekKey(atOf(p));
+      revenueByWeek.set(key, (revenueByWeek.get(key) ?? 0) + netOf(p.amount_kobo));
+    }
+    const weeks = [...revenueByWeek.keys()].sort();
+    bars = weeks.slice(-52).map((key) => ({
       key,
-      label: String(d.getUTCDate()),
-      revenueKobo: revenueByDay.get(key) ?? 0,
-      isToday: i === 0,
-    });
+      title: `Week of ${key} · ${formatNaira(revenueByWeek.get(key) ?? 0)}`,
+      revenueKobo: revenueByWeek.get(key) ?? 0,
+      isToday: key === weekKey(new Date().toISOString()),
+    }));
   }
-  const maxDayRevenue = Math.max(1, ...days.map((d) => d.revenueKobo));
+  const maxRevenue = Math.max(1, ...bars.map((b) => b.revenueKobo));
 
-  // This week (rolling 7 days) vs the 7 before it.
+  // Momentum: rolling 7 days vs the 7 before it, always on all data -- a
+  // business-health read independent of the selected window.
   const now = Date.now();
   let thisWeekKobo = 0;
   let lastWeekKobo = 0;
-  for (const p of purchases) {
-    const age = now - new Date(p.purchased_at ?? p.created_at).getTime();
+  for (const p of allPurchases) {
+    const age = now - new Date(atOf(p)).getTime();
     if (age <= 7 * DAY_MS) thisWeekKobo += netOf(p.amount_kobo);
     else if (age <= 14 * DAY_MS) lastWeekKobo += netOf(p.amount_kobo);
   }
 
-  // Per-drop breakdown.
+  // Per-drop breakdown, range-scoped.
   type DropAgg = { count: number; revenueKobo: number; lastSaleAt: string };
   const byDrop = new Map<string, DropAgg>();
   for (const p of purchases) {
-    const agg = byDrop.get(p.drop_id) ?? { count: 0, revenueKobo: 0, lastSaleAt: p.purchased_at ?? p.created_at };
+    const agg = byDrop.get(p.drop_id) ?? { count: 0, revenueKobo: 0, lastSaleAt: atOf(p) };
     agg.count += 1;
     agg.revenueKobo += netOf(p.amount_kobo);
-    const at = p.purchased_at ?? p.created_at;
+    const at = atOf(p);
     if (at > agg.lastSaleAt) agg.lastSaleAt = at;
     byDrop.set(p.drop_id, agg);
   }
   const dropRows = [...byDrop.entries()]
     .map(([id, agg]) => ({ id, title: dropTitle.get(id) ?? "Unknown drop", ...agg }))
     .sort((a, b) => b.revenueKobo - a.revenueKobo);
+
+  // Payout history follows the range too (by payout week).
+  const payoutCutoffKey =
+    cutoff === null ? null : keyForOffsetDaysAgo(rangeDef.days! - 1);
+  const payoutRows = (payouts ?? []).filter(
+    (p) => payoutCutoffKey === null || p.payout_week >= payoutCutoffKey,
+  );
 
   const weekLabel = (iso: string) => {
     const d = new Date(iso + "T00:00:00Z");
@@ -129,6 +194,11 @@ export default async function ArtistAnalyticsPage() {
     return `${month} ${day}${year}`;
   };
 
+  const axisLabel = (i: number) =>
+    bars.length <= 31
+      ? bars[i]?.key.slice(5)
+      : bars[i]?.key;
+
   return (
     <ArtistShell
       active="analytics"
@@ -137,9 +207,27 @@ export default async function ArtistAnalyticsPage() {
       artistId={user.id}
     >
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between gap-4">
           <h1 className="text-xl font-bold">Analytics</h1>
-          <span className="text-xs text-muted">All-time</span>
+          <div
+            role="tablist"
+            aria-label="Time range"
+            className="flex gap-1 rounded-lg border border-line p-1"
+          >
+            {RANGES.map((r) => (
+              <Link
+                key={r.id}
+                role="tab"
+                aria-selected={r.id === range}
+                href={r.id === "30d" ? "/artist/analytics" : `/artist/analytics?range=${r.id}`}
+                className={`rounded-md px-2.5 py-1 text-xs font-bold transition-colors ${
+                  r.id === range ? "bg-surface-2 text-paper" : "text-muted hover:text-paper"
+                }`}
+              >
+                {r.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -151,7 +239,7 @@ export default async function ArtistAnalyticsPage() {
 
         <div className="mb-8">
           <div className="mb-2 flex items-end justify-between gap-4">
-            <h2 className="text-lg font-bold">Last 30 days</h2>
+            <h2 className="text-lg font-bold">{rangeDef.heading}</h2>
             <div className="flex items-center gap-2 text-xs text-muted">
               {thisWeekKobo > lastWeekKobo ? (
                 <TrendingUp className="h-4 w-4 text-[#34d399]" />
@@ -163,26 +251,34 @@ export default async function ArtistAnalyticsPage() {
               </span>
             </div>
           </div>
-          <div className="flex h-36 items-end gap-[3px] rounded-xl border border-line bg-surface p-3">
-            {days.map((d) => (
-              <div
-                key={d.key}
-                title={`${d.key} · ${formatNaira(d.revenueKobo)}`}
-                className={`relative flex min-w-0 flex-1 flex-col justify-end ${
-                  d.isToday ? "bg-accent" : "bg-line-strong"
-                } rounded-t ${d.revenueKobo === 0 ? "opacity-40" : ""}`}
-                style={{ height: `${Math.max(d.revenueKobo / maxDayRevenue, 0.02) * 100}%` }}
-              />
-            ))}
-          </div>
-          <div className="mt-1.5 flex justify-between text-[10px] text-muted">
-            <span>{days[0]?.key.slice(5)}</span>
-            <span>{days[15]?.key.slice(5)}</span>
-            <span>{days[29]?.key.slice(5)}</span>
-          </div>
+          {bars.length === 0 ? (
+            <p className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-muted">
+              No sales in this period yet.
+            </p>
+          ) : (
+            <>
+              <div className="flex h-36 items-end gap-[3px] rounded-xl border border-line bg-surface p-3">
+                {bars.map((b) => (
+                  <div
+                    key={b.key}
+                    title={b.title}
+                    className={`relative flex min-w-0 flex-1 flex-col justify-end ${
+                      b.isToday ? "bg-accent" : "bg-line-strong"
+                    } rounded-t ${b.revenueKobo === 0 ? "opacity-40" : ""}`}
+                    style={{ height: `${Math.max(b.revenueKobo / maxRevenue, 0.02) * 100}%` }}
+                  />
+                ))}
+              </div>
+              <div className="mt-1.5 flex justify-between text-[10px] text-muted">
+                <span>{axisLabel(0)}</span>
+                <span>{axisLabel(Math.floor(bars.length / 2))}</span>
+                <span>{axisLabel(bars.length - 1)}</span>
+              </div>
+            </>
+          )}
         </div>
 
-        {dropRows.length > 0 && (
+        {dropRows.length > 0 ? (
           <div className="mb-8">
             <h2 className="mb-4 text-lg font-bold">Sales by drop</h2>
             <div className="divide-y divide-line rounded-xl border border-line">
@@ -203,15 +299,17 @@ export default async function ArtistAnalyticsPage() {
               ))}
             </div>
           </div>
+        ) : (
+          <p className="mb-8 text-sm text-muted">No sales in this period yet.</p>
         )}
 
         <div className="mb-8">
           <h2 className="mb-4 text-lg font-bold">Payout history</h2>
-          {(payouts ?? []).length === 0 ? (
-            <p className="text-sm text-muted">No payouts yet.</p>
+          {payoutRows.length === 0 ? (
+            <p className="text-sm text-muted">No payouts in this period yet.</p>
           ) : (
             <div className="divide-y divide-line rounded-xl border border-line">
-              {(payouts ?? []).map((p) => (
+              {payoutRows.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 p-4">
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium">Week of {weekLabel(p.payout_week)}</div>
