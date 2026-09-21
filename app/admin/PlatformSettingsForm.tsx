@@ -65,91 +65,99 @@ export function PlatformSettingsForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xs rounded-xl border border-line p-4">
-      <p className="mb-4 text-xs text-muted">
-        Platform&apos;s cut of each transaction. Artists keep the rest. Applies to
-        every drop purchase and gift going forward — doesn&apos;t change past payouts.
-      </p>
-      <Field label="Drop purchase commission (%)">
-        <Input
-          required
-          type="number"
-          min={0}
-          max={100}
-          step="0.1"
-          value={dropPercent}
-          onChange={(e) => setDropPercent(e.target.value)}
-        />
-      </Field>
-      <Field label="Gift commission (%)">
-        <Input
-          required
-          type="number"
-          min={0}
-          max={100}
-          step="0.1"
-          value={giftPercent}
-          onChange={(e) => setGiftPercent(e.target.value)}
-        />
-      </Field>
+    <form onSubmit={handleSubmit}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-1 text-sm font-bold">Commissions</h2>
+          <p className="mb-4 text-xs text-muted">
+            Platform&apos;s cut of each transaction. Artists keep the rest. Applies to
+            every drop purchase and gift going forward — doesn&apos;t change past payouts.
+          </p>
+          <Field label="Drop purchase commission (%)">
+            <Input
+              required
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              value={dropPercent}
+              onChange={(e) => setDropPercent(e.target.value)}
+            />
+          </Field>
+          <Field label="Gift commission (%)">
+            <Input
+              required
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              value={giftPercent}
+              onChange={(e) => setGiftPercent(e.target.value)}
+            />
+          </Field>
+        </section>
 
-      <p className="mb-3 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
-        Checkout payment methods
-      </p>
-      <div className="mb-2">
-        <Switch checked={paystackOn} onChange={setPaystackOn} label="Paystack" />
-      </div>
-      <div className="mb-4">
-        <Switch checked={monipayOn} onChange={setMonipayOn} label="Monipay" />
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-1 text-sm font-bold">Checkout payment methods</h2>
+          <p className="mb-4 text-xs text-muted">
+            Which rails fans can pay through at checkout.
+          </p>
+          <div className="mb-2">
+            <Switch checked={paystackOn} onChange={setPaystackOn} label="Paystack" />
+          </div>
+          <div>
+            <Switch checked={monipayOn} onChange={setMonipayOn} label="Monipay" />
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-1 text-sm font-bold">Dollar display rate</h2>
+          <p className="mb-4 text-xs text-muted">
+            Naira per $1, shown next to naira prices at checkout so diaspora fans
+            see a familiar number. Display only — charging stays in naira.
+            Auto-refreshed daily to 5 naira below the market rate; a manual edit
+            here lasts until the next refresh.
+          </p>
+          <Field label="₦ per $1">
+            <Input
+              required
+              type="number"
+              min={1}
+              step="1"
+              value={usdRate}
+              onChange={(e) => setUsdRate(e.target.value)}
+            />
+          </Field>
+        </section>
+
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <h2 className="mb-1 text-sm font-bold">Homepage access</h2>
+          <div className="mb-2 mt-4">
+            <Switch checked={waitlistOn} onChange={setWaitlistOn} label="Pre-launch waitlist modal" />
+          </div>
+          <p className="text-xs text-muted">
+            On: homepage visitors see a &quot;going live soon&quot; waitlist gate. It
+            lifts as soon as they join (and stays lifted in that browser). Off: the
+            real homepage is open to everyone. Doesn&apos;t affect artist dashboards,
+            fan libraries, or direct drop links either way.
+          </p>
+        </section>
       </div>
 
-      <p className="mb-3 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
-        Dollar display rate
-      </p>
-      <p className="mb-3 text-xs text-muted">
-        Naira per $1, shown next to naira prices at checkout so diaspora fans
-        see a familiar number. Display only — charging stays in naira.
-        Auto-refreshed daily to 5 naira below the market rate; a manual edit
-        here lasts until the next refresh.
-      </p>
-      <div className="mb-4">
-        <Field label="₦ per $1">
-          <Input
-            required
-            type="number"
-            min={1}
-            step="1"
-            value={usdRate}
-            onChange={(e) => setUsdRate(e.target.value)}
-          />
-        </Field>
+      <div className="mt-4 flex items-center gap-3">
+        <Button type="submit" variant="primary" disabled={loading}>
+          {loading ? (
+            "…"
+          ) : saved ? (
+            <span className="flex items-center gap-1.5">
+              Saved <Check className="h-3.5 w-3.5" />
+            </span>
+          ) : (
+            "Save"
+          )}
+        </Button>
+        {error && <p className="text-sm text-[#ff6b6b]">{error}</p>}
       </div>
-
-      <p className="mb-3 mt-5 text-xs font-bold uppercase tracking-wide text-muted">
-        Homepage access
-      </p>
-      <div className="mb-2">
-        <Switch checked={waitlistOn} onChange={setWaitlistOn} label="Pre-launch waitlist modal" />
-      </div>
-      <p className="mb-4 text-xs text-muted">
-        On: homepage visitors see a &quot;going live soon&quot; waitlist gate. It
-        lifts as soon as they join (and stays lifted in that browser). Off: the
-        real homepage is open to everyone. Doesn&apos;t affect artist dashboards,
-        fan libraries, or direct drop links either way.
-      </p>
-
-      {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
-      <Button type="submit" variant="primary" disabled={loading}>
-        {loading ? (
-          "…"
-        ) : saved ? (
-          <span className="flex items-center gap-1.5">
-            Saved <Check className="h-3.5 w-3.5" />
-          </span>
-        ) : (
-          "Save"
-        )}
-      </Button>
     </form>
   );
 }
