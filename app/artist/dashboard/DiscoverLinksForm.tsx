@@ -49,7 +49,8 @@ export function DiscoverLinksForm({ links }: { links: ArtistLink[] }) {
     <>
       <p className="mb-4 text-xs text-muted">
         Add links to your already-released music elsewhere — shown on your drop
-        pages so fans can find your other tracks.
+        pages so fans can find your other tracks. Paste a song or album link
+        for inline playback; artist profile links show as a button instead.
       </p>
 
       {links.length > 0 && (
