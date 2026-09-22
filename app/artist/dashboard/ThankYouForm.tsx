@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/storage-upload";
 import { Field, Textarea } from "@/components/Field";
@@ -112,10 +113,34 @@ export function ThankYouForm({
         />
       </Field>
 
-      <Field label="Photo or video (optional)">
-        <div className="flex items-center gap-4">
-          {mediaUrl &&
-            (mediaType === "video" ? (
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] font-bold text-muted">
+            Photo or video (optional)
+          </span>
+          <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-paper underline">
+            <Upload className="h-3.5 w-3.5" />
+            {uploading ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Spinner size="xs" /> Uploading…
+              </span>
+            ) : mediaUrl ? (
+              "Replace"
+            ) : (
+              "Upload"
+            )}
+            <input
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleMediaChange}
+              className="hidden"
+              disabled={uploading}
+            />
+          </label>
+        </div>
+        {mediaUrl && (
+          <div className="mt-3 flex items-center gap-4">
+            {mediaType === "video" ? (
               <video
                 src={mediaUrl}
                 controls
@@ -125,38 +150,17 @@ export function ThankYouForm({
               <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
                 <Image src={mediaUrl} alt="Thank-you media" fill className="object-cover" sizes="96px" />
               </div>
-            ))}
-          <div className="flex flex-col items-start gap-2">
-            <label className="cursor-pointer text-xs font-bold text-paper underline">
-              {uploading ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Spinner size="xs" /> Uploading…
-                </span>
-              ) : mediaUrl ? (
-                "Replace"
-              ) : (
-                "Upload"
-              )}
-              <input
-                type="file"
-                accept="image/*,video/*"
-                onChange={handleMediaChange}
-                className="hidden"
-                disabled={uploading}
-              />
-            </label>
-            {mediaUrl && (
-              <button
-                type="button"
-                onClick={handleRemoveMedia}
-                className="text-xs font-bold text-muted underline hover:text-paper"
-              >
-                Remove
-              </button>
             )}
+            <button
+              type="button"
+              onClick={handleRemoveMedia}
+              className="text-xs font-bold text-muted underline hover:text-paper"
+            >
+              Remove
+            </button>
           </div>
-        </div>
-      </Field>
+        )}
+      </div>
 
       {error && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
       {success && <p className="mb-3 text-sm text-[#34d399]">Saved.</p>}
