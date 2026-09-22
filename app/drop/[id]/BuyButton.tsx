@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadScript } from "@/lib/load-script";
 import {
@@ -106,8 +106,18 @@ export function BuyButton({
     const minNaira = minPriceKobo / 100;
     return [minNaira, minNaira * 2, minNaira * 5];
   }, [minPriceKobo]);
-  const [priceMode, setPriceMode] = useState<number | "custom" | null>(null);
+  const [priceMode, setPriceMode] = useState<number | "custom" | null>(
+    () => minPriceKobo / 100,
+  );
   const pricePicked = priceMode !== null;
+  // Keep the auto-picked minimum in sync if this instance is reused for
+  // a different track/drop (bundle list) without remounting.
+  useEffect(() => {
+    if (priceMode !== "custom" && typeof priceMode === "number" && !priceChipsNaira.includes(priceMode)) {
+      setPriceMode(priceChipsNaira[0]);
+      setAmountNaira(String(priceChipsNaira[0]));
+    }
+  }, [priceChipsNaira, priceMode]);
   const {
     fanName,
     fanPhone,
