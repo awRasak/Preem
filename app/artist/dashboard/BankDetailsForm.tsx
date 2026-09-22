@@ -20,6 +20,12 @@ export function BankDetailsForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // Name confirmed by the last successful save in THIS session. The header
+  // and button below read linkedName (not just the prop) so confirmation
+  // survives whether refresh() preserves state or remounts the form: on a
+  // remount the fresh currentAccountName prop carries the same truth.
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const linkedName = savedName ?? currentAccountName;
 
   useEffect(() => {
     fetch("/api/paystack/banks")
@@ -56,15 +62,18 @@ export function BankDetailsForm({
       setError(body.error ?? "Could not save bank details.");
       return;
     }
-    setSuccess(`Linked to ${body.accountName}`);
+    setSavedName(body.accountName as string);
+    setBankCode("");
+    setAccountNumber("");
+    setSuccess(`Saved — payouts now go to ${body.accountName}.`);
     router.refresh();
   }
 
   return (
     <>
       <p className="mb-4 text-xs text-muted">
-        {currentAccountName
-          ? `Currently linked: ${currentAccountName}`
+        {linkedName
+          ? `Currently linked: ${linkedName}`
           : "Add your bank details so weekly payouts can reach you."}
       </p>
       <form onSubmit={handleSubmit}>
@@ -99,6 +108,8 @@ export function BankDetailsForm({
             <span className="inline-flex items-center gap-2">
               <Spinner size="xs" /> Verifying…
             </span>
+          ) : linkedName ? (
+            "Change account details"
           ) : (
             "Save bank account"
           )}
