@@ -5,7 +5,7 @@ import { isDropLive } from "@/lib/format";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
-import { countryFromRequest, gatewayForCountry } from "@/lib/geo";
+import { countryFromRequest, gatewayForCountry, publicKeyForGateway } from "@/lib/geo";
 
 const schema = z.object({
   dropId: z.string().uuid(),
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
   const settings = await getPlatformSettings(supabase);
   // The server picks the gateway from the buyer's country -- Nigeria pays
-  // local (Monipay), everyone else pays international (Paystack). The client
+  // local (Monipay), everyone else pays international (Squad). The client
   // never chooses.
   const gateway = gatewayForCountry(countryFromRequest(req), settings);
   if (!gateway) {
@@ -143,7 +143,9 @@ export async function POST(req: Request) {
   // creates the order under it. Pre-registering the same reference from this
   // route first makes the popup's creation fail with "Duplicate transaction:
   // order_id already exists" on every attempt -- verified Sep 2026, right
-  // after metadata.reference started reaching the popup.
+  // after metadata.reference started reaching the popup. Squad's widget
+  // follows the same inline model: it registers the transaction itself under
+  // the transaction_ref it is handed, so this route must not pre-create one.
   let accessCode: string | undefined;
 
   return NextResponse.json({
@@ -151,9 +153,6 @@ export async function POST(req: Request) {
     amountKobo,
     gateway,
     accessCode,
-    publicKey:
-      gateway === "monipay"
-        ? process.env.NEXT_PUBLIC_MONIPAY_PUBLIC_KEY
-        : process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+    publicKey: publicKeyForGateway(gateway),
   });
 }

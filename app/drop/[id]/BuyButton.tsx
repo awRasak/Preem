@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadScript } from "@/lib/load-script";
+import { openSquadCheckout } from "@/lib/squad-widget";
 import {
   dismissNewestMonipayPopup,
   isMonipayPopupOpen,
@@ -110,14 +111,19 @@ export function BuyButton({
     () => minPriceKobo / 100,
   );
   const pricePicked = priceMode !== null;
-  // Keep the auto-picked minimum in sync if this instance is reused for
-  // a different track/drop (bundle list) without remounting.
-  useEffect(() => {
+  // Keep the auto-picked minimum in sync if this instance is reused for a
+  // different track/drop (bundle list) without remounting. Done at render
+  // time with the previous value in state -- React's documented pattern for
+  // adjusting state when a prop changes; doing it in an effect trips
+  // react-hooks/set-state-in-effect.
+  const [syncedMinPriceKobo, setSyncedMinPriceKobo] = useState(minPriceKobo);
+  if (minPriceKobo !== syncedMinPriceKobo) {
+    setSyncedMinPriceKobo(minPriceKobo);
     if (priceMode !== "custom" && typeof priceMode === "number" && !priceChipsNaira.includes(priceMode)) {
       setPriceMode(priceChipsNaira[0]);
       setAmountNaira(String(priceChipsNaira[0]));
     }
-  }, [priceChipsNaira, priceMode]);
+  }
   const {
     fanName,
     fanPhone,
@@ -267,7 +273,7 @@ export function BuyButton({
     }
 
     // The server geo-routes the payment: Nigeria goes local (Monipay),
-    // everyone else international (Paystack). The client never chooses.
+    // everyone else international (Squad). The client never chooses.
     if (body.gateway === "monipay") {
       try {
         await loadScript("https://js.monipay.ng/v2/inline.js");
@@ -311,6 +317,33 @@ export function BuyButton({
         },
         onSuccess: (data) => afterPaymentSuccess(body.reference, data),
       });
+      return;
+    }
+
+    if (body.gateway === "squad") {
+      // Squad's widget registers the transaction itself under
+      // `transaction_ref`, so -- exactly like Monipay -- this route must not
+      // pre-initiate one. Its onClose also fires AFTER onSuccess on the
+      // account_linked path, so only roll back when we're still waiting on
+      // it; a blanket reset would clobber the "verifying" step.
+      try {
+        await openSquadCheckout({
+          publicKey: body.publicKey,
+          email: fanEmail,
+          amountKobo: body.amountKobo,
+          reference: body.reference,
+          customerName: fanName,
+          onSuccess: () => afterPaymentSuccess(body.reference),
+          onClose: () => {
+            payingRef.current = false;
+            setStep((current) => (current === "submitting" ? "form" : current));
+          },
+        });
+      } catch {
+        setError("Payment failed to load — try again.");
+        setStep("form");
+        payingRef.current = false;
+      }
       return;
     }
 
@@ -537,7 +570,7 @@ export function BuyButton({
                         className={`rounded-xl border px-3 py-3 text-left transition-colors ${
                           priceMode === n
                             ? "border-accent bg-accent/10"
-                            : "border-line-strong bg-surface-2 hover:border-accent/50"
+                            : "border-line bg-surface-2 hover:border-line-strong hover:bg-surface"
                         }`}
                       >
                         <span
@@ -564,7 +597,7 @@ export function BuyButton({
                       className={`rounded-xl border px-3 py-3 text-left transition-colors ${
                         priceMode === "custom"
                           ? "border-accent bg-accent/10"
-                          : "border-line-strong bg-surface-2 hover:border-accent/50"
+                          : "border-line bg-surface-2 hover:border-line-strong hover:bg-surface"
                       }`}
                     >
                       <span
@@ -590,6 +623,7 @@ export function BuyButton({
                       value={amountNaira}
                       onChange={(e) => setAmountNaira(e.target.value)}
                       autoFocus
+                      className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                     {usdRate && amountValid ? (
                       <p className="mt-1.5 text-[11px] text-muted">

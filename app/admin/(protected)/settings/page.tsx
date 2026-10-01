@@ -16,7 +16,7 @@ export default async function AdminSettingsPage() {
         giftCommissionBps={settings.giftCommissionBps}
         paystackEnabled={settings.paystackEnabled}
         monipayEnabled={settings.monipayEnabled}
-        waitlistModeEnabled={settings.waitlistModeEnabled}
+        squadEnabled={settings.squadEnabled}
         ngnPerUsd={settings.ngnPerUsd}
       />
     </main>

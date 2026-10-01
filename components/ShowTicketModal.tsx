@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadScript } from "@/lib/load-script";
+import { openSquadCheckout } from "@/lib/squad-widget";
 import {
   dismissNewestMonipayPopup,
   isMonipayPopupOpen,
@@ -137,7 +138,7 @@ export function BuyTicketButton({
     }
 
     // The server geo-routes the payment: Nigeria goes local (Monipay),
-    // everyone else international (Paystack). The client never chooses.
+    // everyone else international (Squad). The client never chooses.
     if (body.gateway === "monipay") {
       try {
         await loadScript("https://js.monipay.ng/v2/inline.js");
@@ -178,6 +179,31 @@ export function BuyTicketButton({
         },
         onSuccess: (data) => afterPaymentSuccess(body.reference, data),
       });
+      return;
+    }
+
+    if (body.gateway === "squad") {
+      // See BuyButton: the widget registers the transaction itself under our
+      // transaction_ref, and onClose can fire after onSuccess -- only reset
+      // when we are still waiting on it.
+      try {
+        await openSquadCheckout({
+          publicKey: body.publicKey,
+          email: fanEmail,
+          amountKobo: body.amountKobo,
+          reference: body.reference,
+          customerName: fanName,
+          onSuccess: () => afterPaymentSuccess(body.reference),
+          onClose: () => {
+            payingRef.current = false;
+            setStep((current) => (current === "submitting" ? "form" : current));
+          },
+        });
+      } catch {
+        setError("Payment failed to load — try again.");
+        setStep("form");
+        payingRef.current = false;
+      }
       return;
     }
 

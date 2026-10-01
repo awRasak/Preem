@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { loadScript } from "@/lib/load-script";
+import { openSquadCheckout } from "@/lib/squad-widget";
 import {
   dismissNewestMonipayPopup,
   isMonipayPopupOpen,
@@ -134,7 +135,7 @@ export function GiftButton({
     }
 
     // The server geo-routes the gift: Nigeria goes local (Monipay),
-    // everyone else international (Paystack). The client never chooses.
+    // everyone else international (Squad). The client never chooses.
     if (body.gateway === "monipay") {
       try {
         await loadScript("https://js.monipay.ng/v2/inline.js");
@@ -191,6 +192,42 @@ export function GiftButton({
             });
         },
       });
+      return;
+    }
+
+    if (body.gateway === "squad") {
+      // See BuyButton: the widget registers the transaction itself under our
+      // transaction_ref, and onClose can fire after onSuccess -- only reset
+      // when we are still waiting on it.
+      try {
+        await openSquadCheckout({
+          publicKey: body.publicKey,
+          email: body.fanEmail,
+          amountKobo: body.amountKobo,
+          reference: body.reference,
+          onSuccess: () => {
+            setStep("verifying");
+            fetch(`/api/gift/verify?reference=${encodeURIComponent(body.reference)}`)
+              .then((r) => r.json().then((verifyBody) => ({ ok: r.ok, verifyBody })))
+              .then(({ ok, verifyBody }) => {
+                if (ok && verifyBody.status === "success") {
+                  setStep("done");
+                } else {
+                  setError("We received your payment but couldn't confirm it yet.");
+                  setStep("error");
+                }
+              });
+          },
+          onClose: () => {
+            payingRef.current = false;
+            setStep((current) => (current === "submitting" ? "form" : current));
+          },
+        });
+      } catch {
+        setError("Payment failed to load — try again.");
+        setStep("form");
+        payingRef.current = false;
+      }
       return;
     }
 

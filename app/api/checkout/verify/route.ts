@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyTransaction as verifyPaystackTransaction } from "@/lib/paystack";
 import { verifyTransaction as verifyMonipayTransaction, monipayCollected } from "@/lib/monipay";
+import { verifyTransaction as verifySquadTransaction } from "@/lib/squad";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
 
@@ -34,16 +35,21 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Squad reports "Success"/"Failed"/"Abandoned" capitalized; lib/squad
+    // normalizes it to lowercase before this check.
     const tx =
       existing.gateway === "monipay"
         ? await verifyMonipayTransaction(reference)
-        : await verifyPaystackTransaction(reference);
+        : existing.gateway === "squad"
+          ? await verifySquadTransaction(reference)
+          : await verifyPaystackTransaction(reference);
     if (tx.status !== "success") {
       return NextResponse.json({ status: tx.status });
     }
     // The gateway must have collected at least the committed price before
     // access is granted (guards against a tampered inline popup amount).
-    // Monipay reports net of fees, so compare the gross collected.
+    // Monipay reports net of fees, so compare the gross collected -- Paystack
+    // and Squad both report gross already.
     const collected =
       existing.gateway === "monipay" ? monipayCollected(tx) : tx.amount;
     if (typeof collected === "number" && collected < existing.amount_kobo) {

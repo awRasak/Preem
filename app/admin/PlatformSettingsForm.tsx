@@ -12,14 +12,14 @@ export function PlatformSettingsForm({
   giftCommissionBps,
   paystackEnabled,
   monipayEnabled,
-  waitlistModeEnabled,
+  squadEnabled,
   ngnPerUsd,
 }: {
   dropCommissionBps: number;
   giftCommissionBps: number;
   paystackEnabled: boolean;
   monipayEnabled: boolean;
-  waitlistModeEnabled: boolean;
+  squadEnabled: boolean;
   ngnPerUsd: number;
 }) {
   const router = useRouter();
@@ -27,7 +27,7 @@ export function PlatformSettingsForm({
   const [giftPercent, setGiftPercent] = useState(String(giftCommissionBps / 100));
   const [paystackOn, setPaystackOn] = useState(paystackEnabled);
   const [monipayOn, setMonipayOn] = useState(monipayEnabled);
-  const [waitlistOn, setWaitlistOn] = useState(waitlistModeEnabled);
+  const [squadOn, setSquadOn] = useState(squadEnabled);
   const [usdRate, setUsdRate] = useState(String(ngnPerUsd));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -37,7 +37,7 @@ export function PlatformSettingsForm({
     e.preventDefault();
     setError(null);
     setSaved(false);
-    if (!paystackOn && !monipayOn) {
+    if (!paystackOn && !monipayOn && !squadOn) {
       setError("At least one payment gateway must stay on.");
       return;
     }
@@ -50,7 +50,7 @@ export function PlatformSettingsForm({
         giftCommissionBps: Math.round(Number(giftPercent) * 100),
         paystackEnabled: paystackOn,
         monipayEnabled: monipayOn,
-        waitlistModeEnabled: waitlistOn,
+        squadEnabled: squadOn,
         ngnPerUsd: Math.max(1, Math.round(Number(usdRate) || 0)),
       }),
     });
@@ -103,10 +103,13 @@ export function PlatformSettingsForm({
             Which rails fans can pay through at checkout.
           </p>
           <div className="mb-2">
-            <Switch checked={paystackOn} onChange={setPaystackOn} label="Paystack" />
+            <Switch checked={squadOn} onChange={setSquadOn} label="Squad — international" />
+          </div>
+          <div className="mb-2">
+            <Switch checked={monipayOn} onChange={setMonipayOn} label="Monipay — Nigeria" />
           </div>
           <div>
-            <Switch checked={monipayOn} onChange={setMonipayOn} label="Monipay" />
+            <Switch checked={paystackOn} onChange={setPaystackOn} label="Paystack — fallback" />
           </div>
         </section>
 
@@ -130,18 +133,6 @@ export function PlatformSettingsForm({
           </Field>
         </section>
 
-        <section className="rounded-xl border border-line bg-surface p-5">
-          <h2 className="mb-1 text-sm font-bold">Homepage access</h2>
-          <div className="mb-2 mt-4">
-            <Switch checked={waitlistOn} onChange={setWaitlistOn} label="Pre-launch waitlist modal" />
-          </div>
-          <p className="text-xs text-muted">
-            On: homepage visitors see a &quot;going live soon&quot; waitlist gate. It
-            lifts as soon as they join (and stays lifted in that browser). Off: the
-            real homepage is open to everyone. Doesn&apos;t affect artist dashboards,
-            fan libraries, or direct drop links either way.
-          </p>
-        </section>
       </div>
 
       <div className="mt-4 flex items-center gap-3">

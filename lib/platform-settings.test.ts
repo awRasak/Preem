@@ -39,7 +39,6 @@ describe("getPlatformSettings", () => {
       gift_commission_bps: 300,
       paystack_enabled: true,
       monipay_enabled: false,
-      waitlist_mode_enabled: false,
       ngn_per_usd: 1500,
     });
     const settings = await getPlatformSettings(supabase);
@@ -48,7 +47,8 @@ describe("getPlatformSettings", () => {
       giftCommissionBps: 300,
       paystackEnabled: true,
       monipayEnabled: false,
-      waitlistModeEnabled: false,
+      // Row predates the squad_enabled column -> read back as off.
+      squadEnabled: false,
       ngnPerUsd: 1500,
     });
   });
@@ -61,6 +61,20 @@ describe("getPlatformSettings", () => {
     const settings = await getPlatformSettings(supabase);
     expect(settings.paystackEnabled).toBe(true);
     expect(settings.monipayEnabled).toBe(false);
+    expect(settings.squadEnabled).toBe(false);
+  });
+
+  it("reads squad_enabled as on when the row has it", async () => {
+    const supabase = fakeSupabase({
+      drop_commission_bps: 2000,
+      gift_commission_bps: 500,
+      paystack_enabled: true,
+      monipay_enabled: true,
+      squad_enabled: true,
+      ngn_per_usd: 1500,
+    });
+    const settings = await getPlatformSettings(supabase);
+    expect(settings.squadEnabled).toBe(true);
   });
 
   it("caches the result and does not re-query within the TTL", async () => {
@@ -69,7 +83,6 @@ describe("getPlatformSettings", () => {
       gift_commission_bps: 500,
       paystack_enabled: true,
       monipay_enabled: true,
-      waitlist_mode_enabled: false,
       ngn_per_usd: 1500,
     });
     await getPlatformSettings(supabase);
@@ -83,7 +96,6 @@ describe("getPlatformSettings", () => {
       gift_commission_bps: 500,
       paystack_enabled: true,
       monipay_enabled: true,
-      waitlist_mode_enabled: false,
       ngn_per_usd: 1500,
     });
     await getPlatformSettings(supabase);

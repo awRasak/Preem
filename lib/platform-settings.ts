@@ -5,22 +5,24 @@ export type PlatformSettings = {
   giftCommissionBps: number;
   paystackEnabled: boolean;
   monipayEnabled: boolean;
-  waitlistModeEnabled: boolean;
+  // International checkout rail (see lib/geo.ts) -- off until real keys.
+  squadEnabled: boolean;
   // Naira per US$1 -- display only (USD equivalent next to naira prices).
   // Charging and settlement stay in NGN.
   ngnPerUsd: number;
 };
 
-// Falls back to today's rates (20% drops, 5% gifts), Paystack-only, and
-// waitlist mode ON if the singleton row is somehow missing -- keeps
-// payout/checkout/homepage logic from ever silently computing against
-// undefined instead of a real setting.
+// Falls back to today's rates (20% drops, 5% gifts), Paystack-on and
+// Squad-off if the singleton row is somehow missing -- keeps payout/checkout
+// logic from ever silently computing against undefined instead of a real
+// setting. Squad is off until real keys are configured, matching Monipay's
+// rollout.
 const DEFAULT_SETTINGS: PlatformSettings = {
   dropCommissionBps: 2000,
   giftCommissionBps: 500,
   paystackEnabled: true,
   monipayEnabled: false,
-  waitlistModeEnabled: true,
+  squadEnabled: false,
   ngnPerUsd: 1500,
 };
 
@@ -46,7 +48,7 @@ export async function getPlatformSettings(
   const { data } = await supabase
     .from("platform_settings")
     .select(
-      "drop_commission_bps, gift_commission_bps, paystack_enabled, monipay_enabled, waitlist_mode_enabled, ngn_per_usd",
+      "drop_commission_bps, gift_commission_bps, paystack_enabled, monipay_enabled, squad_enabled, ngn_per_usd",
     )
     .eq("id", true)
     .maybeSingle();
@@ -57,7 +59,9 @@ export async function getPlatformSettings(
     giftCommissionBps: data.gift_commission_bps,
     paystackEnabled: data.paystack_enabled,
     monipayEnabled: data.monipay_enabled,
-    waitlistModeEnabled: data.waitlist_mode_enabled,
+    // Old rows/databases predating 0033 read back null -- treat missing as
+    // off rather than crashing checkout.
+    squadEnabled: data.squad_enabled ?? false,
     ngnPerUsd: data.ngn_per_usd,
   };
   settingsCache = { data: settings, at: Date.now() };

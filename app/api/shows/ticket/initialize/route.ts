@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
-import { countryFromRequest, gatewayForCountry } from "@/lib/geo";
+import { countryFromRequest, gatewayForCountry, publicKeyForGateway } from "@/lib/geo";
 
 const schema = z.object({
   showId: z.string().uuid(),
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
   const settings = await getPlatformSettings(supabase);
   // Server-side geo-routing: Nigeria pays local (Monipay), everyone else
-  // pays international (Paystack). The client never chooses.
+  // pays international (Squad). The client never chooses.
   const gateway = gatewayForCountry(countryFromRequest(req), settings);
   if (!gateway) {
     return NextResponse.json(
@@ -133,9 +133,6 @@ export async function POST(req: Request) {
     amountKobo: show.ticket_price_kobo,
     gateway,
     accessCode,
-    publicKey:
-      gateway === "monipay"
-        ? process.env.NEXT_PUBLIC_MONIPAY_PUBLIC_KEY
-        : process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+    publicKey: publicKeyForGateway(gateway),
   });
 }

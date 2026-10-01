@@ -12,11 +12,9 @@ import { ArtistSpotlight } from "@/components/ArtistSpotlight";
 import { PaymentTrustRow } from "@/components/PaymentTrustRow";
 import { FilmstripGallery } from "@/components/FilmstripGallery";
 import { HomeFAQ } from "@/components/HomeFAQ";
-import { WaitlistModal } from "@/components/WaitlistModal";
 import { HomeMobileCta } from "@/components/HomeMobileCta";
 import { createClient } from "@/lib/supabase/server";
 import { artworkFallback } from "@/lib/placeholder";
-import { getPlatformSettings } from "@/lib/platform-settings";
 import type { Drop } from "@/lib/types";
 
 export const revalidate = 0;
@@ -28,10 +26,10 @@ export default async function MarketplacePage() {
   // paying for three full round trips to Supabase before the page could
   // even start rendering, which is where most of the "feels slow on
   // mobile" complaint was coming from. In parallel, the wait is just the
-  // slowest of the three instead of the sum.
+  // slowest of the two instead of the sum.
   const [{ data }, {
     data: { user: sessionUser },
-  }, settings] = await Promise.all([
+  }] = await Promise.all([
     supabase
       .from("drops")
       .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status)")
@@ -39,7 +37,6 @@ export default async function MarketplacePage() {
       .or(`window_end.is.null,window_end.gt.${new Date().toISOString()}`)
       .order("created_at", { ascending: false }),
     supabase.auth.getUser(),
-    getPlatformSettings(supabase),
   ]);
 
   const drops = ((data ?? []) as (Drop & {
@@ -81,7 +78,6 @@ export default async function MarketplacePage() {
 
   return (
     <>
-      {settings.waitlistModeEnabled && <WaitlistModal />}
       <Nav>
         <NavLink href="/explore">Explore</NavLink>
         {!sessionUser && <NavLink href="/artist/signup">For artists</NavLink>}

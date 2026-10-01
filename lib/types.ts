@@ -132,7 +132,7 @@ export type ShowTicket = {
   fan_email: string;
   amount_kobo: number;
   paystack_ref: string;
-  gateway: "paystack" | "monipay";
+  gateway: "paystack" | "monipay" | "squad";
   status: PurchaseStatus;
   purchased_at: string | null;
   created_at: string;
