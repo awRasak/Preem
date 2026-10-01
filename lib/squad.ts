@@ -67,10 +67,16 @@ export async function verifyTransaction(reference: string): Promise<{
 }
 
 // Squad signs webhook bodies with HMAC-SHA512 of the raw body under the
-// secret key, sent as x-squad-encrypted-body. The docs show it uppercased in
-// their Node sample and lowercase in their PHP sample, so both sides are
-// lowercased before the comparison and the length check keeps timingSafeEqual
-// from throwing on a truncated/forged header.
+// secret key. The header name has changed across doc revisions --
+// `x-squad-encrypted-body` today, `x-squad-signature` in the older gitbook --
+// so both are accepted rather than silently 401-ing every event. The samples
+// show the digest uppercased in the Node/Java examples and lowercase in the
+// PHP one, so both sides are lowercased before the comparison, and the length
+// check keeps timingSafeEqual from throwing on a truncated/forged header.
+export function webhookSignature(req: Request): string | null {
+  return req.headers.get("x-squad-encrypted-body") ?? req.headers.get("x-squad-signature");
+}
+
 export function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
   const key = secretKey();
   if (!signature || !key) return false;

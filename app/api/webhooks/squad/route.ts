@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyTransaction as verifySquadTransaction, verifyWebhookSignature } from "@/lib/squad";
+import {
+  verifyTransaction as verifySquadTransaction,
+  verifyWebhookSignature,
+  webhookSignature,
+} from "@/lib/squad";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
 import { markGiftSuccess } from "@/lib/gifts";
@@ -13,8 +17,9 @@ import { markGiftSuccess } from "@/lib/gifts";
 // what still grants access.
 //
 // Trust model, in two independent layers:
-//  1. The body must carry Squad's HMAC-SHA512 signature (x-squad-encrypted-body)
-//     -- that stops anonymous traffic from costing us outbound verify calls.
+//  1. The body must carry Squad's HMAC-SHA512 signature (x-squad-encrypted-body,
+//     or the older x-squad-signature name) -- that stops anonymous traffic
+//     from costing us outbound verify calls.
 //  2. The event is treated as a *trigger* only: TransactionRef is re-verified
 //     live against Squad's API with the secret key, and the row is marked
 //     only on a "success" response whose gross amount covers the recorded
@@ -24,7 +29,7 @@ import { markGiftSuccess } from "@/lib/gifts";
 // callback + webhook) are safe.
 export async function POST(req: Request) {
   const rawBody = await req.text();
-  if (!verifyWebhookSignature(rawBody, req.headers.get("x-squad-encrypted-body"))) {
+  if (!verifyWebhookSignature(rawBody, webhookSignature(req))) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 

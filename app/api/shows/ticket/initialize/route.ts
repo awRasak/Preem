@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
-import { countryFromRequest, gatewayForCountry, publicKeyForGateway } from "@/lib/geo";
+import { publicKeyForGateway, resolveGateway } from "@/lib/geo";
 
 const schema = z.object({
   showId: z.string().uuid(),
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const settings = await getPlatformSettings(supabase);
   // Server-side geo-routing: Nigeria pays local (Monipay), everyone else
   // pays international (Squad). The client never chooses.
-  const gateway = gatewayForCountry(countryFromRequest(req), settings);
+  const gateway = resolveGateway(req, settings);
   if (!gateway) {
     return NextResponse.json(
       { error: "Payments aren't available right now." },

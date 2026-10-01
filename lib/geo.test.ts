@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { countryFromRequest, gatewayForCountry, publicKeyForGateway } from "./geo";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  countryFromRequest,
+  gatewayForCountry,
+  publicKeyForGateway,
+  resolveGateway,
+} from "./geo";
 
 const ALL_ON = {
   paystackEnabled: true,
@@ -87,5 +92,37 @@ describe("publicKeyForGateway", () => {
     restore("NEXT_PUBLIC_MONIPAY_PUBLIC_KEY");
     restore("NEXT_PUBLIC_SQUAD_PUBLIC_KEY");
     restore("NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY");
+  });
+});
+
+describe("resolveGateway", () => {
+  const ALL_OFF = { paystackEnabled: false, monipayEnabled: false, squadEnabled: false };
+  const req = (country?: string) =>
+    new Request("https://x", { headers: country ? { "x-vercel-ip-country": country } : {} });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("falls through to geo + toggles when nothing is forced", () => {
+    expect(resolveGateway(req("NG"), ALL_OFF)).toBeNull();
+    expect(resolveGateway(req("US"), { paystackEnabled: true, monipayEnabled: false, squadEnabled: false })).toBe("paystack");
+  });
+
+  it("lets PREEM_FORCE_GATEWAY pick a rail even when it is toggled off", () => {
+    vi.stubEnv("PREEM_FORCE_GATEWAY", "squad");
+    expect(resolveGateway(req("NG"), ALL_OFF)).toBe("squad");
+    expect(resolveGateway(req(), ALL_OFF)).toBe("squad");
+  });
+
+  it("ignores an unrecognised forced value", () => {
+    vi.stubEnv("PREEM_FORCE_GATEWAY", "stripe");
+    expect(resolveGateway(req("NG"), ALL_OFF)).toBeNull();
+  });
+
+  // The force knob exists only to test a rail locally; platform_settings is a
+  // single row shared with production, so it must never fire in a real build.
+  it("ignores the force knob in a production build", () => {
+    vi.stubEnv("PREEM_FORCE_GATEWAY", "squad");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(resolveGateway(req("NG"), ALL_OFF)).toBeNull();
   });
 });

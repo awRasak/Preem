@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { squadBaseUrl, verifyTransaction, verifyWebhookSignature } from "./squad";
+import { squadBaseUrl, verifyTransaction, verifyWebhookSignature, webhookSignature } from "./squad";
 
 const SECRET = process.env.SQUAD_SECRET_KEY;
 const API_BASE = process.env.SQUAD_API_BASE;
@@ -69,6 +69,25 @@ describe("verifyWebhookSignature", () => {
 
     delete process.env.SQUAD_SECRET_KEY;
     expect(verifyWebhookSignature(body, full)).toBe(false);
+  });
+});
+
+describe("webhookSignature", () => {
+  const body = "{}";
+
+  it("reads the current x-squad-encrypted-body header", () => {
+    const req = new Request("https://x", { method: "POST", headers: { "x-squad-encrypted-body": "abc" } });
+    expect(webhookSignature(req)).toBe("abc");
+  });
+
+  it("falls back to the older x-squad-signature header name", () => {
+    const req = new Request("https://x", { method: "POST", headers: { "x-squad-signature": "def" } });
+    expect(webhookSignature(req)).toBe("def");
+  });
+
+  it("returns null when neither header is present", () => {
+    expect(webhookSignature(new Request("https://x", { method: "POST" }))).toBeNull();
+    expect(verifyWebhookSignature(body, webhookSignature(new Request("https://x", { method: "POST" })))).toBe(false);
   });
 });
 
