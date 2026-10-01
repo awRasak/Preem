@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getFanIdentity } from "@/lib/fan-identity";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 // One fan pre-saves one upcoming drop. The row is inserted along with an
 // artist_follow (same identity) so the existing publish trigger notifies the
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
   } else if (parsed.data.phone) {
     row = {
       drop_id: dropId,
-      fan_phone: parsed.data.phone,
+      fan_phone: normalizePhone(parsed.data.phone),
       ...(parsed.data.email ? { fan_email: parsed.data.email.toLowerCase() } : {}),
     };
   } else {
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
   const followRow: Record<string, unknown> = {
     artist_id: drop.artist_id,
     fan_user_id: identity?.kind === "user" ? identity.userId : null,
-    fan_phone: identity?.kind === "phone" ? identity.session.phone : (parsed.data.phone ?? null),
+    fan_phone: identity?.kind === "phone" ? identity.session.phone : (parsed.data.phone ? normalizePhone(parsed.data.phone) : null),
     fan_email:
       identity?.kind === "phone"
         ? identity.session.email.toLowerCase()

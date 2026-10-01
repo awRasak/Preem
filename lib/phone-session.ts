@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { normalizePhone } from "./phone";
 
 const COOKIE_NAME = "preem_phone";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 90; // 90 days
@@ -15,7 +16,11 @@ function sign(payload: string): string {
 // successful purchase is found (see /api/my-drops/lookup).
 export function createPhoneSessionCookieValue(phone: string, email: string): string {
   const expires = Date.now() + MAX_AGE_SECONDS * 1000;
-  const payload = JSON.stringify({ phone, email: email.toLowerCase(), expires });
+  const payload = JSON.stringify({
+    phone: normalizePhone(phone),
+    email: email.toLowerCase(),
+    expires,
+  });
   const encodedPayload = Buffer.from(payload).toString("base64url");
   return `${encodedPayload}.${sign(encodedPayload)}`;
 }
@@ -42,7 +47,9 @@ export function verifyPhoneSessionCookieValue(value: string | undefined): PhoneS
       Buffer.from(encodedPayload, "base64url").toString("utf8"),
     );
     if (!phone || !email || Date.now() > Number(expires)) return null;
-    return { phone: String(phone), email: String(email) };
+    // Canonicalize on read too: cookies minted before normalization
+    // (90-day lifetime) carry raw +234/spaced variants.
+    return { phone: normalizePhone(String(phone)), email: String(email) };
   } catch {
     return null;
   }

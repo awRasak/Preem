@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 const schema = z.object({
   phone: z.string().trim().min(5).max(20),
@@ -21,7 +22,8 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, schema);
   if (!parsed.ok) return parsed.response;
-  const { phone, email, dropId, message } = parsed.data;
+  const { email, dropId, message } = parsed.data;
+  const phone = normalizePhone(parsed.data.phone);
 
   const admin = createAdminClient();
   const { error } = await admin.from("support_requests").insert({

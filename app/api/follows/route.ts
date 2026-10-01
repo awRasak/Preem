@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getFanIdentity } from "@/lib/fan-identity";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 const schema = z.object({
   artistId: z.string().uuid(),
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
   } else if (parsed.data.phone) {
     row = {
       artist_id: artistId,
-      fan_phone: parsed.data.phone,
+      fan_phone: normalizePhone(parsed.data.phone),
       ...(parsed.data.email ? { fan_email: parsed.data.email.toLowerCase() } : {}),
     };
   } else {

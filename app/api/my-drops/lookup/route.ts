@@ -8,6 +8,7 @@ import {
 } from "@/lib/phone-session";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 const schema = z.object({
   phone: z.string().trim().min(6).max(20),
@@ -26,7 +27,10 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, schema);
   if (!parsed.ok) return parsed.response;
-  const { phone, email } = parsed.data;
+  // Phones are stored canonical (see lib/phone) -- normalize before
+  // comparing so +234/spacing variants match the checkout row.
+  const phone = normalizePhone(parsed.data.phone);
+  const { email } = parsed.data;
 
   // Proof of ownership: the pair must match a successful purchase. Without
   // this check anyone who knew (or guessed) a phone number could mint a

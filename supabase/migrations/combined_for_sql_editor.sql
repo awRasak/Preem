@@ -965,3 +965,30 @@ alter table show_tickets add constraint show_tickets_gateway_check
 alter table payouts drop constraint if exists payouts_gateway_check;
 alter table payouts add constraint payouts_gateway_check
   check (gateway in ('paystack', 'monipay', 'squad'));
+
+-- Oct 2026 incident: fan_phone stored verbatim ("+234 704 691 7132") while
+-- lookup typed local ("07046917132") -- exact-match queries made successful
+-- purchases invisible. Canonical form (see lib/phone.ts): digits only,
+-- Nigerian 13-digit 234-numbers become 11-digit local.
+-- Backfill every table carrying fan phones. New writes are normalized in
+-- code; this heals history. Idempotent -- rerunning changes nothing.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['purchases', 'artist_follows', 'drop_presaves', 'support_requests'] loop
+    execute format(
+      $q$
+      update %I set fan_phone = sub.canonical
+      from (
+        select id,
+          case
+            when length(d) = 13 and d like '234%%' then '0' || substring(d from 4)
+            else d
+          end as canonical
+        from (select id, regexp_replace(fan_phone, '\D', '', 'g') as d from %I where fan_phone is not null) t
+      $q$ || ' sub where %I.id = sub.id and %I.fan_phone <> sub.canonical',
+      t, t, t, t
+    );
+  end loop;
+end $$;

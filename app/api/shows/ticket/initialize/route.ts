@@ -5,6 +5,7 @@ import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
 import { publicKeyForGateway, resolveGateway } from "@/lib/geo";
+import { normalizePhone } from "@/lib/phone";
 
 const schema = z.object({
   showId: z.string().uuid(),
@@ -28,7 +29,8 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, schema);
   if (!parsed.ok) return parsed.response;
-  const { showId, amountKobo, fanName, fanPhone, fanEmail } = parsed.data;
+  const { showId, amountKobo, fanName, fanEmail } = parsed.data;
+  const fanPhone = normalizePhone(parsed.data.fanPhone);
 
   const supabase = createAdminClient();
 
