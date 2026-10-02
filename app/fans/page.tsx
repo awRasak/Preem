@@ -93,7 +93,7 @@ export default async function MyDropsPage({
   // Reuse the identity already resolved above rather than re-reading the
   // session (getFanIdentity would repeat the auth round-trip).
   const identity: FanIdentity | null = fan
-    ? { kind: "user", userId: fan.id }
+    ? { kind: "user", userId: fan.id, email: fan.email ?? null }
     : phoneSession
       ? { kind: "phone", session: phoneSession }
       : null;
@@ -109,7 +109,7 @@ export default async function MyDropsPage({
         <NewDropNotifications items={notifications} />
 
         {fan ? (
-          <MyDropsLibrary userId={fan.id} sortMode={sortMode} continueSection />
+          <MyDropsLibrary userId={fan.id} userEmail={fan.email ?? undefined} sortMode={sortMode} continueSection />
         ) : !phoneSession ? (
           <PhoneLookupForm />
         ) : (
@@ -190,31 +190,57 @@ async function MyDropsLibrary({
   phone,
   email,
   userId,
+  userEmail,
   sortMode,
   continueSection,
 }: {
   phone?: string;
   email?: string;
   userId?: string;
+  userEmail?: string;
   sortMode: "recent" | "az" | "artist";
   continueSection: boolean;
 }) {
   const admin = createAdminClient();
 
-  let purchasesQuery = admin
-    .from("purchases")
-    .select("drop_id, track_id, purchased_at, amount_kobo")
-    .eq("status", "success")
-    .order("purchased_at", { ascending: false });
+  const baseSelect = () =>
+    admin
+      .from("purchases")
+      .select("id, drop_id, track_id, purchased_at, amount_kobo")
+      .eq("status", "success")
+      .order("purchased_at", { ascending: false });
+
+  // Signed-in fan: purchases linked to their account OR matching their
+  // OTP-verified session email. Without the email half, guest checkouts
+  // that skipped OTP linking (fan_user_id empty) render an empty library
+  // the moment the fan signs in -- the receipt link led Ugochukwu here.
+  // Two queries (not one .or()) so emails with ,() can't break the filter.
+  type PurchaseRow = {
+    id: string;
+    drop_id: string;
+    track_id: string | null;
+    purchased_at: string | null;
+    amount_kobo: number;
+  };
+  let purchases: PurchaseRow[] | null = null;
   if (userId) {
-    purchasesQuery = purchasesQuery.eq("fan_user_id", userId);
+    const [byUser, byEmail] = await Promise.all([
+      baseSelect().eq("fan_user_id", userId),
+      userEmail
+        ? baseSelect().ilike("fan_email", userEmail)
+        : Promise.resolve({ data: [] as PurchaseRow[] | null }),
+    ]);
+    const seen = new Set<string>();
+    purchases = [...(byUser.data ?? []), ...(byEmail.data ?? [])].filter(
+      (p) => !seen.has(p.id) && (seen.add(p.id), true),
+    ) as PurchaseRow[];
   } else {
     // Phone sessions are scoped to both checkout identity halves.
-    purchasesQuery = purchasesQuery
+    const { data } = await baseSelect()
       .eq("fan_phone", phone!)
       .ilike("fan_email", email!);
+    purchases = (data ?? []) as PurchaseRow[];
   }
-  const { data: purchases } = await purchasesQuery;
 
   if (!purchases || purchases.length === 0) {
     return (

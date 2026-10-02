@@ -9,7 +9,7 @@ import {
 // How the current visitor identifies as a fan: a Supabase auth account, the
 // signed phone-session pair from a past checkout, or nothing at all.
 export type FanIdentity =
-  | { kind: "user"; userId: string }
+  | { kind: "user"; userId: string; email: string | null }
   | { kind: "phone"; session: PhoneSession };
 
 export async function getFanIdentity(): Promise<FanIdentity | null> {
@@ -17,7 +17,9 @@ export async function getFanIdentity(): Promise<FanIdentity | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) return { kind: "user", userId: user.id };
+  // Email is OTP-verified by Supabase, so access checks may match purchases
+  // on it (covers guest checkouts that skipped OTP linking).
+  if (user) return { kind: "user", userId: user.id, email: user.email ?? null };
 
   const cookieStore = await cookies();
   const session = verifyPhoneSessionCookieValue(

@@ -32,20 +32,36 @@ export async function GET(
 
   // Same access rule as streaming: a success purchase on this drop with
   // track_id = this track OR track_id IS NULL (bought the whole release).
-  let purchaseQuery = admin
-    .from("purchases")
-    .select("id", { count: "exact", head: true })
-    .eq("drop_id", data.drop_id)
-    .eq("status", "success")
-    .or(`track_id.eq.${trackId},track_id.is.null`);
-  purchaseQuery =
-    identity.kind === "user"
-      ? purchaseQuery.eq("fan_user_id", identity.userId)
-      : purchaseQuery
-          .eq("fan_phone", identity.session.phone)
-          .ilike("fan_email", identity.session.email);
-
-  const { count } = await purchaseQuery;
+  // Signed-in fans match by linked account OR verified session email, so
+  // guest checkouts that skipped OTP linking stay downloadable.
+  const trackFilter = `track_id.eq.${trackId},track_id.is.null`;
+  let count = 0;
+  if (identity.kind === "user") {
+    const base = () =>
+      admin
+        .from("purchases")
+        .select("id", { count: "exact", head: true })
+        .eq("drop_id", data.drop_id)
+        .eq("status", "success")
+        .or(trackFilter);
+    const [{ count: byUser }, { count: byEmail }] = await Promise.all([
+      base().eq("fan_user_id", identity.userId),
+      identity.email
+        ? base().ilike("fan_email", identity.email)
+        : Promise.resolve({ count: 0 }),
+    ]);
+    count = (byUser ?? 0) + (byEmail ?? 0);
+  } else {
+    const { count: byPhone } = await admin
+      .from("purchases")
+      .select("id", { count: "exact", head: true })
+      .eq("drop_id", data.drop_id)
+      .eq("status", "success")
+      .or(trackFilter)
+      .eq("fan_phone", identity.session.phone)
+      .ilike("fan_email", identity.session.email);
+    count = byPhone ?? 0;
+  }
   if (!count) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
