@@ -972,23 +972,46 @@ alter table payouts add constraint payouts_gateway_check
 -- Nigerian 13-digit 234-numbers become 11-digit local.
 -- Backfill every table carrying fan phones. New writes are normalized in
 -- code; this heals history. Idempotent -- rerunning changes nothing.
-do $$
-declare
-  t text;
-begin
-  foreach t in array array['purchases', 'artist_follows', 'drop_presaves', 'support_requests'] loop
-    execute format(
-      $q$
-      update %I set fan_phone = sub.canonical
-      from (
-        select id,
-          case
-            when length(d) = 13 and d like '234%%' then '0' || substring(d from 4)
-            else d
-          end as canonical
-        from (select id, regexp_replace(fan_phone, '\D', '', 'g') as d from %I where fan_phone is not null) t
-      $q$ || ' sub where %I.id = sub.id and %I.fan_phone <> sub.canonical',
-      t, t, t, t
-    );
-  end loop;
-end $$;
+update purchases set fan_phone = sub.canonical
+from (
+  select id,
+    case
+      when length(d) = 13 and d like '234%' then '0' || substring(d from 4)
+      else d
+    end as canonical
+  from (select id, regexp_replace(fan_phone, '\D', '', 'g') as d from purchases where fan_phone is not null) inner_t
+) sub
+where purchases.id = sub.id and purchases.fan_phone <> sub.canonical;
+
+update artist_follows set fan_phone = sub.canonical
+from (
+  select id,
+    case
+      when length(d) = 13 and d like '234%' then '0' || substring(d from 4)
+      else d
+    end as canonical
+  from (select id, regexp_replace(fan_phone, '\D', '', 'g') as d from artist_follows where fan_phone is not null) inner_t
+) sub
+where artist_follows.id = sub.id and artist_follows.fan_phone <> sub.canonical;
+
+update drop_presaves set fan_phone = sub.canonical
+from (
+  select id,
+    case
+      when length(d) = 13 and d like '234%' then '0' || substring(d from 4)
+      else d
+    end as canonical
+  from (select id, regexp_replace(fan_phone, '\D', '', 'g') as d from drop_presaves where fan_phone is not null) inner_t
+) sub
+where drop_presaves.id = sub.id and drop_presaves.fan_phone <> sub.canonical;
+
+update support_requests set fan_phone = sub.canonical
+from (
+  select id,
+    case
+      when length(d) = 13 and d like '234%' then '0' || substring(d from 4)
+      else d
+    end as canonical
+  from (select id, regexp_replace(fan_phone, '\D', '', 'g') as d from support_requests where fan_phone is not null) inner_t
+) sub
+where support_requests.id = sub.id and support_requests.fan_phone <> sub.canonical;
