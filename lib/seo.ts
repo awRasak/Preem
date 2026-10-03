@@ -67,3 +67,79 @@ export function artistShareMetadata({
     },
   };
 }
+
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng";
+
+// JSON-LD for rich results. Rendered as-is inside a
+// <script type="application/ld+json"> tag on the public pages.
+export function artistJsonLd({
+  stageName,
+  bio,
+  avatarUrl,
+  artistPath,
+  socialUrls,
+}: {
+  stageName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  artistPath: string;
+  socialUrls: string[];
+}): Record<string, unknown> {
+  const sameAs = socialUrls.filter(Boolean);
+  return {
+    "@context": "https://schema.org",
+    "@type": "MusicGroup",
+    name: stageName,
+    ...(bio ? { description: bio } : {}),
+    url: `${SITE_URL}${artistPath}`,
+    ...(avatarUrl ? { image: avatarUrl } : {}),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
+  };
+}
+
+export function dropJsonLd({
+  title,
+  artistName,
+  description,
+  artworkPath,
+  dropPath,
+  minPriceKobo,
+  trackTitles,
+}: {
+  title: string;
+  artistName: string;
+  description: string | null;
+  artworkPath: string | null;
+  dropPath: string;
+  minPriceKobo: number;
+  trackTitles: string[];
+}): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "MusicAlbum",
+    name: title,
+    byArtist: { "@type": "MusicGroup", name: artistName },
+    ...(description ? { description } : {}),
+    url: `${SITE_URL}${dropPath}`,
+    ...(artworkPath ? { image: artworkPath } : {}),
+    numTracks: trackTitles.length,
+    track: {
+      "@type": "ItemList",
+      numberOfItems: trackTitles.length,
+      itemListElement: trackTitles.map((t, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        item: { "@type": "MusicRecording", name: t },
+      })),
+    },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "NGN",
+      // Floor price -- fans can pay more, but the offer below which access
+      // is never granted is the honest advertised figure.
+      price: (minPriceKobo / 100).toFixed(0),
+      availability: "https://schema.org/InStock",
+      url: `${SITE_URL}${dropPath}`,
+    },
+  };
+}

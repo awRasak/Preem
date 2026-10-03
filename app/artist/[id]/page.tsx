@@ -19,11 +19,11 @@ import {
 } from "@/components/SocialIcons";
 import { sanitizeBio, formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
-import { isUuid, dropPath } from "@/lib/slug";
+import { isUuid, dropPath, artistPath } from "@/lib/slug";
 import { getFanIdentity } from "@/lib/fan-identity";
 import { FollowButton } from "@/components/FollowButton";
 import { ShowCard } from "@/components/ShowCard";
-import { artistShareMetadata } from "@/lib/seo";
+import { artistShareMetadata, artistJsonLd } from "@/lib/seo";
 import type { Artist, ArtistLink, BioLink, Drop } from "@/lib/types";
 
 // Monday 00:00 UTC of the current week -- "Top gifters" resets on this
@@ -57,7 +57,7 @@ export async function generateMetadata({
   const supabase = await createClient();
   const base = supabase
     .from("artists")
-    .select("stage_name, bio, avatar_url")
+    .select("stage_name, bio, avatar_url, slug")
     .eq("approval_status", "approved");
   const { data: artist } = isUuid(id)
     ? await base.eq("id", id).maybeSingle()
@@ -67,11 +67,13 @@ export async function generateMetadata({
         .limit(1)
         .maybeSingle();
   if (!artist) return {};
-  return artistShareMetadata({
+  const canonical = `/artist/${artist.slug || id}`;
+  const meta = artistShareMetadata({
     stageName: artist.stage_name,
     bio: artist.bio,
     avatarUrl: artist.avatar_url,
   });
+  return { ...meta, alternates: { canonical } };
 }
 
 export default async function ArtistProfilePage({
@@ -225,6 +227,20 @@ export default async function ArtistProfilePage({
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            artistJsonLd({
+              stageName: artist.stage_name,
+              bio: bio,
+              avatarUrl: (artist as Artist).avatar_url,
+              artistPath: artistPath((artist as Artist).slug || artist.id),
+              socialUrls: socialLinks.map(({ key }) => (artist as Artist)[key] as string),
+            }),
+          ),
+        }}
+      />
       <Nav>
         <NavLink href="/">← Marketplace</NavLink>
       </Nav>

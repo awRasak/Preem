@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/slug";
+import { isUuid, dropPath } from "@/lib/slug";
 import { dropShareMetadata } from "@/lib/seo";
 import DropView from "@/app/drop/[id]/DropView";
 
@@ -51,12 +51,15 @@ export async function generateMetadata({
   const artist = drop?.artist as { stage_name: string } | null | undefined;
   if (!drop || !artist) return {};
 
-  return dropShareMetadata({
+  const meta = dropShareMetadata({
     title: drop.title,
     artistName: artist.stage_name,
     description: drop.description,
     artworkPath: drop.artwork_path,
   });
+  // Legacy /drop/<uuid> links redirect here, so this slug URL is the one
+  // true address for crawlers.
+  return { ...meta, alternates: { canonical: dropPath(artist.stage_name, drop.title) } };
 }
 
 // /artist/<artist-slug>/<release-slug> -- the human-readable drop URL. Both

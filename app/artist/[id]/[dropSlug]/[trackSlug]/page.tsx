@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/slug";
+import { isUuid, trackPath } from "@/lib/slug";
 import { dropShareMetadata } from "@/lib/seo";
 import DropView from "@/app/drop/[id]/DropView";
 
@@ -73,13 +73,19 @@ export async function generateMetadata({
   const artist = drop?.artist as { stage_name: string } | null | undefined;
   if (!drop || !artist) return {};
 
-  return dropShareMetadata({
+  const meta = dropShareMetadata({
     title: drop.title,
     artistName: artist.stage_name,
     description: drop.description,
     artworkPath: drop.artwork_path,
     trackTitle: resolved.trackTitle,
   });
+  return {
+    ...meta,
+    alternates: {
+      canonical: trackPath(artist.stage_name, drop.title, resolved.trackTitle),
+    },
+  };
 }
 
 export default async function ArtistDropTrackPage({

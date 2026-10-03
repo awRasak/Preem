@@ -16,6 +16,8 @@ import { DiscoverMore } from "@/components/DiscoverMore";
 import { ScrollToTrack } from "./ScrollToTrack";
 import { genreLabel } from "@/lib/genres";
 import { getPlatformSettings } from "@/lib/platform-settings";
+import { dropJsonLd } from "@/lib/seo";
+import { dropPath } from "@/lib/slug";
 import type { PlayerTrack } from "@/lib/player-context";
 import type { ArtistLink, Drop, DropTrack } from "@/lib/types";
 
@@ -142,6 +144,22 @@ export default async function DropView({
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            dropJsonLd({
+              title: drop.title,
+              artistName,
+              description: drop.description,
+              artworkPath: drop.artwork_path,
+              dropPath: dropPath(artistName, drop.title),
+              minPriceKobo: drop.min_price_kobo,
+              trackTitles: tracks.map((t) => t.title),
+            }),
+          ),
+        }}
+      />
       {initialTrackId && <ScrollToTrack trackId={initialTrackId} />}
       {/* Drop-link entry: artist identity leads, not the Preem wordmark */}
       <nav className="flex items-center justify-between border-b border-line px-5 py-3 sm:px-8">
