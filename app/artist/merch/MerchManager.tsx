@@ -110,16 +110,6 @@ export function MerchManager({
             ▾
           </span>
         </button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            setEditing(null);
-            setCatalogueOpen(true);
-            setShowForm((s) => !s);
-          }}
-        >
-          {showForm ? "Close" : "+ New item"}
-        </Button>
       </div>
       {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
       {catalogueOpen && (
@@ -136,42 +126,55 @@ export function MerchManager({
             />
           )}
 
-          {items.length === 0 && !showForm ? (
-            <p className="mb-8 text-sm text-muted">
-              No merch yet — add your first item above. Photos sell shirts.
+          {items.length === 0 && !showForm && (
+            <p className="mb-4 text-sm text-muted">
+              No merch yet — start with the + tile. Photos sell shirts.
             </p>
-          ) : (
-            <ul className="mb-10 space-y-3">
+          )}
+          <ul className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(null);
+                  setShowForm(true);
+                }}
+                className="flex h-full min-h-[230px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong bg-surface/50 p-4 transition-colors hover:border-accent hover:bg-surface"
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-2xl font-bold text-muted">
+                  +
+                </span>
+                <span className="text-sm font-bold">New item</span>
+              </button>
+            </li>
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3"
+              className="flex flex-col rounded-xl border border-line bg-surface p-3"
             >
-              <span className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
+              <span className="relative aspect-square w-full overflow-hidden rounded-lg bg-surface-2">
                 <Image
                   src={item.photo_path || artworkFallback(item.id)}
                   alt={item.title}
                   fill
                   className="object-cover"
-                  sizes="56px"
+                  sizes="(max-width: 640px) 50vw, 33vw"
                 />
               </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-bold">{item.title}</p>
-                  <Badge status={item.status === "published" ? "live" : "closed"}>
-                    {item.status === "published" ? "Live" : "Draft"}
-                  </Badge>
-                </div>
-                <p className="mt-0.5 text-xs text-muted">
-                  {formatNaira(item.price_kobo)} · {item.stock} in stock
-                </p>
+              <div className="mt-2 flex items-center gap-2">
+                <p className="min-w-0 flex-1 truncate text-sm font-bold">{item.title}</p>
+                <Badge status={item.status === "published" ? "live" : "closed"}>
+                  {item.status === "published" ? "Live" : "Draft"}
+                </Badge>
               </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
+              <p className="mt-0.5 text-xs text-muted">
+                {formatNaira(item.price_kobo)} · {item.stock} in stock
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   onClick={() => togglePublish(item)}
-                  className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-bold hover:bg-surface-2"
+                  className="rounded-lg border border-line-strong px-2 py-1 text-[11px] font-bold hover:bg-surface-2"
                 >
                   {item.status === "published" ? "Unpublish" : "Publish"}
                 </button>
@@ -181,7 +184,7 @@ export function MerchManager({
                     setEditing(item);
                     setShowForm(true);
                   }}
-                  className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-bold hover:bg-surface-2"
+                  className="rounded-lg border border-line-strong px-2 py-1 text-[11px] font-bold hover:bg-surface-2"
                 >
                   Edit
                 </button>
@@ -189,7 +192,7 @@ export function MerchManager({
                   type="button"
                   onClick={() => remove(item)}
                   aria-label={`Delete ${item.title}`}
-                  className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs text-muted hover:text-paper"
+                  className="rounded-lg border border-line-strong px-2 py-1 text-[11px] text-muted hover:text-paper"
                 >
                   ✕
                 </button>
@@ -197,7 +200,6 @@ export function MerchManager({
             </li>
           ))}
         </ul>
-          )}
         </>
       )}
 
