@@ -86,11 +86,7 @@ export default async function ArtistDropDetailPage({
           pendingRequests={(changeRequestsData ?? []) as TrackChangeRequest[]}
         />
 
-        {!live && (
-          <div className="mb-8">
-            <DistributionGuidance />
-          </div>
-        )}
+        {!live && <DistributionGuidance dropId={drop.id} />}
 
         {drop.status === "draft" && (
           <PreSavePanel
