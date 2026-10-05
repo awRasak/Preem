@@ -171,6 +171,10 @@ export default function CreateDropWizard() {
         0,
       );
       if (minKobo >= sum) return false;
+    } else if (
+      !isSheetValid(state.singleSplitArtists ?? [], state.singleSplitInvites ?? [])
+    ) {
+      return false;
     }
     return true;
   }
@@ -343,13 +347,25 @@ export default function CreateDropWizard() {
 
       const trackRows = await buildTrackRows(session.access_token, user.id, releaseMinPriceKobo, mode === "publish");
       setProgress({ label: "Saving tracklist", percent: null });
-      // usable[] and trackRows[] align by index -- zip created ids back to
-      // the drafts so split sheets save against the right tracks. Mirrors
-      // buildTrackRows' own filtering.
-      const usable =
-        mode === "publish"
-          ? state.tracks
-          : state.tracks.filter((t) => t.file && t.title.trim());
+      // trackRows[] aligns by index with the drafts below: bundles zip the
+      // usable track drafts, singles carry one implicit track row whose
+      // sheet drafts live on the wizard state. Mirrors buildTrackRows.
+      const sheetDrafts = isBundle
+        ? (mode === "publish"
+            ? state.tracks
+            : state.tracks.filter((t) => t.file && t.title.trim())
+          ).map((t) => ({
+            title: t.title || "Track",
+            splitArtists: t.splitArtists ?? [],
+            splitInvites: t.splitInvites ?? [],
+          }))
+        : [
+            {
+              title: state.title || "Track",
+              splitArtists: state.singleSplitArtists ?? [],
+              splitInvites: state.singleSplitInvites ?? [],
+            },
+          ];
       if (trackRows.length > 0) {
         const { data: createdTracks, error: tracksError } = await supabase
           .from("drop_tracks")
@@ -360,7 +376,11 @@ export default function CreateDropWizard() {
         }
         setProgress({ label: "Saving revenue splits", percent: null });
         for (let i = 0; i < createdTracks.length; i++) {
-          const draft = usable[i];
+          const draft = sheetDrafts[i] ?? {
+            title: `Track ${i + 1}`,
+            splitArtists: [],
+            splitInvites: [],
+          };
           const payload = buildSheetPayload(
             user.id,
             draft?.splitArtists ?? [],
@@ -489,7 +509,13 @@ export default function CreateDropWizard() {
                 owner={userId ? { id: userId, stageName: ownerName || "You" } : null}
               />
             )}
-            {step === 3 && <Step3Pricing state={state} onChange={patch} />}
+            {step === 3 && (
+              <Step3Pricing
+                state={state}
+                onChange={patch}
+                owner={userId ? { id: userId, stageName: ownerName || "You" } : null}
+              />
+            )}
             {step === 4 && <Step4Review state={state} />}
             {progress && (
               <ProgressBar label={progress.label} percent={progress.percent} />

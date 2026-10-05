@@ -37,6 +37,10 @@ export type WizardState = {
   description: string;
   singleAudioFile: File | null;
   tracks: TrackDraft[];
+  // Singles skip Step 2, so the single's sheet drafts live here instead of
+  // on a TrackDraft. Same shapes, same autosave treatment.
+  singleSplitArtists: { artistId: string; stageName: string; avatarUrl: string | null; shareBps: number }[];
+  singleSplitInvites: { name: string; email: string; shareBps: number }[];
   minPriceNaira: string;
   releaseDate: string;
   // Pre-save: open a public "coming soon" page on this draft so fans can
@@ -77,6 +81,8 @@ export function initialWizardState(): WizardState {
     description: "",
     singleAudioFile: null,
     tracks: [],
+    singleSplitArtists: [],
+    singleSplitInvites: [],
     minPriceNaira: "",
     releaseDate: defaultReleaseDate(),
     presaveEnabled: true,

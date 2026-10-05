@@ -2,16 +2,22 @@
 
 import { Field, Input } from "@/components/Field";
 import { DateTimePicker } from "@/components/DateTimePicker";
+import { SplitSheetEditor } from "@/components/SplitSheetEditor";
 import type { WizardState } from "./types";
 
 export function Step3Pricing({
   state,
   onChange,
+  owner,
 }: {
   state: WizardState;
   onChange: (patch: Partial<WizardState>) => void;
+  // Singles skip Step 2, so their sheet lives here. Bundles edit sheets
+  // per track back on Step 2 -- owner null hides this block entirely.
+  owner?: { id: string; stageName: string } | null;
 }) {
   const isExclusive = state.dropType === "exclusive";
+  const isSingle = state.releaseType === "single";
 
   return (
     <div>
@@ -83,6 +89,19 @@ export function Step3Pricing({
             </span>
           </span>
         </label>
+      )}
+
+      {isSingle && owner && (
+        <div className="mt-2">
+          <SplitSheetEditor
+            owner={owner}
+            splits={state.singleSplitArtists ?? []}
+            invites={state.singleSplitInvites ?? []}
+            onChange={(singleSplitArtists, singleSplitInvites) =>
+              onChange({ singleSplitArtists, singleSplitInvites })
+            }
+          />
+        </div>
       )}
     </div>
   );
