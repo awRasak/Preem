@@ -47,6 +47,10 @@ export function MerchManager({
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<MerchItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Catalogue lives in a collapsible nest: open while empty so the empty
+  // state teaches, collapsed once items exist to keep the page short.
+  // Opening the form always expands the nest first.
+  const [catalogueOpen, setCatalogueOpen] = useState(initialItems.length === 0);
 
   async function refresh() {
     const res = await fetch("/api/artist/merch/items");
@@ -88,12 +92,29 @@ export function MerchManager({
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-lg font-bold">Catalogue</h2>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setCatalogueOpen((o) => !o)}
+          aria-expanded={catalogueOpen}
+          className="flex min-w-0 items-center gap-2 text-left"
+        >
+          <h2 className="text-lg font-bold">Catalogue</h2>
+          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-bold text-muted">
+            {items.length}
+          </span>
+          <span
+            aria-hidden
+            className={`text-muted transition-transform ${catalogueOpen ? "rotate-180" : ""}`}
+          >
+            ▾
+          </span>
+        </button>
         <Button
           variant="primary"
           onClick={() => {
             setEditing(null);
+            setCatalogueOpen(true);
             setShowForm((s) => !s);
           }}
         >
@@ -101,24 +122,26 @@ export function MerchManager({
         </Button>
       </div>
       {error && <p className="mb-4 text-sm text-[#ff6b6b]">{error}</p>}
-      {showForm && (
-        <ItemForm
-          key={editing?.id ?? "new"}
-          item={editing}
-          onDone={() => {
-            setShowForm(false);
-            setEditing(null);
-            refresh();
-          }}
-        />
-      )}
+      {catalogueOpen && (
+        <>
+          {showForm && (
+            <ItemForm
+              key={editing?.id ?? "new"}
+              item={editing}
+              onDone={() => {
+                setShowForm(false);
+                setEditing(null);
+                refresh();
+              }}
+            />
+          )}
 
-      {items.length === 0 && !showForm ? (
-        <p className="mb-8 text-sm text-muted">
-          No merch yet — add your first item above. Photos sell shirts.
-        </p>
-      ) : (
-        <ul className="mb-10 space-y-3">
+          {items.length === 0 && !showForm ? (
+            <p className="mb-8 text-sm text-muted">
+              No merch yet — add your first item above. Photos sell shirts.
+            </p>
+          ) : (
+            <ul className="mb-10 space-y-3">
           {items.map((item) => (
             <li
               key={item.id}
@@ -174,6 +197,8 @@ export function MerchManager({
             </li>
           ))}
         </ul>
+          )}
+        </>
       )}
 
       <h2 className="mb-1 text-lg font-bold">Orders</h2>
