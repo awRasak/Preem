@@ -9,6 +9,7 @@ const schema = z
   .object({
     dropCommissionBps: z.number().int().min(0).max(10000),
     giftCommissionBps: z.number().int().min(0).max(10000),
+    merchCommissionBps: z.number().int().min(0).max(10000),
     paystackEnabled: z.boolean(),
     monipayEnabled: z.boolean(),
     squadEnabled: z.boolean(),
@@ -44,6 +45,7 @@ export async function PATCH(req: Request) {
     .update({
       drop_commission_bps: parsed.data.dropCommissionBps,
       gift_commission_bps: parsed.data.giftCommissionBps,
+      merch_commission_bps: parsed.data.merchCommissionBps,
       paystack_enabled: parsed.data.paystackEnabled,
       monipay_enabled: parsed.data.monipayEnabled,
       squad_enabled: parsed.data.squadEnabled,

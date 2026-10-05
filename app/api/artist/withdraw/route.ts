@@ -89,18 +89,25 @@ export async function POST() {
     ctx,
   );
 
-  const [{ data: unpaidGifts }] = await Promise.all([
+  const [{ data: unpaidGifts }, { data: unpaidMerch }] = await Promise.all([
     admin
       .from("gifts")
       .select("id, amount_kobo")
       .eq("artist_id", user.id)
       .eq("status", "success")
       .eq("paid_out", false),
+    admin
+      .from("merch_orders")
+      .select("id, amount_kobo, merch_items!inner(artist_id)")
+      .eq("status", "success")
+      .eq("paid_out", false)
+      .eq("merch_items.artist_id", user.id),
   ]);
 
   const purchaseIds = [...shares.keys()];
   const giftIds = (unpaidGifts ?? []).map((g) => g.id);
-  if (purchaseIds.length === 0 && giftIds.length === 0) {
+  const merchIds = (unpaidMerch ?? []).map((m) => m.id);
+  if (purchaseIds.length === 0 && giftIds.length === 0 && merchIds.length === 0) {
     return NextResponse.json(
       {
         error: "Nothing to withdraw yet.",
@@ -114,6 +121,7 @@ export async function POST() {
 
   const claimedItemIds: string[] = [];
   const claimedGiftIds: string[] = [];
+  const claimedMerchIds: string[] = [];
   let claimedKobo = 0;
 
   try {
@@ -143,6 +151,20 @@ export async function POST() {
         claimedKobo += applyCommission(row.amount_kobo, settings.giftCommissionBps);
       }
     }
+    if (merchIds.length > 0) {
+      const { data: claimed, error } = await admin
+        .from("merch_orders")
+        .update({ paid_out: true })
+        .in("id", merchIds)
+        .eq("status", "success")
+        .eq("paid_out", false)
+        .select("id, amount_kobo");
+      if (error) throw new Error(error.message);
+      for (const row of claimed ?? []) {
+        claimedMerchIds.push(row.id);
+        claimedKobo += applyCommission(row.amount_kobo, settings.merchCommissionBps);
+      }
+    }
 
     if (claimedKobo < MIN_PAYOUT_KOBO) {
       // Below the floor: release the claims so the rows keep accumulating
@@ -152,6 +174,9 @@ export async function POST() {
       }
       if (claimedGiftIds.length > 0) {
         await admin.from("gifts").update({ paid_out: false }).in("id", claimedGiftIds);
+      }
+      if (claimedMerchIds.length > 0) {
+        await admin.from("merch_orders").update({ paid_out: false }).in("id", claimedMerchIds);
       }
       return NextResponse.json(
         {
@@ -207,6 +232,9 @@ export async function POST() {
     }
     if (claimedGiftIds.length > 0) {
       await admin.from("gifts").update({ paid_out: false }).in("id", claimedGiftIds);
+    }
+    if (claimedMerchIds.length > 0) {
+      await admin.from("merch_orders").update({ paid_out: false }).in("id", claimedMerchIds);
     }
     if (err instanceof Error) {
       return NextResponse.json({ error: err.message }, { status: 502 });

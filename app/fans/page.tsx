@@ -109,16 +109,22 @@ export default async function MyDropsPage({
         <NewDropNotifications items={notifications} />
 
         {fan ? (
-          <MyDropsLibrary userId={fan.id} userEmail={fan.email ?? undefined} sortMode={sortMode} continueSection />
+          <>
+            <MyDropsLibrary userId={fan.id} userEmail={fan.email ?? undefined} sortMode={sortMode} continueSection />
+            <MerchOrdersSection userEmail={fan.email ?? undefined} />
+          </>
         ) : !phoneSession ? (
           <PhoneLookupForm />
         ) : (
-          <MyDropsLibrary
-            phone={phoneSession.phone}
-            email={phoneSession.email}
-            sortMode={sortMode}
-            continueSection
-          />
+          <>
+            <MyDropsLibrary
+              phone={phoneSession.phone}
+              email={phoneSession.email}
+              sortMode={sortMode}
+              continueSection
+            />
+            <MerchOrdersSection phone={phoneSession.phone} email={phoneSession.email} />
+          </>
         )}
       </main>
     </>
@@ -495,5 +501,78 @@ async function MyDropsLibrary({
         </div>
       </section>
     </div>
+  );
+}
+
+// Physical orders for this fan, matched the same way as the library above:
+// auth fans by account email, phone sessions by both identity halves.
+// Fulfillment is Preem ops; returns are manual via support either way.
+async function MerchOrdersSection({
+  userEmail,
+  phone,
+  email,
+}: {
+  userEmail?: string;
+  phone?: string;
+  email?: string | null;
+}) {
+  const admin = createAdminClient();
+  let query = admin
+    .from("merch_orders")
+    .select("id, quantity, amount_kobo, status, fulfillment, created_at, merch_items(title)")
+    .in("status", ["success", "pending"])
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (phone && email) {
+    query = query.eq("fan_phone", phone).ilike("fan_email", email);
+  } else if (userEmail) {
+    query = query.ilike("fan_email", userEmail);
+  } else {
+    return null;
+  }
+  const { data } = await query;
+  const orders = (data ?? []) as unknown as {
+    id: string;
+    quantity: number;
+    amount_kobo: number;
+    status: string;
+    fulfillment: string;
+    created_at: string;
+    merch_items: { title: string } | { title: string }[] | null;
+  }[];
+  if (orders.length === 0) return null;
+
+  const stepLabel: Record<string, string> = {
+    pending: "Confirming payment",
+    preparing: "Preparing",
+    shipped: "Shipped",
+    delivered: "Delivered",
+  };
+
+  return (
+    <section className="mb-10 mt-10">
+      <h2 className="mb-4 text-lg font-bold">Your merch orders</h2>
+      <div className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+        {orders.map((o) => {
+          const item = Array.isArray(o.merch_items) ? o.merch_items[0] : o.merch_items;
+          return (
+            <div key={o.id} className="flex items-center gap-3 p-4">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">
+                  {o.quantity} × {item?.title ?? "Item"}
+                </div>
+                <div className="mt-1 text-xs text-muted">
+                  {o.status === "pending" ? "Confirming payment" : (stepLabel[o.fulfillment] ?? o.fulfillment)}
+                </div>
+              </div>
+              <div className="text-sm font-bold">{formatNaira(o.amount_kobo)}</div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        Shipped by Preem. Problems with an order? Contact Preem support.
+      </p>
+    </section>
   );
 }

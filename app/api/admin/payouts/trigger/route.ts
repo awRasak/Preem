@@ -83,6 +83,19 @@ export async function POST(req: Request) {
   // applies to drop purchases only) -- folded into the Paystack bucket.
   const gifts = unpaidGifts ?? [];
 
+  const { data: unpaidMerch } = await supabase
+    .from("merch_orders")
+    .select("id, amount_kobo, gateway, merch_items!inner(artist_id)")
+    .eq("status", "success")
+    .eq("paid_out", false)
+    .eq("merch_items.artist_id", artistId);
+
+  // Merch rides the rail each order paid on; Squad merch (no transfer rail
+  // yet, settles off-band) folds into the Paystack bucket like gifts do.
+  const merch = unpaidMerch ?? [];
+  const paystackMerch = merch.filter((m) => (m.gateway ?? "paystack") !== "monipay");
+  const monipayMerch = merch.filter((m) => m.gateway === "monipay");
+
   const paystackPurchases = [...shares.keys()].filter(
     (id) => gatewayByPurchase.get(id) !== "monipay",
   );
@@ -93,10 +106,14 @@ export async function POST(req: Request) {
   // Pre-check so the common "nothing to do" case exits before claiming.
   // Amounts are this artist's sheet shares, not full purchase values.
   const shareOf = (id: string) => shares.get(id) ?? 0;
+  const merchOf = (rows: typeof merch) =>
+    rows.reduce((sum, m) => sum + applyCommission(m.amount_kobo, settings.merchCommissionBps), 0);
   const paystackAmountKobo =
     paystackPurchases.reduce((sum, id) => sum + shareOf(id), 0) +
-    gifts.reduce((sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps), 0);
-  const monipayAmountKobo = monipayPurchases.reduce((sum, id) => sum + shareOf(id), 0);
+    gifts.reduce((sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps), 0) +
+    merchOf(paystackMerch);
+  const monipayAmountKobo =
+    monipayPurchases.reduce((sum, id) => sum + shareOf(id), 0) + merchOf(monipayMerch);
 
   if (paystackAmountKobo <= 0 && monipayAmountKobo <= 0) {
     return NextResponse.json({ error: "Nothing to pay out." }, { status: 400 });
@@ -114,12 +131,15 @@ export async function POST(req: Request) {
     gateway: Gateway,
     candidatePurchases: string[],
     candidateGifts: { id: string }[],
+    candidateMerch: { id: string }[] = [],
   ) {
     const client = gateway === "monipay" ? monipay : paystack;
     const claimedItemIds: string[] = [];
     let claimedKobo = 0;
     const claimedGiftIds: string[] = [];
     let claimedGiftKobo = 0;
+    const claimedMerchIds: string[] = [];
+    let claimedMerchKobo = 0;
 
     try {
       if (candidatePurchases.length > 0) {
@@ -149,9 +169,23 @@ export async function POST(req: Request) {
           claimedGiftKobo += applyCommission(row.amount_kobo, settings.giftCommissionBps);
         }
       }
+      if (candidateMerch.length > 0) {
+        const { data: claimed, error } = await supabase
+          .from("merch_orders")
+          .update({ paid_out: true })
+          .in("id", candidateMerch.map((m) => m.id))
+          .eq("status", "success")
+          .eq("paid_out", false)
+          .select("id, amount_kobo");
+        if (error) throw new Error(error.message);
+        for (const row of claimed ?? []) {
+          claimedMerchIds.push(row.id);
+          claimedMerchKobo += applyCommission(row.amount_kobo, settings.merchCommissionBps);
+        }
+      }
 
       const totalKobo =
-        gateway === "paystack" ? claimedKobo + claimedGiftKobo : claimedKobo;
+        gateway === "paystack" ? claimedKobo + claimedGiftKobo + claimedMerchKobo : claimedKobo + claimedMerchKobo;
       if (totalKobo <= 0) return;
 
       const recipientColumn =
@@ -204,13 +238,16 @@ export async function POST(req: Request) {
       if (claimedGiftIds.length > 0) {
         await supabase.from("gifts").update({ paid_out: false }).in("id", claimedGiftIds);
       }
+      if (claimedMerchIds.length > 0) {
+        await supabase.from("merch_orders").update({ paid_out: false }).in("id", claimedMerchIds);
+      }
       throw err;
     }
   }
 
   try {
-    await payOutVia("paystack", paystackPurchases, gifts);
-    await payOutVia("monipay", monipayPurchases, []);
+    await payOutVia("paystack", paystackPurchases, gifts, paystackMerch);
+    await payOutVia("monipay", monipayPurchases, [], monipayMerch);
 
     return NextResponse.json({
       ok: true,

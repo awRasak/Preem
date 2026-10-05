@@ -5,8 +5,9 @@ import { verifyTransaction as verifyMonipayTransaction, monipayCollected } from 
 import { verifyTransaction as verifySquadTransaction } from "@/lib/squad";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
+import { markMerchOrderSuccess } from "@/lib/merch";
 
-// One verify endpoint for both drops and show tickets -- both mint pending
+// One verify endpoint for drops, show tickets, and merch -- all mint pending
 // rows keyed by reference before payment, so the flow is identical.
 export async function GET(req: Request) {
   const reference = new URL(req.url).searchParams.get("reference");
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
 
   const supabase = createAdminClient();
 
-  const [{ data: purchase }, { data: showTicket }] = await Promise.all([
+  const [{ data: purchase }, { data: showTicket }, { data: merchOrder }] = await Promise.all([
     supabase
       .from("purchases")
       .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
@@ -27,9 +28,14 @@ export async function GET(req: Request) {
       .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
       .eq("paystack_ref", reference)
       .single(),
+    supabase
+      .from("merch_orders")
+      .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
+      .eq("paystack_ref", reference)
+      .single(),
   ]);
 
-  const existing = purchase ?? showTicket;
+  const existing = purchase ?? showTicket ?? merchOrder;
   if (!existing) {
     return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
   }
@@ -65,7 +71,9 @@ export async function GET(req: Request) {
 
   const confirmed = purchase
     ? await markPurchaseSuccess(supabase, reference)
-    : await markShowTicketSuccess(supabase, reference);
+    : showTicket
+      ? await markShowTicketSuccess(supabase, reference)
+      : await markMerchOrderSuccess(supabase, reference);
 
   if (!confirmed || confirmed.status !== "success") {
     return NextResponse.json(
@@ -76,6 +84,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     status: "success",
+    oversold: "oversold" in confirmed ? confirmed.oversold : false,
     fanPhone: "fan_phone" in confirmed ? confirmed.fan_phone : undefined,
   });
 }

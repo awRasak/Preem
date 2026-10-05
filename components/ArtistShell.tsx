@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Bell, CalendarDays, Megaphone, BarChart3 } from "lucide-react";
+import { Bell, CalendarDays, Megaphone, BarChart3, ShoppingBag } from "lucide-react";
 import { Avatar } from "./Avatar";
 import { HomeIcon, MusicNoteIcon, PeopleIcon } from "./Icons";
 
@@ -11,7 +11,8 @@ export type ArtistSection =
   | "listeners"
   | "analytics"
   | "profile"
-  | "promote";
+  | "promote"
+  | "merch";
 
 const NAV_ITEMS: {
   section: ArtistSection;
@@ -25,6 +26,7 @@ const NAV_ITEMS: {
   { section: "listeners", label: "Listeners", href: "/artist/listeners", icon: PeopleIcon },
   { section: "analytics", label: "Analytics", href: "/artist/analytics", icon: BarChart3 },
   { section: "promote", label: "Promote", href: "/artist/promote", icon: Megaphone },
+  { section: "merch", label: "Merch", href: "/artist/merch", icon: ShoppingBag },
 ];
 
 export function ArtistShell({

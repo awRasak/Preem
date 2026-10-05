@@ -1088,3 +1088,85 @@ create policy "track_split_invites owner full"
 -- (service role bypasses RLS), admins via existing admin paths.
 create policy "payout_items artist read own"
   on public.payout_items for select using (artist_id = auth.uid());
+
+-- 0034_merch (see supabase/migrations/0034_merch.sql)
+create table merch_items (
+  id uuid primary key default gen_random_uuid(),
+  artist_id uuid not null references artists (id) on delete cascade,
+  title text not null,
+  description text,
+  price_kobo integer not null check (price_kobo > 0),
+  stock integer not null default 0 check (stock >= 0),
+  photo_path text,
+  status text not null default 'draft'
+    check (status in ('draft', 'published')),
+  created_at timestamptz not null default now()
+);
+create index merch_items_artist_id_idx on merch_items (artist_id);
+create table delivery_zones (
+  id uuid primary key default gen_random_uuid(),
+  label text not null,
+  fee_kobo integer not null default 0 check (fee_kobo >= 0),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+insert into delivery_zones (label, fee_kobo, sort_order) values
+  ('Lagos', 150000, 0),
+  ('Outside Lagos', 300000, 1);
+create table merch_orders (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references merch_items (id) on delete restrict,
+  fan_name text not null,
+  fan_phone text not null,
+  fan_email text not null,
+  address text not null,
+  zone_id uuid references delivery_zones (id) on delete set null,
+  zone_label text not null default '',
+  quantity integer not null default 1 check (quantity > 0),
+  item_price_kobo integer not null check (item_price_kobo > 0),
+  delivery_fee_kobo integer not null default 0 check (delivery_fee_kobo >= 0),
+  amount_kobo integer not null check (amount_kobo > 0),
+  paystack_ref text not null unique,
+  gateway text not null default 'paystack'
+    check (gateway in ('paystack', 'monipay', 'squad')),
+  status text not null default 'pending'
+    check (status in ('pending', 'success', 'failed')),
+  paid_out boolean not null default false,
+  fulfillment text not null default 'pending'
+    check (fulfillment in ('pending', 'preparing', 'shipped', 'delivered')),
+  purchased_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index merch_orders_item_id_idx on merch_orders (item_id);
+create index merch_orders_status_idx on merch_orders (status);
+alter table public.platform_settings
+  add column if not exists merch_commission_bps integer not null default 500
+  check (merch_commission_bps between 0 and 10000);
+alter table merch_items enable row level security;
+alter table merch_orders enable row level security;
+alter table delivery_zones enable row level security;
+create policy "public can read published merch items"
+  on merch_items for select
+  using (status = 'published');
+create policy "artist can manage own merch items"
+  on merch_items for all
+  using (auth.uid() = artist_id)
+  with check (auth.uid() = artist_id);
+create policy "admin can read all merch items"
+  on merch_items for select
+  using (is_admin());
+create policy "public can read delivery zones"
+  on delivery_zones for select
+  using (true);
+create policy "artist can read orders of own items"
+  on merch_orders for select
+  using (
+    exists (
+      select 1 from merch_items
+      where merch_items.id = merch_orders.item_id
+        and merch_items.artist_id = auth.uid()
+    )
+  );
+create policy "admin can manage merch orders"
+  on merch_orders for all
+  using (is_admin());

@@ -45,6 +45,7 @@ describe("getPlatformSettings", () => {
     expect(settings).toEqual({
       dropCommissionBps: 1500,
       giftCommissionBps: 300,
+      merchCommissionBps: 500,
       paystackEnabled: true,
       monipayEnabled: false,
       // Row predates the squad_enabled column -> read back as off.
@@ -68,6 +69,7 @@ describe("getPlatformSettings", () => {
     const supabase = fakeSupabase({
       drop_commission_bps: 2000,
       gift_commission_bps: 500,
+      merch_commission_bps: 500,
       paystack_enabled: true,
       monipay_enabled: true,
       squad_enabled: true,
@@ -75,6 +77,7 @@ describe("getPlatformSettings", () => {
     });
     const settings = await getPlatformSettings(supabase);
     expect(settings.squadEnabled).toBe(true);
+    expect(settings.merchCommissionBps).toBe(500);
   });
 
   it("caches the result and does not re-query within the TTL", async () => {

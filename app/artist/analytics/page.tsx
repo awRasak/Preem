@@ -75,6 +75,7 @@ export default async function ArtistAnalyticsPage({
   const [
     { data: artist },
     { data: successPurchases },
+    { data: successMerch },
     { data: payouts },
     { data: drops },
   ] = await Promise.all([
@@ -84,6 +85,11 @@ export default async function ArtistAnalyticsPage({
       .select("drop_id, amount_kobo, purchased_at, fan_phone, drops!inner(artist_id, title)")
       .eq("status", "success")
       .eq("drops.artist_id", user.id),
+    supabase
+      .from("merch_orders")
+      .select("amount_kobo, purchased_at, created_at, fan_phone, merch_items!inner(artist_id)")
+      .eq("status", "success")
+      .eq("merch_items.artist_id", user.id),
     supabase
       .from("payouts")
       .select("*")
@@ -107,17 +113,33 @@ export default async function ArtistAnalyticsPage({
   );
 
   const netOf = (amountKobo: number) => applyCommission(amountKobo, settings.dropCommissionBps);
+  const merchNetOf = (amountKobo: number) => applyCommission(amountKobo, settings.merchCommissionBps);
   const atOf = (p: Purchase) => p.purchased_at ?? p.created_at;
 
   // Everything below (except the momentum line) is scoped to the range.
   const cutoff = rangeDef.days === null ? null : Date.now() - rangeDef.days * DAY_MS;
+  const inRange = (iso: string | null, fallback: string) =>
+    cutoff === null || new Date(iso ?? fallback).getTime() >= cutoff;
   const purchases =
     cutoff === null ? allPurchases : allPurchases.filter((p) => new Date(atOf(p)).getTime() >= cutoff);
+  const allMerch = ((successMerch ?? []) as unknown as {
+    amount_kobo: number;
+    purchased_at: string | null;
+    created_at: string;
+    fan_phone: string;
+  }[]);
+  const merch = allMerch.filter((m) => inRange(m.purchased_at, m.created_at));
 
-  const totalSales = purchases.length;
-  const revenueKobo = purchases.reduce((sum, p) => sum + netOf(p.amount_kobo), 0);
-  const buyers = new Set(purchases.map((p) => p.fan_phone)).size;
+  const totalSales = purchases.length + merch.length;
+  const revenueKobo =
+    purchases.reduce((sum, p) => sum + netOf(p.amount_kobo), 0) +
+    merch.reduce((sum, m) => sum + merchNetOf(m.amount_kobo), 0);
+  const buyers = new Set([
+    ...purchases.map((p) => p.fan_phone),
+    ...merch.map((m) => m.fan_phone),
+  ]).size;
   const avgPerBuyer = buyers > 0 ? Math.round(revenueKobo / buyers) : 0;
+  const merchRevenueKobo = merch.reduce((sum, m) => sum + merchNetOf(m.amount_kobo), 0);
 
   // Revenue chart: daily buckets for bounded ranges, weekly for all-time.
   let bars: Bar[];
@@ -126,6 +148,10 @@ export default async function ArtistAnalyticsPage({
     for (const p of purchases) {
       const key = dayKey(atOf(p));
       revenueByDay.set(key, (revenueByDay.get(key) ?? 0) + netOf(p.amount_kobo));
+    }
+    for (const m of merch) {
+      const key = dayKey(m.purchased_at ?? m.created_at);
+      revenueByDay.set(key, (revenueByDay.get(key) ?? 0) + merchNetOf(m.amount_kobo));
     }
     bars = [];
     for (let i = rangeDef.days - 1; i >= 0; i--) {
@@ -142,6 +168,10 @@ export default async function ArtistAnalyticsPage({
     for (const p of purchases) {
       const key = weekKey(atOf(p));
       revenueByWeek.set(key, (revenueByWeek.get(key) ?? 0) + netOf(p.amount_kobo));
+    }
+    for (const m of merch) {
+      const key = weekKey(m.purchased_at ?? m.created_at);
+      revenueByWeek.set(key, (revenueByWeek.get(key) ?? 0) + merchNetOf(m.amount_kobo));
     }
     const weeks = [...revenueByWeek.keys()].sort();
     bars = weeks.slice(-52).map((key) => ({
@@ -162,6 +192,11 @@ export default async function ArtistAnalyticsPage({
     const age = now - new Date(atOf(p)).getTime();
     if (age <= 7 * DAY_MS) thisWeekKobo += netOf(p.amount_kobo);
     else if (age <= 14 * DAY_MS) lastWeekKobo += netOf(p.amount_kobo);
+  }
+  for (const m of allMerch) {
+    const age = now - new Date(m.purchased_at ?? m.created_at).getTime();
+    if (age <= 7 * DAY_MS) thisWeekKobo += merchNetOf(m.amount_kobo);
+    else if (age <= 14 * DAY_MS) lastWeekKobo += merchNetOf(m.amount_kobo);
   }
 
   // Per-drop breakdown, range-scoped.
@@ -301,6 +336,18 @@ export default async function ArtistAnalyticsPage({
           </div>
         ) : (
           <p className="mb-8 text-sm text-muted">No sales in this period yet.</p>
+        )}
+
+        {merch.length > 0 && (
+          <div className="mb-8 flex items-center gap-3 rounded-xl border border-line p-4">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">Merch</div>
+              <div className="mt-1 text-xs text-muted">
+                {merch.length} order{merch.length === 1 ? "" : "s"} · shipped by Preem
+              </div>
+            </div>
+            <div className="text-sm font-bold text-accent">{formatNaira(merchRevenueKobo)}</div>
+          </div>
         )}
 
         <div className="mb-8">

@@ -10,6 +10,7 @@ import {
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
 import { markGiftSuccess } from "@/lib/gifts";
+import { markMerchOrderSuccess } from "@/lib/merch";
 
 // Confirms a Monipay payment using the reference Monipay itself reports.
 //
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient();
 
-  const [{ data: purchase }, { data: showTicket }, { data: gift }] = await Promise.all([
+  const [{ data: purchase }, { data: showTicket }, { data: gift }, { data: merchOrder }] = await Promise.all([
     supabase
       .from("purchases")
       .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
@@ -50,9 +51,14 @@ export async function POST(req: Request) {
       .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
       .eq("paystack_ref", reference)
       .single(),
+    supabase
+      .from("merch_orders")
+      .select("gateway, amount_kobo, fan_phone, fan_email, fan_name")
+      .eq("paystack_ref", reference)
+      .single(),
   ]);
 
-  const existing = purchase ?? showTicket ?? gift;
+  const existing = purchase ?? showTicket ?? gift ?? merchOrder;
   if (!existing) {
     return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
   }
@@ -87,10 +93,13 @@ export async function POST(req: Request) {
         ? await markPurchaseSuccess(supabase, reference, collected)
         : showTicket
           ? await markShowTicketSuccess(supabase, reference, collected)
-          : await markGiftSuccess(supabase, reference, collected);
+          : gift
+            ? await markGiftSuccess(supabase, reference, collected)
+            : await markMerchOrderSuccess(supabase, reference);
       if (confirmed && confirmed.status === "success") {
         return NextResponse.json({
           status: "success",
+          oversold: "oversold" in confirmed ? confirmed.oversold : false,
           fanPhone: "fan_phone" in confirmed ? confirmed.fan_phone : undefined,
         });
       }

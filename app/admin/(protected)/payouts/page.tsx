@@ -16,6 +16,7 @@ export default async function AdminPayoutsPage() {
     { data: approvedArtists },
     { data: unpaidPurchases },
     { data: unpaidGifts },
+    { data: unpaidMerch },
   ] = await Promise.all([
     getPlatformSettings(supabase),
     supabase
@@ -30,6 +31,11 @@ export default async function AdminPayoutsPage() {
     supabase
       .from("gifts")
       .select("artist_id, amount_kobo")
+      .eq("status", "success")
+      .eq("paid_out", false),
+    supabase
+      .from("merch_orders")
+      .select("amount_kobo, item:merch_items!inner(artist_id)")
       .eq("status", "success")
       .eq("paid_out", false),
   ]);
@@ -62,6 +68,18 @@ export default async function AdminPayoutsPage() {
       g.artist_id,
       (balanceByArtist.get(g.artist_id) ?? 0) +
         applyCommission(g.amount_kobo, settings.giftCommissionBps),
+    );
+  }
+  for (const m of (unpaidMerch ?? []) as unknown as {
+    amount_kobo: number;
+    item: { artist_id: string } | { artist_id: string }[] | null;
+  }[]) {
+    const item = Array.isArray(m.item) ? m.item[0] : m.item;
+    if (!item) continue;
+    balanceByArtist.set(
+      item.artist_id,
+      (balanceByArtist.get(item.artist_id) ?? 0) +
+        applyCommission(m.amount_kobo, settings.merchCommissionBps),
     );
   }
 

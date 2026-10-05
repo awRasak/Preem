@@ -20,8 +20,10 @@ import {
 import { sanitizeBio, formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { isUuid, dropPath, artistPath } from "@/lib/slug";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { getFanIdentity } from "@/lib/fan-identity";
 import { FollowButton } from "@/components/FollowButton";
+import { MerchCard } from "@/components/MerchCard";
 import { ShowCard } from "@/components/ShowCard";
 import { artistShareMetadata, artistJsonLd } from "@/lib/seo";
 import type { Artist, ArtistLink, BioLink, Drop } from "@/lib/types";
@@ -120,6 +122,20 @@ export default async function ArtistProfilePage({
     .select("*")
     .eq("artist_id", artist.id)
     .order("sort_order", { ascending: true });
+
+  const [{ data: merchItems }, { data: zones }, settings] = await Promise.all([
+    supabase
+      .from("merch_items")
+      .select("*")
+      .eq("artist_id", artist.id)
+      .eq("status", "published")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("delivery_zones")
+      .select("*")
+      .order("sort_order", { ascending: true }),
+    getPlatformSettings(supabase),
+  ]);
 
   // Pinned "current single" -- hero slot above everything else. Only goes
   // out while published; a draft pin or a cleared pin falls back to the
@@ -406,6 +422,26 @@ export default async function ArtistProfilePage({
               <DropCard key={drop.id} drop={{ ...drop, artist }} />
             ))}
           </div>
+        )}
+
+        {(merchItems ?? []).length > 0 && (
+          <>
+            <h2 className="mb-4 mt-10 text-lg font-bold">Merch</h2>
+            <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              {(merchItems as import("@/lib/types").MerchItem[]).map((item) => (
+                <MerchCard
+                  key={item.id}
+                  item={item}
+                  artistName={artist.stage_name}
+                  zones={(zones ?? []) as import("@/lib/types").DeliveryZone[]}
+                  usdRate={settings.ngnPerUsd}
+                />
+              ))}
+            </div>
+            <p className="-mt-6 mb-10 text-xs text-muted">
+              Ships via Preem. All sales final — problems? Contact Preem support.
+            </p>
+          </>
         )}
 
         <DiscoverMore

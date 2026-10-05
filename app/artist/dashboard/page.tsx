@@ -86,13 +86,19 @@ export default async function ArtistDashboardPage() {
     candidates.map((p) => p.drop_id),
   );
   const { shares } = planArtistShares(user.id, candidates, settings.dropCommissionBps, sheetCtx);
-  const [{ data: unpaidGifts }, { data: payoutHistory }] = await Promise.all([
+  const [{ data: unpaidGifts }, { data: unpaidMerch }, { data: payoutHistory }] = await Promise.all([
     admin
       .from("gifts")
       .select("amount_kobo")
       .eq("artist_id", user.id)
       .eq("status", "success")
       .eq("paid_out", false),
+    admin
+      .from("merch_orders")
+      .select("amount_kobo, merch_items!inner(artist_id)")
+      .eq("status", "success")
+      .eq("paid_out", false)
+      .eq("merch_items.artist_id", user.id),
     admin
       .from("payouts")
       .select("amount_kobo, status, created_at")
@@ -104,6 +110,10 @@ export default async function ArtistDashboardPage() {
   for (const kobo of shares.values()) withdrawableKobo += kobo;
   withdrawableKobo += (unpaidGifts ?? []).reduce(
     (sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps),
+    0,
+  );
+  withdrawableKobo += (unpaidMerch ?? []).reduce(
+    (sum, m) => sum + applyCommission(m.amount_kobo, settings.merchCommissionBps),
     0,
   );
   const hasBankDetails = Boolean(

@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   const supabase = createAdminClient();
   const cutoff = new Date(Date.now() - ABANDON_AFTER_MS).toISOString();
 
-  const expire = async (table: "purchases" | "show_tickets") => {
+  const expire = async (table: "purchases" | "show_tickets" | "merch_orders") => {
     const { data } = await supabase
       .from(table)
       .update({ status: "failed" })
@@ -41,14 +41,16 @@ export async function GET(req: Request) {
     return data?.length ?? 0;
   };
 
-  const [expiredPurchases, expiredTickets] = await Promise.all([
+  const [expiredPurchases, expiredTickets, expiredMerch] = await Promise.all([
     expire("purchases"),
     expire("show_tickets"),
+    expire("merch_orders"),
   ]);
 
   return NextResponse.json({
     expiredPurchases,
     expiredTickets,
+    expiredMerch,
     cutoff,
   });
 }

@@ -10,6 +10,7 @@ import { Switch } from "@/components/Switch";
 export function PlatformSettingsForm({
   dropCommissionBps,
   giftCommissionBps,
+  merchCommissionBps,
   paystackEnabled,
   monipayEnabled,
   squadEnabled,
@@ -17,6 +18,7 @@ export function PlatformSettingsForm({
 }: {
   dropCommissionBps: number;
   giftCommissionBps: number;
+  merchCommissionBps: number;
   paystackEnabled: boolean;
   monipayEnabled: boolean;
   squadEnabled: boolean;
@@ -25,6 +27,7 @@ export function PlatformSettingsForm({
   const router = useRouter();
   const [dropPercent, setDropPercent] = useState(String(dropCommissionBps / 100));
   const [giftPercent, setGiftPercent] = useState(String(giftCommissionBps / 100));
+  const [merchPercent, setMerchPercent] = useState(String(merchCommissionBps / 100));
   const [paystackOn, setPaystackOn] = useState(paystackEnabled);
   const [monipayOn, setMonipayOn] = useState(monipayEnabled);
   const [squadOn, setSquadOn] = useState(squadEnabled);
@@ -48,6 +51,7 @@ export function PlatformSettingsForm({
       body: JSON.stringify({
         dropCommissionBps: Math.round(Number(dropPercent) * 100),
         giftCommissionBps: Math.round(Number(giftPercent) * 100),
+        merchCommissionBps: Math.round(Number(merchPercent) * 100),
         paystackEnabled: paystackOn,
         monipayEnabled: monipayOn,
         squadEnabled: squadOn,
@@ -93,6 +97,17 @@ export function PlatformSettingsForm({
               step="0.1"
               value={giftPercent}
               onChange={(e) => setGiftPercent(e.target.value)}
+            />
+          </Field>
+          <Field label="Merch commission (%)">
+            <Input
+              required
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              value={merchPercent}
+              onChange={(e) => setMerchPercent(e.target.value)}
             />
           </Field>
         </section>

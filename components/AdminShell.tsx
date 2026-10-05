@@ -16,6 +16,7 @@ import {
   Settings,
   MoreHorizontal,
   X,
+  ShoppingBag,
 } from "lucide-react";
 import { SignOutButton } from "./SignOutButton";
 
@@ -28,6 +29,7 @@ type AdminSection =
   | "support"
   | "transactions"
   | "payouts"
+  | "merch"
   | "settings";
 
 const NAV_ITEMS: { section: AdminSection; label: string; href: string; icon: typeof Home }[] = [
@@ -39,6 +41,7 @@ const NAV_ITEMS: { section: AdminSection; label: string; href: string; icon: typ
   { section: "support", label: "Support", href: "/admin/support", icon: Mail },
   { section: "transactions", label: "Transactions", href: "/admin/transactions", icon: ArrowLeftRight },
   { section: "payouts", label: "Payouts", href: "/admin/payouts", icon: Wallet },
+  { section: "merch", label: "Merch", href: "/admin/merch", icon: ShoppingBag },
   { section: "settings", label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
