@@ -20,6 +20,10 @@ export type TrackDraft = {
   collaborators: string;
   lyrics: string;
   expanded: boolean;
+  // Split sheet drafts (plain JSON -- autosave-safe). Saved to
+  // track_splits / track_split_invites after the tracks are created.
+  splitArtists: { artistId: string; stageName: string; avatarUrl: string | null; shareBps: number }[];
+  splitInvites: { name: string; email: string; shareBps: number }[];
 };
 
 export type WizardState = {
@@ -56,6 +60,8 @@ export function newTrackDraft(title = ""): TrackDraft {
     collaborators: "",
     lyrics: "",
     expanded: false,
+    splitArtists: [],
+    splitInvites: [],
   };
 }
 

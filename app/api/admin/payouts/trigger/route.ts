@@ -5,6 +5,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import * as paystack from "@/lib/paystack";
 import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
+import {
+  claimItems,
+  findCandidatePurchases,
+  loadSheetContext,
+  markSettledPurchases,
+  planArtistShares,
+  releaseItems,
+  syncUnpaidItems,
+} from "@/lib/payout-shares";
 import { parseBody } from "@/lib/http";
 
 const schema = z.object({ artistId: z.string().uuid() });
@@ -47,14 +56,21 @@ export async function POST(req: Request) {
     .eq("artist_id", artistId);
   const dropIds = (drops ?? []).map((d) => d.id);
 
-  const { data: unpaidPurchases } = dropIds.length
-    ? await supabase
-        .from("purchases")
-        .select("id, amount_kobo, gateway")
-        .in("drop_id", dropIds)
-        .eq("status", "success")
-        .eq("paid_out", false)
-    : { data: [] };
+  // Multi-payee candidates: own unsettled rows plus others' rows where this
+  // artist holds a split. Gifts stay owner-only (no split sheets on gifts).
+  const candidates = await findCandidatePurchases(supabase, artistId, dropIds);
+  const ctx = await loadSheetContext(
+    supabase,
+    candidates.map((p) => p.track_id).filter((t): t is string => t !== null),
+    candidates.map((p) => p.drop_id),
+  );
+  const { shares, payeesByPurchase } = planArtistShares(
+    artistId,
+    candidates,
+    settings.dropCommissionBps,
+    ctx,
+  );
+  const gatewayByPurchase = new Map(candidates.map((p) => [p.id, p.gateway ?? "paystack"]));
 
   const { data: unpaidGifts } = await supabase
     .from("gifts")
@@ -63,25 +79,24 @@ export async function POST(req: Request) {
     .eq("status", "success")
     .eq("paid_out", false);
 
-  const purchases = unpaidPurchases ?? [];
   // Gifts only ever go through Paystack today (checkout gateway choice
   // applies to drop purchases only) -- folded into the Paystack bucket.
   const gifts = unpaidGifts ?? [];
 
-  const paystackPurchases = purchases.filter((p) => (p.gateway ?? "paystack") === "paystack");
-  const monipayPurchases = purchases.filter((p) => p.gateway === "monipay");
+  const paystackPurchases = [...shares.keys()].filter(
+    (id) => gatewayByPurchase.get(id) !== "monipay",
+  );
+  const monipayPurchases = [...shares.keys()].filter(
+    (id) => gatewayByPurchase.get(id) === "monipay",
+  );
 
   // Pre-check so the common "nothing to do" case exits before claiming.
+  // Amounts are this artist's sheet shares, not full purchase values.
+  const shareOf = (id: string) => shares.get(id) ?? 0;
   const paystackAmountKobo =
-    paystackPurchases.reduce(
-      (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
-      0,
-    ) +
+    paystackPurchases.reduce((sum, id) => sum + shareOf(id), 0) +
     gifts.reduce((sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps), 0);
-  const monipayAmountKobo = monipayPurchases.reduce(
-    (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
-    0,
-  );
+  const monipayAmountKobo = monipayPurchases.reduce((sum, id) => sum + shareOf(id), 0);
 
   if (paystackAmountKobo <= 0 && monipayAmountKobo <= 0) {
     return NextResponse.json({ error: "Nothing to pay out." }, { status: 400 });
@@ -89,36 +104,35 @@ export async function POST(req: Request) {
 
   const results: { gateway: Gateway; amountKobo: number }[] = [];
 
-  // Claim-then-pay: flip paid_out on exactly the still-unpaid rows FIRST
-  // (the conditional update returns what THIS call claimed), then transfer
-  // the claimed sum. Two concurrent triggers can no longer both pay the
-  // same rows -- the loser claims zero and moves on. If anything throws
-  // after claiming (recipient creation, transfer), the claim is reverted so
-  // a retry picks the money back up.
+  // Claim-then-pay on ledger items: sync fresh amounts, flip paid_out on
+  // exactly the still-unpaid items FIRST (the conditional update returns
+  // what THIS call claimed), then transfer the claimed sum. Two concurrent
+  // triggers can no longer both pay the same items -- the loser claims zero
+  // and moves on. If anything throws after claiming (recipient creation,
+  // transfer), the claim is reverted so a retry picks the money back up.
   async function payOutVia(
     gateway: Gateway,
-    candidatePurchases: { id: string }[],
+    candidatePurchases: string[],
     candidateGifts: { id: string }[],
   ) {
     const client = gateway === "monipay" ? monipay : paystack;
-    const claimedPurchaseIds: string[] = [];
+    const claimedItemIds: string[] = [];
     let claimedKobo = 0;
     const claimedGiftIds: string[] = [];
     let claimedGiftKobo = 0;
 
     try {
       if (candidatePurchases.length > 0) {
-        const { data: claimed, error } = await supabase
-          .from("purchases")
-          .update({ paid_out: true })
-          .in("id", candidatePurchases.map((p) => p.id))
-          .eq("status", "success")
-          .eq("paid_out", false)
-          .select("id, amount_kobo");
-        if (error) throw new Error(error.message);
-        for (const row of claimed ?? []) {
-          claimedPurchaseIds.push(row.id);
-          claimedKobo += applyCommission(row.amount_kobo, settings.dropCommissionBps);
+        // Sync fresh sheet amounts, then claim exactly this call's items.
+        const itemIds = await syncUnpaidItems(
+          supabase,
+          artistId,
+          new Map(candidatePurchases.map((id) => [id, shares.get(id) ?? 0])),
+        );
+        const claimed = await claimItems(supabase, artistId, itemIds);
+        for (const row of claimed) {
+          claimedItemIds.push(row.id);
+          claimedKobo += row.amount_kobo;
         }
       }
       if (candidateGifts.length > 0) {
@@ -175,11 +189,17 @@ export async function POST(req: Request) {
       });
 
       results.push({ gateway, amountKobo: totalKobo });
+
+      // Only after a recorded transfer: fully-settled purchases stop
+      // rescanning. Everything else (other unpaid payees, held pending
+      // shares) stays open for future runs.
+      await markSettledPurchases(supabase, candidatePurchases, payeesByPurchase);
     } catch (err) {
-      // Transfer never completed or was never recorded -- release the
-      // claims so the next attempt isn't skipped.
-      if (claimedPurchaseIds.length > 0) {
-        await supabase.from("purchases").update({ paid_out: false }).in("id", claimedPurchaseIds);
+      // Transfer never completed or was never recorded -- release the item
+      // claims so the next attempt isn't skipped. Synced amounts stay (they
+      // recompute fresh every run); purchases were never marked.
+      if (claimedItemIds.length > 0) {
+        await releaseItems(supabase, claimedItemIds);
       }
       if (claimedGiftIds.length > 0) {
         await supabase.from("gifts").update({ paid_out: false }).in("id", claimedGiftIds);

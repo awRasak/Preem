@@ -254,3 +254,47 @@ export async function sendNewArtistSignupEmail({
     `,
   });
 }
+
+// Split-sheet invite: the drop owner named someone off-Preem as a paid
+// contributor. Their share accrues on every sale but only pays out after
+// they join Preem, get approved, and claim via the token link.
+export async function sendSplitInviteEmail({
+  to,
+  contributorName,
+  ownerName,
+  trackTitle,
+  dropTitle,
+  shareBps,
+  claimUrl,
+}: {
+  to: string;
+  contributorName: string;
+  ownerName: string;
+  trackTitle: string;
+  dropTitle: string;
+  shareBps: number;
+  claimUrl: string;
+}) {
+  if (!resend) return;
+
+  const percent = (shareBps / 100).toFixed(shareBps % 100 === 0 ? 0 : 2);
+  const safeName = escapeHtml(contributorName);
+  const safeOwner = escapeHtml(ownerName);
+  const safeTrack = escapeHtml(trackTitle);
+  const safeDrop = escapeHtml(dropTitle);
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${ownerName} added you as a contributor on "${trackTitle}"`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="margin-bottom: 4px;">Hi ${safeName},</h2>
+        <p style="color: #555;"><strong>${safeOwner}</strong> listed you as a paid contributor on <strong>${safeTrack}</strong> (${safeDrop}) — <strong>${percent}%</strong> of the track's revenue is yours.</p>
+        <p style="color: #555;">Your share is held for you. To claim it, join Preem as an artist and open your claim link after approval:</p>
+        <p style="margin: 24px 0;"><a href="${claimUrl}" style="display: inline-block; background: #1a1a1a; color: #fff; padding: 12px 24px; border-radius: 999px; text-decoration: none; font-weight: bold;">Claim your ${percent}%</a></p>
+        <p style="color: #999; font-size: 12px;">Already on Preem? Sign in and open the link above to claim. Questions? Reply to this email.</p>
+      </div>
+    `,
+  });
+}

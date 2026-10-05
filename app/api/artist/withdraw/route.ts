@@ -4,18 +4,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
 import { MIN_PAYOUT_KOBO } from "@/lib/payouts";
+import {
+  claimItems,
+  findCandidatePurchases,
+  loadSheetContext,
+  markSettledPurchases,
+  planArtistShares,
+  releaseItems,
+  syncUnpaidItems,
+} from "@/lib/payout-shares";
 import { rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
 
 // Artist-initiated withdrawal: the single-pot payout path. Paystack diaspora
 // revenue settles into the Monipay account off-band, so everything the
 // artist is owed pays out through one Monipay transfer when they tap
-// Withdraw -- no per-gateway splits, no admin button.
+// Withdraw -- no per-gateway splits, no admin button. Split sheets divide
+// each purchase first; this pays out only the artist's own shares.
 //
-// Safety mirrors the admin trigger's claim-then-pay: flip paid_out on
-// exactly the still-unpaid rows FIRST, move the claimed sum, and release
-// the claims if anything downstream throws. The ₦10k floor is enforced on
-// the claimed sum (not the estimate), so two racing taps can't each pay a
-// sub-minimum sliver -- the loser claims zero and is refused.
+// Safety mirrors the admin trigger's claim-then-pay: sync ledger items,
+// flip paid_out on exactly the still-unpaid items FIRST, move the claimed
+// sum, and release the claims if anything downstream throws. The ₦10k floor
+// is enforced on the claimed sum (not the estimate), so two racing taps
+// can't each pay a sub-minimum sliver -- the loser claims zero and is
+// refused.
 export async function POST() {
   const supabase = await createClient();
   const {
@@ -58,13 +69,27 @@ export async function POST() {
 
   const settings = await getPlatformSettings(admin);
 
-  const [{ data: unpaidPurchases }, { data: unpaidGifts }] = await Promise.all([
-    admin
-      .from("purchases")
-      .select("id, amount_kobo, drops!inner(artist_id)")
-      .eq("status", "success")
-      .eq("paid_out", false)
-      .eq("drops.artist_id", user.id),
+  const { data: ownDrops } = await admin
+    .from("drops")
+    .select("id")
+    .eq("artist_id", user.id);
+  const ownDropIds = (ownDrops ?? []).map((d) => d.id);
+
+  // Own unsettled rows plus others' rows where this artist holds a split.
+  const candidates = await findCandidatePurchases(admin, user.id, ownDropIds);
+  const ctx = await loadSheetContext(
+    admin,
+    candidates.map((p) => p.track_id).filter((t): t is string => t !== null),
+    candidates.map((p) => p.drop_id),
+  );
+  const { shares, payeesByPurchase } = planArtistShares(
+    user.id,
+    candidates,
+    settings.dropCommissionBps,
+    ctx,
+  );
+
+  const [{ data: unpaidGifts }] = await Promise.all([
     admin
       .from("gifts")
       .select("id, amount_kobo")
@@ -73,7 +98,7 @@ export async function POST() {
       .eq("paid_out", false),
   ]);
 
-  const purchaseIds = (unpaidPurchases ?? []).map((p) => p.id);
+  const purchaseIds = [...shares.keys()];
   const giftIds = (unpaidGifts ?? []).map((g) => g.id);
   if (purchaseIds.length === 0 && giftIds.length === 0) {
     return NextResponse.json(
@@ -87,23 +112,21 @@ export async function POST() {
     );
   }
 
-  const claimedPurchaseIds: string[] = [];
+  const claimedItemIds: string[] = [];
   const claimedGiftIds: string[] = [];
   let claimedKobo = 0;
 
   try {
     if (purchaseIds.length > 0) {
-      const { data: claimed, error } = await admin
-        .from("purchases")
-        .update({ paid_out: true })
-        .in("id", purchaseIds)
-        .eq("status", "success")
-        .eq("paid_out", false)
-        .select("id, amount_kobo");
-      if (error) throw new Error(error.message);
-      for (const row of claimed ?? []) {
-        claimedPurchaseIds.push(row.id);
-        claimedKobo += applyCommission(row.amount_kobo, settings.dropCommissionBps);
+      const itemIds = await syncUnpaidItems(
+        admin,
+        user.id,
+        new Map(purchaseIds.map((id) => [id, shares.get(id) ?? 0])),
+      );
+      const claimed = await claimItems(admin, user.id, itemIds);
+      for (const row of claimed) {
+        claimedItemIds.push(row.id);
+        claimedKobo += row.amount_kobo;
       }
     }
     if (giftIds.length > 0) {
@@ -124,8 +147,8 @@ export async function POST() {
     if (claimedKobo < MIN_PAYOUT_KOBO) {
       // Below the floor: release the claims so the rows keep accumulating
       // toward the next attempt instead of stranding paid_out.
-      if (claimedPurchaseIds.length > 0) {
-        await admin.from("purchases").update({ paid_out: false }).in("id", claimedPurchaseIds);
+      if (claimedItemIds.length > 0) {
+        await releaseItems(admin, claimedItemIds);
       }
       if (claimedGiftIds.length > 0) {
         await admin.from("gifts").update({ paid_out: false }).in("id", claimedGiftIds);
@@ -172,12 +195,15 @@ export async function POST() {
       gateway: "monipay",
     });
 
+    // Only after a recorded transfer: settle fully-paid purchases.
+    await markSettledPurchases(admin, purchaseIds, payeesByPurchase);
+
     return NextResponse.json({ ok: true, amountKobo: claimedKobo });
   } catch (err) {
     // Below-minimum and transfer failures alike release the claims, so the
     // rows accumulate toward the next attempt instead of stranding paid_out.
-    if (claimedPurchaseIds.length > 0) {
-      await admin.from("purchases").update({ paid_out: false }).in("id", claimedPurchaseIds);
+    if (claimedItemIds.length > 0) {
+      await releaseItems(admin, claimedItemIds);
     }
     if (claimedGiftIds.length > 0) {
       await admin.from("gifts").update({ paid_out: false }).in("id", claimedGiftIds);

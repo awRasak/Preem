@@ -15,6 +15,7 @@ import { Step4Review } from "./Step4Review";
 import { PreviewCard } from "./PreviewCard";
 import { WizardBottomBar } from "./WizardBottomBar";
 import { ProgressBar } from "@/components/Loader";
+import { isSheetValid, buildSheetPayload } from "@/components/SplitSheetEditor";
 import { initialWizardState } from "./types";
 import type { WizardState } from "./types";
 import {
@@ -53,6 +54,7 @@ export default function CreateDropWizard() {
     null,
   );
   const [userId, setUserId] = useState<string | null>(null);
+  const [ownerName, setOwnerName] = useState<string>("");
   const [resumeOffer, setResumeOffer] = useState<RestoredDraft | null>(null);
   const [restoredNotice, setRestoredNotice] = useState<string | null>(null);
 
@@ -65,6 +67,14 @@ export default function CreateDropWizard() {
       .then(({ data: { user } }) => {
         if (cancelled || !user) return;
         setUserId(user.id);
+        createClient()
+          .from("artists")
+          .select("stage_name")
+          .eq("id", user.id)
+          .single()
+          .then(({ data }) => {
+            if (!cancelled && data) setOwnerName(data.stage_name);
+          });
         try {
           const raw = localStorage.getItem(draftStorageKey(user.id));
           if (!raw) return;
@@ -143,7 +153,13 @@ export default function CreateDropWizard() {
   }
 
   function step2Valid() {
-    return state.tracks.every((t) => t.file && t.title.trim() && Number(t.minPriceNaira) > 0);
+    return state.tracks.every(
+      (t) =>
+        t.file &&
+        t.title.trim() &&
+        Number(t.minPriceNaira) > 0 &&
+        isSheetValid(t.splitArtists ?? [], t.splitInvites ?? []),
+    );
   }
 
   function step3Valid() {
@@ -327,11 +343,49 @@ export default function CreateDropWizard() {
 
       const trackRows = await buildTrackRows(session.access_token, user.id, releaseMinPriceKobo, mode === "publish");
       setProgress({ label: "Saving tracklist", percent: null });
+      // usable[] and trackRows[] align by index -- zip created ids back to
+      // the drafts so split sheets save against the right tracks. Mirrors
+      // buildTrackRows' own filtering.
+      const usable =
+        mode === "publish"
+          ? state.tracks
+          : state.tracks.filter((t) => t.file && t.title.trim());
       if (trackRows.length > 0) {
-        const { error: tracksError } = await supabase
+        const { data: createdTracks, error: tracksError } = await supabase
           .from("drop_tracks")
-          .insert(trackRows.map((r) => ({ ...r, drop_id: drop.id })));
-        if (tracksError) throw new Error("Could not save the tracklist.");
+          .insert(trackRows.map((r) => ({ ...r, drop_id: drop.id })))
+          .select("id");
+        if (tracksError || !createdTracks || createdTracks.length !== trackRows.length) {
+          throw new Error("Could not save the tracklist.");
+        }
+        setProgress({ label: "Saving revenue splits", percent: null });
+        for (let i = 0; i < createdTracks.length; i++) {
+          const draft = usable[i];
+          const payload = buildSheetPayload(
+            user.id,
+            draft?.splitArtists ?? [],
+            draft?.splitInvites ?? [],
+          );
+          // Null = invalid sheet (publish gating should have caught it);
+          // empty = 100% owner, nothing to save.
+          if (!payload) {
+            throw new Error(
+              `Revenue split on "${draft?.title || `Track ${i + 1}`}" doesn't add up -- fix it on the drop page. Drop saved as ${drop.id}.`,
+            );
+          }
+          if (payload.splits.length === 0 && payload.invites.length === 0) continue;
+          const sheetRes = await fetch(`/api/artist/tracks/${createdTracks[i].id}/splits`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!sheetRes.ok) {
+            const body = await sheetRes.json().catch(() => null);
+            throw new Error(
+              body?.error ?? `Could not save the revenue split -- edit it on the drop page. Drop saved as ${drop.id}.`,
+            );
+          }
+        }
       }
 
       router.push(mode === "publish" ? `/artist/drops/${drop.id}` : "/artist/dashboard");
@@ -428,7 +482,13 @@ export default function CreateDropWizard() {
         <div className={`grid gap-8 ${step === 4 ? "" : "lg:grid-cols-[1fr_280px]"}`}>
           <div>
             {step === 1 && <Step1ReleaseSetup state={state} onChange={patch} />}
-            {step === 2 && <Step2TrackDetails state={state} onChange={patch} />}
+            {step === 2 && (
+              <Step2TrackDetails
+                state={state}
+                onChange={patch}
+                owner={userId ? { id: userId, stageName: ownerName || "You" } : null}
+              />
+            )}
             {step === 3 && <Step3Pricing state={state} onChange={patch} />}
             {step === 4 && <Step4Review state={state} />}
             {progress && (

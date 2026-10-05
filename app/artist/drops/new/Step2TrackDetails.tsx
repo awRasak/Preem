@@ -5,13 +5,16 @@ import { Field, Input, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { newTrackDraft, AUDIO_ACCEPT } from "./types";
 import type { TrackDraft, WizardState } from "./types";
+import { SplitSheetEditor } from "@/components/SplitSheetEditor";
 
 export function Step2TrackDetails({
   state,
   onChange,
+  owner = null,
 }: {
   state: WizardState;
   onChange: (patch: Partial<WizardState>) => void;
+  owner?: { id: string; stageName: string } | null;
 }) {
   function updateTrack(localId: string, patch: Partial<TrackDraft>) {
     onChange({
@@ -128,6 +131,18 @@ export function Step2TrackDetails({
                     placeholder={"Plain text, or LRC for synced playback:\n[00:12.50] First line of the verse"}
                   />
                 </Field>
+                {owner && (
+                  <div className="mt-4">
+                    <SplitSheetEditor
+                      owner={owner}
+                      splits={track.splitArtists ?? []}
+                      invites={track.splitInvites ?? []}
+                      onChange={(splitArtists, splitInvites) =>
+                        updateTrack(track.localId, { splitArtists, splitInvites })
+                      }
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

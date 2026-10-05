@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
+import { loadSheetContext, planArtistShares } from "@/lib/payout-shares";
 import { PayoutsTable, type PayoutArtist } from "../../PayoutsTable";
 
 export const revalidate = 0;
@@ -22,7 +24,7 @@ export default async function AdminPayoutsPage() {
       .eq("approval_status", "approved"),
     supabase
       .from("purchases")
-      .select("amount_kobo, drops(artist_id)")
+      .select("id, drop_id, track_id, amount_kobo")
       .eq("status", "success")
       .eq("paid_out", false),
     supabase
@@ -33,16 +35,27 @@ export default async function AdminPayoutsPage() {
   ]);
 
   const balanceByArtist = new Map<string, number>();
-  for (const p of unpaidPurchases ?? []) {
-    type WithDrop = { amount_kobo: number; drops: { artist_id: string } | { artist_id: string }[] | null };
-    const row = p as unknown as WithDrop;
-    const drop = Array.isArray(row.drops) ? row.drops[0] : row.drops;
-    if (!drop) continue;
-    balanceByArtist.set(
-      drop.artist_id,
-      (balanceByArtist.get(drop.artist_id) ?? 0) +
-        applyCommission(row.amount_kobo, settings.dropCommissionBps),
+  // Share-aware balances: each artist's cut of unsettled purchases under
+  // current sheets (contributor shares included), not full purchase values.
+  const admin = createAdminClient();
+  const sheetPurchases = (unpaidPurchases ?? []) as {
+    id: string;
+    drop_id: string;
+    track_id: string | null;
+    amount_kobo: number;
+  }[];
+  if (sheetPurchases.length > 0 && (approvedArtists ?? []).length > 0) {
+    const ctx = await loadSheetContext(
+      admin,
+      sheetPurchases.map((p) => p.track_id).filter((t): t is string => t !== null),
+      sheetPurchases.map((p) => p.drop_id),
     );
+    for (const a of approvedArtists ?? []) {
+      const { shares } = planArtistShares(a.id, sheetPurchases, settings.dropCommissionBps, ctx);
+      let total = 0;
+      for (const kobo of shares.values()) total += kobo;
+      if (total > 0) balanceByArtist.set(a.id, total);
+    }
   }
   for (const g of unpaidGifts ?? []) {
     balanceByArtist.set(

@@ -79,6 +79,26 @@ export type BioLink = {
   created_at: string;
 };
 
+export type TrackSplit = {
+  id: string;
+  track_id: string;
+  artist_id: string;
+  share_bps: number;
+  created_at: string;
+  artist?: { id: string; stage_name: string; avatar_url: string | null } | null;
+};
+
+export type TrackSplitInvite = {
+  id: string;
+  track_id: string;
+  name: string;
+  email: string;
+  share_bps: number;
+  status: "pending" | "claimed" | "revoked";
+  claimed_by_artist_id: string | null;
+  created_at: string;
+};
+
 export type ArtistLink = {
   id: string;
   artist_id: string;
@@ -151,5 +171,50 @@ export type Purchase = {
   purchased_at: string | null;
   access_granted_at: string | null;
   paid_out: boolean;
+  created_at: string;
+};
+
+export type MerchItemStatus = "draft" | "published";
+
+export type MerchItem = {
+  id: string;
+  artist_id: string;
+  title: string;
+  description: string | null;
+  price_kobo: number;
+  stock: number;
+  photo_path: string | null;
+  status: MerchItemStatus;
+  created_at: string;
+};
+
+export type DeliveryZone = {
+  id: string;
+  label: string;
+  fee_kobo: number;
+  sort_order: number;
+};
+
+export type MerchFulfillment = "pending" | "preparing" | "shipped" | "delivered";
+
+export type MerchOrder = {
+  id: string;
+  item_id: string;
+  fan_name: string;
+  fan_phone: string;
+  fan_email: string;
+  address: string;
+  zone_id: string | null;
+  zone_label: string;
+  quantity: number;
+  item_price_kobo: number;
+  delivery_fee_kobo: number;
+  amount_kobo: number;
+  paystack_ref: string;
+  gateway: "paystack" | "monipay" | "squad";
+  status: PurchaseStatus;
+  paid_out: boolean;
+  fulfillment: MerchFulfillment;
+  purchased_at: string | null;
   created_at: string;
 };

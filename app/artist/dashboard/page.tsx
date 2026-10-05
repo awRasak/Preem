@@ -13,6 +13,11 @@ import { StatBox } from "@/components/StatBox";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
+import {
+  findCandidatePurchases,
+  loadSheetContext,
+  planArtistShares,
+} from "@/lib/payout-shares";
 import { GiftRow } from "./GiftRow";
 import { DropsManager } from "./DropsManager";
 import type { Drop, Purchase } from "@/lib/types";
@@ -64,40 +69,43 @@ export default async function ArtistDashboardPage() {
 
   if (!artist) redirect("/artist/login");
 
-  // Withdrawable balance: unpaid success rows across both gateways, minus
+  // Withdrawable balance: this artist's sheet shares of unsettled success
+  // rows (own drops plus contributor cuts on others' tracks), minus
   // commission. Admin client, artist-scoped by user.id in every filter --
   // the artist's own client can't reliably read payouts history under RLS.
   const admin = createAdminClient();
-  const [{ data: unpaidPurchases }, { data: unpaidGifts }, { data: payoutHistory }] =
-    await Promise.all([
-      admin
-        .from("purchases")
-        .select("amount_kobo, drops!inner(artist_id)")
-        .eq("status", "success")
-        .eq("paid_out", false)
-        .eq("drops.artist_id", user.id),
-      admin
-        .from("gifts")
-        .select("amount_kobo")
-        .eq("artist_id", user.id)
-        .eq("status", "success")
-        .eq("paid_out", false),
-      admin
-        .from("payouts")
-        .select("amount_kobo, status, created_at")
-        .eq("artist_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
-  const withdrawableKobo =
-    (unpaidPurchases ?? []).reduce(
-      (sum, p) => sum + applyCommission(p.amount_kobo, settings.dropCommissionBps),
-      0,
-    ) +
-    (unpaidGifts ?? []).reduce(
-      (sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps),
-      0,
-    );
+  const { data: ownDrops } = await admin
+    .from("drops")
+    .select("id")
+    .eq("artist_id", user.id);
+  const ownDropIds = (ownDrops ?? []).map((d) => d.id);
+  const candidates = await findCandidatePurchases(admin, user.id, ownDropIds);
+  const sheetCtx = await loadSheetContext(
+    admin,
+    candidates.map((p) => p.track_id).filter((t): t is string => t !== null),
+    candidates.map((p) => p.drop_id),
+  );
+  const { shares } = planArtistShares(user.id, candidates, settings.dropCommissionBps, sheetCtx);
+  const [{ data: unpaidGifts }, { data: payoutHistory }] = await Promise.all([
+    admin
+      .from("gifts")
+      .select("amount_kobo")
+      .eq("artist_id", user.id)
+      .eq("status", "success")
+      .eq("paid_out", false),
+    admin
+      .from("payouts")
+      .select("amount_kobo, status, created_at")
+      .eq("artist_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+  let withdrawableKobo = 0;
+  for (const kobo of shares.values()) withdrawableKobo += kobo;
+  withdrawableKobo += (unpaidGifts ?? []).reduce(
+    (sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps),
+    0,
+  );
   const hasBankDetails = Boolean(
     artist.bank_code && artist.account_number && artist.account_name,
   );

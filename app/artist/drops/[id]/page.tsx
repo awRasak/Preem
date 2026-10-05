@@ -6,6 +6,7 @@ import { DistributionGuidance } from "@/components/DistributionGuidance";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { DropHeaderEditable } from "./DropHeaderEditable";
 import { PreSavePanel } from "./PreSavePanel";
+import { TrackSplitManager } from "./TrackSplitManager";
 import type { Drop, DropTrack, TrackChangeRequest } from "@/lib/types";
 
 export default async function ArtistDropDetailPage({
@@ -99,6 +100,22 @@ export default async function ArtistDropDetailPage({
             releaseDate={drop.window_end}
           />
         )}
+
+        <h2 className="mb-3 text-lg font-bold">Revenue splits</h2>
+        <p className="mb-3 text-xs text-muted">
+          Who gets paid when each track sells. Empty means 100% you. Changes
+          apply to not-yet-paid-out sales only.
+        </p>
+        <div className="mb-8 space-y-3">
+          {tracks.map((t) => (
+            <TrackSplitManager
+              key={t.id}
+              trackId={t.id}
+              trackTitle={isBundle ? t.title : (drop.title as string)}
+              owner={{ id: user.id, stageName: artistName ?? "You" }}
+            />
+          ))}
+        </div>
 
         <h2 className="mb-3 text-lg font-bold">Buyers ({buyers?.length ?? 0})</h2>
         <div className="divide-y divide-line rounded-xl border border-line">
