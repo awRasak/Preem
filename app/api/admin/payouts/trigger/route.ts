@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import * as paystack from "@/lib/paystack";
 import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
+import { SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
 import {
   claimItems,
   findCandidatePurchases,
@@ -96,6 +97,29 @@ export async function POST(req: Request) {
   const paystackMerch = merch.filter((m) => (m.gateway ?? "paystack") !== "monipay");
   const monipayMerch = merch.filter((m) => m.gateway === "monipay");
 
+  // Tickets belong to whoever created the show and carry no split sheet.
+  const { data: artistShows } = await supabase
+    .from("shows")
+    .select("id")
+    .eq("artist_id", artistId);
+  const showIds = (artistShows ?? []).map((s) => s.id);
+  const { data: unpaidTickets } =
+    showIds.length > 0
+      ? await supabase
+          .from("show_tickets")
+          .select("id, amount_kobo, gateway")
+          .in("show_id", showIds)
+          .eq("status", "success")
+          .eq("paid_out", false)
+      : { data: [] as { id: string; amount_kobo: number; gateway: string | null }[] };
+  const tickets = (unpaidTickets ?? []) as {
+    id: string;
+    amount_kobo: number;
+    gateway: string | null;
+  }[];
+  const paystackTickets = tickets.filter((t) => (t.gateway ?? "paystack") !== "monipay");
+  const monipayTickets = tickets.filter((t) => t.gateway === "monipay");
+
   const paystackPurchases = [...shares.keys()].filter(
     (id) => gatewayByPurchase.get(id) !== "monipay",
   );
@@ -108,12 +132,17 @@ export async function POST(req: Request) {
   const shareOf = (id: string) => shares.get(id) ?? 0;
   const merchOf = (rows: typeof merch) =>
     rows.reduce((sum, m) => sum + applyCommission(m.amount_kobo, settings.merchCommissionBps), 0);
+  const ticketOf = (rows: typeof tickets) =>
+    rows.reduce((sum, t) => sum + applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS), 0);
   const paystackAmountKobo =
     paystackPurchases.reduce((sum, id) => sum + shareOf(id), 0) +
     gifts.reduce((sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps), 0) +
-    merchOf(paystackMerch);
+    merchOf(paystackMerch) +
+    ticketOf(paystackTickets);
   const monipayAmountKobo =
-    monipayPurchases.reduce((sum, id) => sum + shareOf(id), 0) + merchOf(monipayMerch);
+    monipayPurchases.reduce((sum, id) => sum + shareOf(id), 0) +
+    merchOf(monipayMerch) +
+    ticketOf(monipayTickets);
 
   if (paystackAmountKobo <= 0 && monipayAmountKobo <= 0) {
     return NextResponse.json({ error: "Nothing to pay out." }, { status: 400 });
@@ -132,6 +161,7 @@ export async function POST(req: Request) {
     candidatePurchases: string[],
     candidateGifts: { id: string }[],
     candidateMerch: { id: string }[] = [],
+    candidateTickets: { id: string }[] = [],
   ) {
     const client = gateway === "monipay" ? monipay : paystack;
     const claimedItemIds: string[] = [];
@@ -140,6 +170,8 @@ export async function POST(req: Request) {
     let claimedGiftKobo = 0;
     const claimedMerchIds: string[] = [];
     let claimedMerchKobo = 0;
+    const claimedTicketIds: string[] = [];
+    let claimedTicketKobo = 0;
 
     try {
       if (candidatePurchases.length > 0) {
@@ -183,9 +215,25 @@ export async function POST(req: Request) {
           claimedMerchKobo += applyCommission(row.amount_kobo, settings.merchCommissionBps);
         }
       }
+      if (candidateTickets.length > 0) {
+        const { data: claimed, error } = await supabase
+          .from("show_tickets")
+          .update({ paid_out: true })
+          .in("id", candidateTickets.map((t) => t.id))
+          .eq("status", "success")
+          .eq("paid_out", false)
+          .select("id, amount_kobo");
+        if (error) throw new Error(error.message);
+        for (const row of claimed ?? []) {
+          claimedTicketIds.push(row.id);
+          claimedTicketKobo += applyCommission(row.amount_kobo, SHOW_TICKET_COMMISSION_BPS);
+        }
+      }
 
       const totalKobo =
-        gateway === "paystack" ? claimedKobo + claimedGiftKobo + claimedMerchKobo : claimedKobo + claimedMerchKobo;
+        gateway === "paystack"
+          ? claimedKobo + claimedGiftKobo + claimedMerchKobo + claimedTicketKobo
+          : claimedKobo + claimedMerchKobo + claimedTicketKobo;
       if (totalKobo <= 0) return;
 
       const recipientColumn =
@@ -241,13 +289,16 @@ export async function POST(req: Request) {
       if (claimedMerchIds.length > 0) {
         await supabase.from("merch_orders").update({ paid_out: false }).in("id", claimedMerchIds);
       }
+      if (claimedTicketIds.length > 0) {
+        await supabase.from("show_tickets").update({ paid_out: false }).in("id", claimedTicketIds);
+      }
       throw err;
     }
   }
 
   try {
-    await payOutVia("paystack", paystackPurchases, gifts, paystackMerch);
-    await payOutVia("monipay", monipayPurchases, [], monipayMerch);
+    await payOutVia("paystack", paystackPurchases, gifts, paystackMerch, paystackTickets);
+    await payOutVia("monipay", monipayPurchases, [], monipayMerch, monipayTickets);
 
     return NextResponse.json({
       ok: true,

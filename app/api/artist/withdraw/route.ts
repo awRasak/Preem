@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
-import { MIN_PAYOUT_KOBO } from "@/lib/payouts";
+import { MIN_PAYOUT_KOBO, SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
 import {
   claimItems,
   findCandidatePurchases,
@@ -75,6 +75,13 @@ export async function POST() {
     .eq("artist_id", user.id);
   const ownDropIds = (ownDrops ?? []).map((d) => d.id);
 
+  // Tickets belong to whoever created the show, and carry no split sheet.
+  const { data: ownShows } = await admin
+    .from("shows")
+    .select("id")
+    .eq("artist_id", user.id);
+  const ownShowIds = (ownShows ?? []).map((s) => s.id);
+
   // Own unsettled rows plus others' rows where this artist holds a split.
   const candidates = await findCandidatePurchases(admin, user.id, ownDropIds);
   const ctx = await loadSheetContext(
@@ -89,25 +96,40 @@ export async function POST() {
     ctx,
   );
 
-  const [{ data: unpaidGifts }, { data: unpaidMerch }] = await Promise.all([
-    admin
-      .from("gifts")
-      .select("id, amount_kobo")
-      .eq("artist_id", user.id)
-      .eq("status", "success")
-      .eq("paid_out", false),
-    admin
-      .from("merch_orders")
-      .select("id, amount_kobo, merch_items!inner(artist_id)")
-      .eq("status", "success")
-      .eq("paid_out", false)
-      .eq("merch_items.artist_id", user.id),
-  ]);
+  const [{ data: unpaidGifts }, { data: unpaidMerch }, { data: unpaidTickets }] =
+    await Promise.all([
+      admin
+        .from("gifts")
+        .select("id, amount_kobo")
+        .eq("artist_id", user.id)
+        .eq("status", "success")
+        .eq("paid_out", false),
+      admin
+        .from("merch_orders")
+        .select("id, amount_kobo, merch_items!inner(artist_id)")
+        .eq("status", "success")
+        .eq("paid_out", false)
+        .eq("merch_items.artist_id", user.id),
+      ownShowIds.length > 0
+        ? admin
+            .from("show_tickets")
+            .select("id, amount_kobo")
+            .in("show_id", ownShowIds)
+            .eq("status", "success")
+            .eq("paid_out", false)
+        : Promise.resolve({ data: [] as { id: string; amount_kobo: number }[] }),
+    ]);
 
   const purchaseIds = [...shares.keys()];
   const giftIds = (unpaidGifts ?? []).map((g) => g.id);
   const merchIds = (unpaidMerch ?? []).map((m) => m.id);
-  if (purchaseIds.length === 0 && giftIds.length === 0 && merchIds.length === 0) {
+  const ticketIds = ((unpaidTickets ?? []) as { id: string }[]).map((t) => t.id);
+  if (
+    purchaseIds.length === 0 &&
+    giftIds.length === 0 &&
+    merchIds.length === 0 &&
+    ticketIds.length === 0
+  ) {
     return NextResponse.json(
       {
         error: "Nothing to withdraw yet.",
@@ -122,6 +144,7 @@ export async function POST() {
   const claimedItemIds: string[] = [];
   const claimedGiftIds: string[] = [];
   const claimedMerchIds: string[] = [];
+  const claimedTicketIds: string[] = [];
   let claimedKobo = 0;
 
   try {
@@ -165,6 +188,20 @@ export async function POST() {
         claimedKobo += applyCommission(row.amount_kobo, settings.merchCommissionBps);
       }
     }
+    if (ticketIds.length > 0) {
+      const { data: claimed, error } = await admin
+        .from("show_tickets")
+        .update({ paid_out: true })
+        .in("id", ticketIds)
+        .eq("status", "success")
+        .eq("paid_out", false)
+        .select("id, amount_kobo");
+      if (error) throw new Error(error.message);
+      for (const row of claimed ?? []) {
+        claimedTicketIds.push(row.id);
+        claimedKobo += applyCommission(row.amount_kobo, SHOW_TICKET_COMMISSION_BPS);
+      }
+    }
 
     if (claimedKobo < MIN_PAYOUT_KOBO) {
       // Below the floor: release the claims so the rows keep accumulating
@@ -177,6 +214,9 @@ export async function POST() {
       }
       if (claimedMerchIds.length > 0) {
         await admin.from("merch_orders").update({ paid_out: false }).in("id", claimedMerchIds);
+      }
+      if (claimedTicketIds.length > 0) {
+        await admin.from("show_tickets").update({ paid_out: false }).in("id", claimedTicketIds);
       }
       return NextResponse.json(
         {
@@ -235,6 +275,9 @@ export async function POST() {
     }
     if (claimedMerchIds.length > 0) {
       await admin.from("merch_orders").update({ paid_out: false }).in("id", claimedMerchIds);
+    }
+    if (claimedTicketIds.length > 0) {
+      await admin.from("show_tickets").update({ paid_out: false }).in("id", claimedTicketIds);
     }
     if (err instanceof Error) {
       return NextResponse.json({ error: err.message }, { status: 502 });

@@ -1170,3 +1170,10 @@ create policy "artist can read orders of own items"
 create policy "admin can manage merch orders"
   on merch_orders for all
   using (is_admin());
+
+-- 0035: show tickets join the single withdrawable pot at 95% (Preem keeps
+-- a flat 5%). Settlement mirrors gifts/merch -- a per-row paid_out flag the
+-- claim-then-pay withdraw flips exactly once. A ticket has no split sheet,
+-- so the show's owner is the only payee.
+alter table show_tickets
+  add column if not exists paid_out boolean not null default false;

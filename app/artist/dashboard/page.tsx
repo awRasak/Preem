@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ArtistShell } from "@/components/ArtistShell";
 import { ApprovalCelebration } from "./ApprovalCelebration";
 import { WithdrawCard } from "./WithdrawCard";
-import { MIN_PAYOUT_KOBO } from "@/lib/payouts";
+import { MIN_PAYOUT_KOBO, SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
@@ -42,6 +42,7 @@ export default async function ArtistDashboardPage() {
     { data: successPurchases },
     { data: gifts },
     { data: trackPaths },
+    { data: shows },
   ] = await Promise.all([
     supabase.from("artists").select("*").eq("id", user.id).single(),
     supabase
@@ -65,7 +66,9 @@ export default async function ArtistDashboardPage() {
       .from("drop_tracks")
       .select("drop_id, audio_file_path, drops!inner(artist_id)")
       .eq("drops.artist_id", user.id),
+    supabase.from("shows").select("id").eq("artist_id", user.id),
   ]);
+  const ownShowIds = (shows ?? []).map((s) => s.id);
 
   if (!artist) redirect("/artist/login");
 
@@ -86,7 +89,12 @@ export default async function ArtistDashboardPage() {
     candidates.map((p) => p.drop_id),
   );
   const { shares } = planArtistShares(user.id, candidates, settings.dropCommissionBps, sheetCtx);
-  const [{ data: unpaidGifts }, { data: unpaidMerch }, { data: payoutHistory }] = await Promise.all([
+  const [
+    { data: unpaidGifts },
+    { data: unpaidMerch },
+    { data: payoutHistory },
+    { data: unpaidTickets },
+  ] = await Promise.all([
     admin
       .from("gifts")
       .select("amount_kobo")
@@ -105,6 +113,14 @@ export default async function ArtistDashboardPage() {
       .eq("artist_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5),
+    ownShowIds.length > 0
+      ? admin
+          .from("show_tickets")
+          .select("amount_kobo")
+          .in("show_id", ownShowIds)
+          .eq("status", "success")
+          .eq("paid_out", false)
+      : Promise.resolve({ data: [] as { amount_kobo: number }[] }),
   ]);
   let withdrawableKobo = 0;
   for (const kobo of shares.values()) withdrawableKobo += kobo;
@@ -114,6 +130,10 @@ export default async function ArtistDashboardPage() {
   );
   withdrawableKobo += (unpaidMerch ?? []).reduce(
     (sum, m) => sum + applyCommission(m.amount_kobo, settings.merchCommissionBps),
+    0,
+  );
+  withdrawableKobo += (unpaidTickets ?? []).reduce(
+    (sum, t) => sum + applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS),
     0,
   );
   const hasBankDetails = Boolean(

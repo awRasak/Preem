@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
 import { loadSheetContext, planArtistShares } from "@/lib/payout-shares";
+import { SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
 import { PayoutsTable, type PayoutArtist } from "../../PayoutsTable";
 
 export const revalidate = 0;
@@ -17,6 +18,7 @@ export default async function AdminPayoutsPage() {
     { data: unpaidPurchases },
     { data: unpaidGifts },
     { data: unpaidMerch },
+    { data: unpaidTickets },
   ] = await Promise.all([
     getPlatformSettings(supabase),
     supabase
@@ -36,6 +38,11 @@ export default async function AdminPayoutsPage() {
     supabase
       .from("merch_orders")
       .select("amount_kobo, item:merch_items!inner(artist_id)")
+      .eq("status", "success")
+      .eq("paid_out", false),
+    supabase
+      .from("show_tickets")
+      .select("amount_kobo, show:shows!inner(artist_id)")
       .eq("status", "success")
       .eq("paid_out", false),
   ]);
@@ -80,6 +87,18 @@ export default async function AdminPayoutsPage() {
       item.artist_id,
       (balanceByArtist.get(item.artist_id) ?? 0) +
         applyCommission(m.amount_kobo, settings.merchCommissionBps),
+    );
+  }
+  for (const t of (unpaidTickets ?? []) as unknown as {
+    amount_kobo: number;
+    show: { artist_id: string } | { artist_id: string }[] | null;
+  }[]) {
+    const show = Array.isArray(t.show) ? t.show[0] : t.show;
+    if (!show) continue;
+    balanceByArtist.set(
+      show.artist_id,
+      (balanceByArtist.get(show.artist_id) ?? 0) +
+        applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS),
     );
   }
 

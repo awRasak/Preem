@@ -34,7 +34,8 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/artist/dashboard") ||
     path.startsWith("/artist/drops") ||
     path.startsWith("/artist/listeners") ||
-    path.startsWith("/artist/profile");
+    path.startsWith("/artist/profile") ||
+    path.startsWith("/artist/transactions");
   const isAdminLogin = path === "/admin/login";
   const isAdminRoute =
     path.startsWith("/admin") &&
@@ -90,6 +91,7 @@ export const config = {
     "/artist/drops/:path*",
     "/artist/listeners/:path*",
     "/artist/profile/:path*",
+    "/artist/transactions/:path*",
     "/admin/:path*",
     // Fans now get real Supabase Auth sessions too (post-purchase email
     // OTP) -- these routes don't gate on role, but still need to run
