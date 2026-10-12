@@ -103,6 +103,24 @@ export function Step3Pricing({
           />
         </div>
       )}
+
+      <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface px-3.5 py-3">
+        <input
+          type="checkbox"
+          checked={state.distributeOnRelease}
+          onChange={(e) => onChange({ distributeOnRelease: e.target.checked })}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+        />
+        <span>
+          <span className="block text-sm font-bold text-paper">
+            Send to streaming on release
+          </span>
+          <span className="mt-0.5 block text-[11px] text-muted">
+            Pushed to Spotify, Apple Music, Boomplay and more with the street
+            date set to your window end. Retried from the drop page if it fails.
+          </span>
+        </span>
+      </label>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { formatNaira, isDropLive } from "@/lib/format";
 import { DropHeaderEditable } from "./DropHeaderEditable";
 import { PreSavePanel } from "./PreSavePanel";
 import { TrackSplitManager } from "./TrackSplitManager";
+import { DistributionPanel } from "./DistributionPanel";
 import type { Drop, DropTrack, TrackChangeRequest } from "@/lib/types";
 
 export default async function ArtistDropDetailPage({
@@ -60,6 +61,12 @@ export default async function ArtistDropDetailPage({
   const isBundle = drop.release_type !== "single" && tracks.length > 1;
   const trackTitleById = new Map(tracks.map((t) => [t.id, t.title]));
 
+  const { data: distJob } = await supabase
+    .from("distribution_jobs")
+    .select("id, status, external_id, street_date, upc, rejection_reason, last_error, submitted_at, live_at")
+    .eq("drop_id", id)
+    .maybeSingle();
+
   // Pre-save counts (drafts only) come from the admin client -- drop_presaves
   // is RLS-locked and only server routes may read it.
   let presaveCount = 0;
@@ -87,6 +94,28 @@ export default async function ArtistDropDetailPage({
         />
 
         {!live && <DistributionGuidance dropId={drop.id} />}
+
+        <DistributionPanel
+          dropId={drop.id}
+          dropTitle={drop.title as string}
+          windowEnd={drop.window_end}
+          isExclusive={Boolean(drop.is_exclusive)}
+          initialJob={
+            distJob
+              ? {
+                  id: distJob.id,
+                  status: distJob.status,
+                  external_id: distJob.external_id,
+                  street_date: distJob.street_date,
+                  upc: distJob.upc,
+                  rejection_reason: distJob.rejection_reason,
+                  last_error: distJob.last_error,
+                  submitted_at: distJob.submitted_at,
+                  live_at: distJob.live_at,
+                }
+              : null
+          }
+        />
 
         {drop.status === "draft" && (
           <PreSavePanel

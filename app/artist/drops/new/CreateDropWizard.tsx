@@ -408,6 +408,24 @@ export default function CreateDropWizard() {
         }
       }
 
+      // Opt-in streaming distribution (publish only): the route derives the
+      // street date from the window end. Failure is non-fatal -- the drop
+      // page panel shows the error with a retry button.
+      if (mode === "publish" && state.distributeOnRelease && trackRows.length > 0) {
+        setProgress({ label: "Submitting to streaming", percent: null });
+        const distRes = await fetch(`/api/artist/drops/${drop.id}/distribute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        if (!distRes.ok) {
+          const body = await distRes.json().catch(() => null);
+          throw new Error(
+            body?.error ?? `Drop is live but distribution failed -- retry it on the drop page.`,
+          );
+        }
+      }
+
       router.push(mode === "publish" ? `/artist/drops/${drop.id}` : "/artist/dashboard");
       clearAutosave();
       router.refresh();

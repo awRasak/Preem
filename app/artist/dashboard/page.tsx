@@ -94,6 +94,7 @@ export default async function ArtistDashboardPage() {
     { data: unpaidMerch },
     { data: payoutHistory },
     { data: unpaidTickets },
+    { data: distJobs },
   ] = await Promise.all([
     admin
       .from("gifts")
@@ -121,7 +122,13 @@ export default async function ArtistDashboardPage() {
           .eq("status", "success")
           .eq("paid_out", false)
       : Promise.resolve({ data: [] as { amount_kobo: number }[] }),
+    ownDropIds.length > 0
+      ? admin.from("distribution_jobs").select("drop_id, status").in("drop_id", ownDropIds)
+      : Promise.resolve({ data: [] as { drop_id: string; status: string }[] }),
   ]);
+  const distStatusByDrop = new Map(
+    ((distJobs ?? []) as { drop_id: string; status: string }[]).map((j) => [j.drop_id, j.status] as [string, string]),
+  );
   let withdrawableKobo = 0;
   for (const kobo of shares.values()) withdrawableKobo += kobo;
   withdrawableKobo += (unpaidGifts ?? []).reduce(
@@ -315,6 +322,7 @@ export default async function ArtistDashboardPage() {
             salesCount: salesByDrop.get(drop.id)?.count ?? 0,
             revenueKobo: salesByDrop.get(drop.id)?.revenueKobo ?? 0,
             audioPaths: audioPathsByDrop.get(drop.id) ?? [],
+            distributionStatus: distStatusByDrop.get(drop.id) ?? null,
           })) ?? []}
         />
       </main>

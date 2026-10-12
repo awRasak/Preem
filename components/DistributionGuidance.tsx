@@ -11,6 +11,24 @@ export function DistributionGuidance({ dropId }: { dropId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function handleDistributeNow() {
+    setLoading(true);
+    setError(null);
+    const res = await fetch(`/api/artist/drops/${dropId}/distribute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const body = await res.json().catch(() => null);
+    setLoading(false);
+    if (!res.ok) {
+      setError(body?.error ?? "Could not start distribution.");
+      return;
+    }
+    setOpen(false);
+    router.refresh();
+  }
+
   async function handleKeepExclusive() {
     setLoading(true);
     setError(null);
@@ -51,19 +69,26 @@ export function DistributionGuidance({ dropId }: { dropId: string }) {
         </div>
 
         <p className="mb-4 text-xs text-muted">
-          Preem doesn&apos;t push to streaming platforms automatically. Distribute it
-          yourself elsewhere, or keep it exclusive to Preem instead — either way, buyers
-          who already have it keep it.
+          Your early-access window has closed. Push it to Spotify, Apple
+          Music, Boomplay and more right from here, keep it exclusive to
+          Preem, or distribute it yourself elsewhere — either way, buyers who
+          already have it keep it.
         </p>
 
         {error && <p className="mb-3 text-xs text-[#ff6b6b]">{error}</p>}
 
+        <div className="mb-4">
+          <Button onClick={handleDistributeNow} disabled={loading}>
+            {loading ? "…" : "Distribute to streaming now"}
+          </Button>
+        </div>
+
         <Link
           href="/artist/distribute"
           target="_blank"
-          className="text-xs font-bold text-paper underline"
+          className="text-xs font-bold text-muted underline"
         >
-          How to distribute it yourself →
+          Or distribute it yourself →
         </Link>
 
         <div className="mt-5">

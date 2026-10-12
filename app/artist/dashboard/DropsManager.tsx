@@ -20,6 +20,7 @@ export type ManagedDrop = {
   salesCount: number;
   revenueKobo: number;
   audioPaths: string[];
+  distributionStatus?: string | null;
 };
 
 export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
@@ -190,6 +191,12 @@ export function DropsManager({ drops }: { drops: ManagedDrop[] }) {
                 ) : (
                   <Badge status="closed">Released</Badge>
                 )}
+                {drop.distributionStatus === "live" ? (
+                  <Badge status="live">On streaming</Badge>
+                ) : drop.distributionStatus === "submitted" ||
+                  drop.distributionStatus === "scheduled" ? (
+                  <Badge status="pending">Streaming soon</Badge>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => deleteDrops([drop.id])}

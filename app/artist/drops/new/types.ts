@@ -47,6 +47,9 @@ export type WizardState = {
   // leave their number before release. Defaults to ON in the wizard but can
   // be skipped, and can be toggled later from the drop's owner page.
   presaveEnabled: boolean;
+  // Distribution: push to streaming via the provider on publish, street
+  // date derived from the window end. Retried from the drop page on failure.
+  distributeOnRelease: boolean;
 };
 
 export function defaultReleaseDate(): string {
@@ -86,6 +89,7 @@ export function initialWizardState(): WizardState {
     minPriceNaira: "",
     releaseDate: defaultReleaseDate(),
     presaveEnabled: true,
+    distributeOnRelease: false,
   };
 }
 
