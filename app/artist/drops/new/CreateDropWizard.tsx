@@ -318,6 +318,9 @@ export default function CreateDropWizard() {
         window_end: windowEnd,
         is_exclusive: isExclusive,
         presave_enabled: mode === "save" && !isExclusive && state.presaveEnabled,
+        // Persisted so the auto-distribute cron can still submit if the
+        // publish-time call below never lands.
+        distribute_on_release: mode === "publish" && state.distributeOnRelease,
       };
 
       let { data: drop, error: dropError } = await supabase

@@ -1212,3 +1212,11 @@ create policy "distribution_jobs owner read"
       where d.id = distribution_jobs.drop_id and d.artist_id = auth.uid()
     )
   );
+
+-- 0036: auto-submit. The wizard's "also distribute to streaming" opt-in
+-- lived only in component state, so if the publish-time submit call never
+-- landed nothing knew the artist had asked for it. Persist it so the
+-- auto-distribute cron can find drops that still owe a submission when
+-- their countdown closes.
+alter table public.drops
+  add column if not exists distribute_on_release boolean not null default false;
