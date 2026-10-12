@@ -128,10 +128,14 @@ h2 {
 }
 
 /* Fades the hero video's edges to transparent so it dissolves into the page
-   background instead of reading as a hard-edged rectangle. */
+   background instead of reading as a hard-edged rectangle. `closest-side`
+   sizes the gradient ellipse to the video box itself, so it reaches full
+   transparency exactly at the four edges -- the default `farthest-corner`
+   only bottoms out at the corners, which left the top/bottom ~92% opaque
+   and the sides ~15% opaque (a visible cut-out rectangle). */
 .hero-video-fade {
-  -webkit-mask-image: radial-gradient(ellipse at center, black 45%, transparent 95%);
-  mask-image: radial-gradient(ellipse at center, black 45%, transparent 95%);
+  -webkit-mask-image: radial-gradient(ellipse closest-side at center, black 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse closest-side at center, black 45%, transparent 100%);
 }
 
 /* Pauses a marquee's scroll animation while the pointer is over it, so text
