@@ -57,10 +57,10 @@ export function ArtistsTable({ artists }: { artists: AdminArtist[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-              <th className="pb-2 font-bold">Artist</th>
-              <th className="pb-2 font-bold">Status</th>
-              <th className="pb-2 font-bold">Drops</th>
-              <th className="pb-2 font-bold">Sales</th>
+              <th className="pb-2 pr-4 font-bold">Artist</th>
+              <th className="pb-2 pr-4 font-bold">Status</th>
+              <th className="pb-2 pr-4 font-bold">Drops</th>
+              <th className="pb-2 pr-4 font-bold">Sales</th>
               <th className="pb-2 font-bold">Joined</th>
             </tr>
           </thead>
@@ -72,7 +72,16 @@ export function ArtistsTable({ artists }: { artists: AdminArtist[] }) {
                     {a.stageName}
                   </Link>
                   {a.profileLink && (
-                    <div className="truncate text-xs text-muted">{a.profileLink}</div>
+                    // Capped so a full Spotify URL can't stretch column 1 --
+                    // auto table layout otherwise sizes to the nowrap text and
+                    // `truncate` never overflows. title keeps the full URL on
+                    // hover.
+                    <div
+                      className="max-w-[22rem] truncate text-xs text-muted"
+                      title={a.profileLink}
+                    >
+                      {a.profileLink}
+                    </div>
                   )}
                 </td>
                 <td className="py-2.5 pr-4">

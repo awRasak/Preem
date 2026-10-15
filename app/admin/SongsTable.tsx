@@ -64,11 +64,11 @@ export function SongsTable({ songs }: { songs: AdminSong[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-              <th className="pb-2 font-bold">Song</th>
-              <th className="pb-2 font-bold">Artist</th>
-              <th className="pb-2 font-bold">Status</th>
-              <th className="pb-2 font-bold">Price</th>
-              <th className="pb-2 font-bold">Sales</th>
+              <th className="pb-2 pr-4 font-bold">Song</th>
+              <th className="pb-2 pr-4 font-bold">Artist</th>
+              <th className="pb-2 pr-4 font-bold">Status</th>
+              <th className="pb-2 pr-4 font-bold">Price</th>
+              <th className="pb-2 pr-4 font-bold">Sales</th>
             </tr>
           </thead>
           <tbody>

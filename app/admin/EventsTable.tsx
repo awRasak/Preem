@@ -64,11 +64,11 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-              <th className="pb-2 font-bold">Event</th>
-              <th className="pb-2 font-bold">Artist</th>
-              <th className="pb-2 font-bold">Status</th>
-              <th className="pb-2 font-bold">Price</th>
-              <th className="pb-2 font-bold">Tickets</th>
+              <th className="pb-2 pr-4 font-bold">Event</th>
+              <th className="pb-2 pr-4 font-bold">Artist</th>
+              <th className="pb-2 pr-4 font-bold">Status</th>
+              <th className="pb-2 pr-4 font-bold">Price</th>
+              <th className="pb-2 pr-4 font-bold">Tickets</th>
             </tr>
           </thead>
           <tbody>

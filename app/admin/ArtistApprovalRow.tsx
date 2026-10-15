@@ -32,7 +32,13 @@ export function ArtistApprovalRow({
       <td className="py-3 pr-4 text-sm">{stageName}</td>
       <td className="py-3 pr-4 text-sm text-muted">
         {profileLink && (
-          <a href={profileLink} target="_blank" rel="noopener noreferrer" className="underline">
+          <a
+            href={profileLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block max-w-[22rem] truncate align-bottom underline"
+            title={profileLink}
+          >
             {profileLink}
           </a>
         )}

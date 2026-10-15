@@ -55,10 +55,10 @@ export function ListenersTable({ listeners }: { listeners: AdminListener[] }) {
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-              <th className="pb-2 font-bold">Listener</th>
-              <th className="pb-2 font-bold">Purchases</th>
-              <th className="pb-2 font-bold">Total spent</th>
-              <th className="pb-2 font-bold">Last purchase</th>
+              <th className="pb-2 pr-4 font-bold">Listener</th>
+              <th className="pb-2 pr-4 font-bold">Purchases</th>
+              <th className="pb-2 pr-4 font-bold">Total spent</th>
+              <th className="pb-2 pr-4 font-bold">Last purchase</th>
             </tr>
           </thead>
           <tbody>

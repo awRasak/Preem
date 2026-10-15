@@ -126,11 +126,11 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-              <th className="pb-2 font-bold">Fan</th>
-              <th className="pb-2 font-bold">Drop</th>
-              <th className="pb-2 font-bold">Amount</th>
-              <th className="pb-2 font-bold">Status</th>
-              <th className="pb-2 font-bold">Ref</th>
+              <th className="pb-2 pr-4 font-bold">Fan</th>
+              <th className="pb-2 pr-4 font-bold">Drop</th>
+              <th className="pb-2 pr-4 font-bold">Amount</th>
+              <th className="pb-2 pr-4 font-bold">Status</th>
+              <th className="pb-2 pr-4 font-bold">Ref</th>
             </tr>
           </thead>
           <tbody>
