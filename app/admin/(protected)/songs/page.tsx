@@ -10,7 +10,7 @@ export default async function AdminSongsPage() {
   const [{ data: drops }, { data: successPurchases }, { data: allTracks }] = await Promise.all([
     supabase
       .from("drops")
-      .select("id, title, artist_id, release_type, status, min_price_kobo, created_at, artists(stage_name)")
+      .select("id, title, artist_id, release_type, status, min_price_kobo, created_at, artists!drops_artist_id_fkey(stage_name)")
       .order("created_at", { ascending: false })
       .limit(500),
     supabase.from("purchases").select("drop_id").eq("status", "success").limit(5000),
