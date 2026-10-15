@@ -25,5 +25,31 @@ export default async function AdminProtectedLayout({
   if (roleRow?.role === "artist") redirect("/artist/dashboard");
   if (roleRow?.role !== "admin") redirect("/");
 
-  return <AdminShell>{children}</AdminShell>;
+  // Sidebar count pills (support open tickets, drops, approved artists,
+  // merch awaiting shipment) -- one parallel wave here in the layout so
+  // every admin page gets them without refetching per tab.
+  const [{ count: openSupport }, { count: songsCount }, { count: artistsCount }, { count: merchCount }] =
+    await Promise.all([
+      supabase.from("support_requests").select("id", { count: "exact", head: true }).eq("status", "open"),
+      supabase.from("drops").select("id", { count: "exact", head: true }),
+      supabase.from("artists").select("id", { count: "exact", head: true }).eq("approval_status", "approved"),
+      supabase
+        .from("merch_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "success")
+        .neq("fulfillment", "delivered"),
+    ]);
+
+  return (
+    <AdminShell
+      badges={{
+        support: openSupport ?? 0,
+        songs: songsCount ?? 0,
+        artists: artistsCount ?? 0,
+        merch: merchCount ?? 0,
+      }}
+    >
+      {children}
+    </AdminShell>
+  );
 }

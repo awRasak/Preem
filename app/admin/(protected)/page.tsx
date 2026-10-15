@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShoppingBag, Wallet, Banknote, Package, Mail, TriangleAlert } from "lucide-react";
+import { Wallet, Banknote, TriangleAlert, Music2, Mic2 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, timeAgo } from "@/lib/format";
@@ -9,11 +9,17 @@ import { ArtistApprovalRow } from "../ArtistApprovalRow";
 
 export const revalidate = 0;
 
-// Start of today in Africa/Lagos as an ISO instant -- "sales today" means
-// the market's today, not UTC's.
-function lagosMidnightIso(): string {
-  const lagos = new Date(Date.now() + 3_600_000);
-  return new Date(Date.UTC(lagos.getUTCFullYear(), lagos.getUTCMonth(), lagos.getUTCDate()) - 3_600_000).toISOString();
+type RangeId = "7d" | "30d" | "90d" | "all";
+
+const RANGES: { id: RangeId; label: string; days: number | null }[] = [
+  { id: "7d", label: "7D", days: 7 },
+  { id: "30d", label: "30D", days: 30 },
+  { id: "90d", label: "90D", days: 90 },
+  { id: "all", label: "All", days: null },
+];
+
+function parseRange(raw: string | undefined): RangeId {
+  return RANGES.some((r) => r.id === raw) ? (raw as RangeId) : "30d";
 }
 
 type ActivityItem = {
@@ -23,10 +29,17 @@ type ActivityItem = {
   detail: string;
 };
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const { range: rawRange } = await searchParams;
+  const range = parseRange(rawRange);
+  const rangeDays = RANGES.find((r) => r.id === range)!.days;
+  const cutoff = rangeDays === null ? null : Date.now() - rangeDays * 86_400_000;
+
   const supabase = createAdminClient();
-  const dayStart = lagosMidnightIso();
-  const dayAgo = new Date(Date.now() - 24 * 3_600_000).toISOString();
 
   // Everything here is independent -- one parallel wave, slowest wins.
   const [
@@ -39,8 +52,8 @@ export default async function AdminPage() {
     { data: allSuccessPurchases },
     { data: allSuccessGifts },
     { data: allSuccessMerch },
-    { count: merchToShip },
-    { count: openSupport },
+    { count: totalDropCount },
+    { count: totalTrackCount },
     { count: failedPurchases },
     { count: failedTickets },
     { count: failedMerch },
@@ -75,33 +88,29 @@ export default async function AdminPage() {
       .select("amount_kobo, item:merch_items!inner(artist_id)")
       .eq("status", "success")
       .eq("paid_out", false),
-    supabase.from("purchases").select("fan_phone, amount_kobo, created_at").eq("status", "success"),
-    supabase.from("gifts").select("amount_kobo").eq("status", "success"),
-    supabase.from("merch_orders").select("amount_kobo").eq("status", "success"),
+    supabase.from("purchases").select("amount_kobo, created_at").eq("status", "success"),
+    supabase.from("gifts").select("amount_kobo, created_at").eq("status", "success"),
+    supabase.from("merch_orders").select("amount_kobo, created_at").eq("status", "success"),
+    supabase.from("drops").select("id", { count: "exact", head: true }),
     supabase
-      .from("merch_orders")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "success")
-      .neq("fulfillment", "delivered"),
-    supabase
-      .from("support_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "open"),
+      .from("drop_tracks")
+      .select("id, drops!inner(status)", { count: "exact", head: true })
+      .eq("drops.status", "published"),
     supabase
       .from("purchases")
       .select("id", { count: "exact", head: true })
       .eq("status", "failed")
-      .gte("created_at", dayAgo),
+      .gte("created_at", new Date(Date.now() - 24 * 3_600_000).toISOString()),
     supabase
       .from("show_tickets")
       .select("id", { count: "exact", head: true })
       .eq("status", "failed")
-      .gte("created_at", dayAgo),
+      .gte("created_at", new Date(Date.now() - 24 * 3_600_000).toISOString()),
     supabase
       .from("merch_orders")
       .select("id", { count: "exact", head: true })
       .eq("status", "failed")
-      .gte("created_at", dayAgo),
+      .gte("created_at", new Date(Date.now() - 24 * 3_600_000).toISOString()),
     supabase
       .from("purchases")
       .select("fan_name, amount_kobo, created_at, drops(title, artist:artists!drops_artist_id_fkey(stage_name))")
@@ -133,15 +142,22 @@ export default async function AdminPage() {
       .limit(5),
   ]);
 
-  // Today's sales (gross collected).
-  const todaySales = (allSuccessPurchases ?? []).filter((p) => p.created_at >= dayStart);
-
-  // Platform take across every product.
+  // Range-scoped money: gross collected plus the platform's take, across
+  // every product. Owed/failed/counts below stay absolute -- they're state,
+  // not history.
+  const inRange = (iso: string) => cutoff === null || new Date(iso).getTime() >= cutoff;
   const take = (amountKobo: number, bps: number) => amountKobo - applyCommission(amountKobo, bps);
-  const platformRevenueKobo =
-    (allSuccessPurchases ?? []).reduce((s, p) => s + take(p.amount_kobo, settings.dropCommissionBps), 0) +
-    (allSuccessGifts ?? []).reduce((s, g) => s + take(g.amount_kobo, settings.giftCommissionBps), 0) +
-    (allSuccessMerch ?? []).reduce((s, m) => s + take(m.amount_kobo, settings.merchCommissionBps), 0);
+  const rangePurchases = (allSuccessPurchases ?? []).filter((p) => inRange(p.created_at));
+  const rangeGifts = (allSuccessGifts ?? []).filter((g) => inRange(g.created_at));
+  const rangeMerch = (allSuccessMerch ?? []).filter((m) => inRange(m.created_at));
+  const rangeTakeKobo =
+    rangePurchases.reduce((s, p) => s + take(p.amount_kobo, settings.dropCommissionBps), 0) +
+    rangeGifts.reduce((s, g) => s + take(g.amount_kobo, settings.giftCommissionBps), 0) +
+    rangeMerch.reduce((s, m) => s + take(m.amount_kobo, settings.merchCommissionBps), 0);
+  const rangeGrossKobo =
+    rangePurchases.reduce((s, p) => s + p.amount_kobo, 0) +
+    rangeGifts.reduce((s, g) => s + g.amount_kobo, 0) +
+    rangeMerch.reduce((s, m) => s + m.amount_kobo, 0);
 
   // Owed per artist, split-aware like the payouts page.
   const sheetPurchases = (unpaidPurchases ?? []) as {
@@ -240,15 +256,6 @@ export default async function AdminPage() {
     .slice(0, 15);
 
   const attention: { label: string; detail: string; href: string }[] = [
-    ...((pendingArtists ?? []).length > 0
-      ? [
-          {
-            label: `${pendingArtists!.length} artist approval${pendingArtists!.length === 1 ? "" : "s"} waiting`,
-            detail: "Review applications",
-            href: "/admin/artists",
-          },
-        ]
-      : []),
     ...(noBankNames.length > 0
       ? [
           {
@@ -285,22 +292,38 @@ export default async function AdminPage() {
     artist: "bg-surface-2 text-muted",
   };
 
+  const rangeHref = (id: string) => (id === "30d" ? "/admin" : `/admin?range=${id}`);
+
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 space-y-10 px-5 py-8 sm:px-8">
       <section>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-          <StatBox
-            icon={<ShoppingBag className="h-4 w-4" />}
-            value={formatNaira(todaySales.reduce((s, p) => s + p.amount_kobo, 0))}
-            label={`${todaySales.length} sales today`}
-            href="/admin/transactions"
-          />
-          <StatBox
-            icon={<Wallet className="h-4 w-4" />}
-            value={formatNaira(platformRevenueKobo)}
-            label="Platform revenue"
-            href="/admin/payouts"
-          />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="col-span-2 flex flex-col justify-between gap-4 rounded-2xl border border-line bg-surface p-5 sm:col-span-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-muted">
+                Total revenue
+              </span>
+              <div role="tablist" aria-label="Time range" className="flex gap-1">
+                {RANGES.map((r) => (
+                  <Link
+                    key={r.id}
+                    role="tab"
+                    aria-selected={r.id === range}
+                    href={rangeHref(r.id)}
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors ${
+                      r.id === range ? "bg-surface-2 text-paper" : "text-muted hover:text-paper"
+                    }`}
+                  >
+                    {r.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="font-mono text-[28px] font-bold">{formatNaira(rangeTakeKobo)}</div>
+            <div className="text-[11px] text-muted">
+              {formatNaira(rangeGrossKobo)} collected · {rangePurchases.length + rangeMerch.length} sales
+            </div>
+          </div>
           <StatBox
             icon={<Banknote className="h-4 w-4" />}
             value={formatNaira(owedKobo)}
@@ -308,24 +331,53 @@ export default async function AdminPage() {
             href="/admin/payouts"
           />
           <StatBox
-            icon={<Package className="h-4 w-4" />}
-            value={String(merchToShip ?? 0)}
-            label="Merch to ship"
-            href="/admin/merch"
-          />
-          <StatBox
-            icon={<Mail className="h-4 w-4" />}
-            value={String(openSupport ?? 0)}
-            label="Open support"
-            href="/admin/support"
-          />
-          <StatBox
             icon={<TriangleAlert className="h-4 w-4" />}
             value={String(failed24)}
             label="Failed 24h"
             href="/admin/transactions"
           />
+          <StatBox
+            icon={<Music2 className="h-4 w-4" />}
+            value={`${totalDropCount ?? 0} / ${totalTrackCount ?? 0}`}
+            label="Drops / Tracks"
+            href="/admin/songs"
+          />
+          <StatBox
+            icon={<Mic2 className="h-4 w-4" />}
+            value={String(approvedArtists?.length ?? 0)}
+            label="Artists"
+            href="/admin/artists"
+          />
         </div>
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-lg font-bold">
+          Pending approvals ({pendingArtists?.length ?? 0})
+        </h2>
+        {(pendingArtists ?? []).length === 0 ? (
+          <p className="text-sm text-muted">No pending artist accounts.</p>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
+                <th className="pb-2 font-bold">Artist</th>
+                <th className="pb-2 font-bold">Profile link</th>
+                <th className="pb-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingArtists?.map((a) => (
+                <ArtistApprovalRow
+                  key={a.id}
+                  id={a.id}
+                  stageName={a.stage_name}
+                  profileLink={a.profile_link}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section>
@@ -406,35 +458,6 @@ export default async function AdminPage() {
               </div>
             ))}
           </div>
-        )}
-      </section>
-
-      <section>
-        <h2 className="mb-4 text-lg font-bold">
-          Pending approvals ({pendingArtists?.length ?? 0})
-        </h2>
-        {(pendingArtists ?? []).length === 0 ? (
-          <p className="text-sm text-muted">No pending artist accounts.</p>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-                <th className="pb-2 font-bold">Artist</th>
-                <th className="pb-2 font-bold">Profile link</th>
-                <th className="pb-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {pendingArtists?.map((a) => (
-                <ArtistApprovalRow
-                  key={a.id}
-                  id={a.id}
-                  stageName={a.stage_name}
-                  profileLink={a.profile_link}
-                />
-              ))}
-            </tbody>
-          </table>
         )}
       </section>
     </main>

@@ -53,7 +53,16 @@ const MOBILE_BAR_SECTIONS: AdminSection[] = ["home", "transactions", "artists", 
 // so it stays mounted across navigations instead of remounting per click --
 // active tab is derived from the URL rather than passed down, since a
 // shared layout only renders once per navigation, not per page.
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  badges,
+}: {
+  children: React.ReactNode;
+  // Live counts for the sidebar pills (support open tickets, published
+  // drops, approved artists, merch awaiting shipment). Zero renders dimmed,
+  // never hidden -- a vanishing nav item reads as broken.
+  badges?: Partial<Record<AdminSection, number>>;
+}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -64,6 +73,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const mobileBarItems = NAV_ITEMS.filter((item) => MOBILE_BAR_SECTIONS.includes(item.section));
   const moreItems = NAV_ITEMS.filter((item) => !MOBILE_BAR_SECTIONS.includes(item.section));
   const moreActive = moreItems.some((item) => item.section === active);
+
+  const pill = (section: AdminSection) => {
+    const count = badges?.[section];
+    if (count === undefined) return null;
+    return (
+      <span
+        className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-bold ${
+          count > 0 ? "bg-accent/15 text-accent" : "bg-surface-2 text-muted"
+        }`}
+      >
+        {count}
+      </span>
+    );
+  };
 
   return (
     <div className="sm:flex sm:min-h-screen">
@@ -98,7 +121,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <Icon className={`h-4 w-4 ${isActive ? "text-accent" : ""}`} />
-              {item.label}
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {pill(item.section)}
             </Link>
           );
         })}
@@ -141,6 +165,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             >
               <Icon className="h-4 w-4" />
               {item.label}
+              {pill(item.section)}
             </Link>
           );
         })}
@@ -193,6 +218,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
+                    <span className="flex-1" />
+                    {pill(item.section)}
                   </Link>
                 );
               })}
