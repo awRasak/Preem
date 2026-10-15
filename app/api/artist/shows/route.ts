@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 
 const schema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -29,6 +30,14 @@ export async function POST(req: Request) {
   }
   const { title, description, venue, city, start_at, end_at, ticket_price_kobo, total_tickets, cover_art_path } =
     parsed.data;
+
+  // Rails won't process sub-₦50 amounts -- block unpayable ticket prices.
+  if (ticket_price_kobo < MIN_CHECKOUT_KOBO) {
+    return NextResponse.json(
+      { error: "Ticket price must be at least ₦50." },
+      { status: 400 },
+    );
+  }
 
   const { data: artist } = await supabase
     .from("artists")

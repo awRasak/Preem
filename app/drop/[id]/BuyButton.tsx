@@ -15,6 +15,7 @@ import { Spinner } from "@/components/Loader";
 import { Badge } from "@/components/Badge";
 import { Field, Input } from "@/components/Field";
 import { formatNaira, formatUsd } from "@/lib/format";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { createClient } from "@/lib/supabase/client";
 import { usePlayer } from "@/lib/player-context";
 import { useBuyerDetails } from "@/components/useBuyerDetails";
@@ -99,16 +100,20 @@ export function BuyButton({
   usdRate?: number | null;
 }) {
   const [step, setStep] = useState<Step>("closed");
-  const [amountNaira, setAmountNaira] = useState(String(minPriceKobo / 100));
+  const [amountNaira, setAmountNaira] = useState(
+    String(Math.max(minPriceKobo, MIN_CHECKOUT_KOBO) / 100),
+  );
   // Anchoring chips above the minimum nudge the amount fans type in the
   // same way Bandcamp/Patreon's suggested-amount buttons do -- "custom"
   // reveals the free-text field so the minimum is always reachable.
+  // Chips anchor on the payable floor (artist min, but never below the
+  // ₦50 rail floor) so every suggested amount actually pays.
+  const floorNaira = Math.max(minPriceKobo, MIN_CHECKOUT_KOBO) / 100;
   const priceChipsNaira = useMemo(() => {
-    const minNaira = minPriceKobo / 100;
-    return [minNaira, minNaira * 2, minNaira * 5];
-  }, [minPriceKobo]);
+    return [floorNaira, floorNaira * 2, floorNaira * 5];
+  }, [floorNaira]);
   const [priceMode, setPriceMode] = useState<number | "custom" | null>(
-    () => minPriceKobo / 100,
+    () => floorNaira,
   );
   const pricePicked = priceMode !== null;
   // Keep the auto-picked minimum in sync if this instance is reused for a
@@ -160,7 +165,11 @@ export function BuyButton({
   }
 
   const amountKobo = Math.round(Number(amountNaira) * 100);
-  const amountValid = Number.isFinite(amountKobo) && amountKobo >= minPriceKobo;
+  // Gateway rails refuse sub-₦50 amounts, so the effective floor is the
+  // higher of the artist's minimum and the platform floor (same floor the
+  // chips anchor on above).
+  const floorKobo = Math.round(floorNaira * 100);
+  const amountValid = Number.isFinite(amountKobo) && amountKobo >= floorKobo;
 
   function afterPaymentSuccess(paidReference: string, monipayData?: unknown) {
     setStep("verifying");
@@ -252,7 +261,7 @@ export function BuyButton({
       return;
     }
     if (!amountValid) {
-      setError(`Enter at least ${formatNaira(minPriceKobo)}.`);
+      setError(`Enter at least ${formatNaira(floorKobo)}.`);
       payingRef.current = false;
       return;
     }
@@ -614,11 +623,11 @@ export function BuyButton({
                   </div>
                 </Field>
                 {priceMode === "custom" && (
-                  <Field label={`Amount (₦${minPriceKobo / 100} minimum)`}>
+                  <Field label={`Amount (₦${floorKobo / 100} minimum)`}>
                     <Input
                       required
                       type="number"
-                      min={minPriceKobo / 100}
+                      min={floorKobo / 100}
                       step="1"
                       value={amountNaira}
                       onChange={(e) => setAmountNaira(e.target.value)}

@@ -12,6 +12,7 @@ import { Step3Pricing } from "@/app/artist/drops/new/Step3Pricing";
 import { Step4Review } from "@/app/artist/drops/new/Step4Review";
 import { PreviewCard } from "@/app/artist/drops/new/PreviewCard";
 import { WizardBottomBar } from "@/app/artist/drops/new/WizardBottomBar";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { ProgressBar } from "@/components/Loader";
 import {
   initialWizardState,
@@ -119,12 +120,17 @@ export function AdminDropWizard({
   }
 
   function step2Valid() {
-    return state.tracks.every((t) => t.file && t.title.trim() && Number(t.minPriceNaira) > 0);
+    return state.tracks.every(
+      (t) =>
+        t.file &&
+        t.title.trim() &&
+        Math.round((Number(t.minPriceNaira) || 0) * 100) >= MIN_CHECKOUT_KOBO,
+    );
   }
 
   function step3Valid() {
     const minKobo = Math.round((Number(state.minPriceNaira) || 0) * 100);
-    if (minKobo <= 0) return false;
+    if (minKobo < MIN_CHECKOUT_KOBO) return false;
     if (isBundle) {
       const sum = state.tracks.reduce(
         (acc, t) => acc + Math.round((Number(t.minPriceNaira) || 0) * 100),

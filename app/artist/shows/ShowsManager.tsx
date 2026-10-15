@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { uploadFileWithProgress } from "@/lib/storage-upload";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
@@ -84,8 +85,8 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
 
     const price = Math.round(Number(priceNaira) * 100);
     const tickets = Math.round(Number(totalTickets));
-    if (!Number.isFinite(price) || price <= 0) {
-      setError("Enter a valid ticket price.");
+    if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) {
+      setError(`Ticket price must be at least ₦${MIN_CHECKOUT_KOBO / 100} (payment minimum).`);
       return;
     }
     if (!Number.isInteger(tickets) || tickets <= 0) {

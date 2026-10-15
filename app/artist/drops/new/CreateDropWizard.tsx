@@ -16,6 +16,7 @@ import { PreviewCard } from "./PreviewCard";
 import { WizardBottomBar } from "./WizardBottomBar";
 import { ProgressBar } from "@/components/Loader";
 import { isSheetValid, buildSheetPayload } from "@/components/SplitSheetEditor";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { initialWizardState } from "./types";
 import type { WizardState } from "./types";
 import {
@@ -157,14 +158,16 @@ export default function CreateDropWizard() {
       (t) =>
         t.file &&
         t.title.trim() &&
-        Number(t.minPriceNaira) > 0 &&
+        Math.round((Number(t.minPriceNaira) || 0) * 100) >= MIN_CHECKOUT_KOBO &&
         isSheetValid(t.splitArtists ?? [], t.splitInvites ?? []),
     );
   }
 
   function step3Valid() {
     const minKobo = Math.round((Number(state.minPriceNaira) || 0) * 100);
-    if (minKobo <= 0) return false;
+    // Rails won't process sub-₦50 amounts -- block unpayable minimums here
+    // rather than stranding fans at the popup.
+    if (minKobo < MIN_CHECKOUT_KOBO) return false;
     if (isBundle) {
       const sum = state.tracks.reduce(
         (acc, t) => acc + Math.round((Number(t.minPriceNaira) || 0) * 100),

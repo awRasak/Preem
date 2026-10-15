@@ -14,6 +14,7 @@ import { Spinner } from "@/components/Loader";
 import { Field, Input } from "@/components/Field";
 import { useBuyerDetails } from "@/components/useBuyerDetails";
 import { formatNaira, formatShowDate } from "@/lib/format";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 
 declare global {
   interface Window {
@@ -318,6 +319,12 @@ export function BuyTicketButton({
                 <p className="mb-4 text-xs text-muted">
                   General admission at the door. No refunds once a ticket is issued.
                 </p>
+                {amountKobo < MIN_CHECKOUT_KOBO && (
+                  <p className="mb-4 rounded-lg border border-line bg-surface-2 p-3 text-xs text-[#ff6b6b]">
+                    This ticket is priced below the {formatNaira(MIN_CHECKOUT_KOBO)} payment
+                    minimum -- the artist needs to raise the price before it can be sold.
+                  </p>
+                )}
                 </div>
                 <div>
                 <Field label="Name">
@@ -360,7 +367,11 @@ export function BuyTicketButton({
                     type="submit"
                     variant="primary"
                     className="w-full !py-4 !text-base"
-                    disabled={step === "submitting" || step === "verifying"}
+                    disabled={
+                      step === "submitting" ||
+                      step === "verifying" ||
+                      amountKobo < MIN_CHECKOUT_KOBO
+                    }
                   >
                     {step === "submitting" ? (
                       <span className="inline-flex items-center gap-2">

@@ -3,6 +3,8 @@
 import { Field, Input } from "@/components/Field";
 import { DateTimePicker } from "@/components/DateTimePicker";
 import { SplitSheetEditor } from "@/components/SplitSheetEditor";
+import { formatNaira } from "@/lib/format";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import type { WizardState } from "./types";
 
 export function Step3Pricing({
@@ -29,11 +31,15 @@ export function Step3Pricing({
         <Input
           required
           type="number"
-          min={1}
+          min={MIN_CHECKOUT_KOBO / 100}
           value={state.minPriceNaira}
           onChange={(e) => onChange({ minPriceNaira: e.target.value })}
           placeholder="800"
         />
+        <p className="mt-1.5 text-[11px] text-muted">
+          Payment rails won&apos;t process anything under{" "}
+          {formatNaira(MIN_CHECKOUT_KOBO)} — set at least that.
+        </p>
       </Field>
 
       <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface px-3.5 py-3">

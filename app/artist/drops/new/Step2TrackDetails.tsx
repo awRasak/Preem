@@ -6,6 +6,7 @@ import { Button } from "@/components/Button";
 import { newTrackDraft, AUDIO_ACCEPT } from "./types";
 import type { TrackDraft, WizardState } from "./types";
 import { SplitSheetEditor } from "@/components/SplitSheetEditor";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 
 export function Step2TrackDetails({
   state,
@@ -92,7 +93,7 @@ export function Step2TrackDetails({
                 )}
                 <Input
                   type="number"
-                  min={1}
+                  min={MIN_CHECKOUT_KOBO / 100}
                   value={track.minPriceNaira}
                   onChange={(e) => updateTrack(track.localId, { minPriceNaira: e.target.value })}
                   placeholder="Minimum Price (₦)"

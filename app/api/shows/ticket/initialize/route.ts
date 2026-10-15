@@ -6,6 +6,8 @@ import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
 import { publicKeyForGateway, resolveGateway } from "@/lib/geo";
 import { normalizePhone } from "@/lib/phone";
+import { formatNaira } from "@/lib/format";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 
 const schema = z.object({
   showId: z.string().uuid(),
@@ -63,6 +65,13 @@ export async function POST(req: Request) {
   if (amountKobo < show.ticket_price_kobo) {
     return NextResponse.json(
       { error: "Amount is below the ticket price." },
+      { status: 400 },
+    );
+  }
+
+  if (amountKobo < MIN_CHECKOUT_KOBO) {
+    return NextResponse.json(
+      { error: `Minimum payment is ${formatNaira(MIN_CHECKOUT_KOBO)} — pick a higher amount.` },
       { status: 400 },
     );
   }

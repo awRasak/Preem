@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isDropLive } from "@/lib/format";
+import { isDropLive, formatNaira } from "@/lib/format";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimitCheck, tooManyRequests } from "@/lib/rate-limit";
@@ -86,6 +87,15 @@ export async function POST(req: Request) {
   if (amountKobo < minPriceKobo) {
     return NextResponse.json(
       { error: "Amount is below the minimum price." },
+      { status: 400 },
+    );
+  }
+
+  // Gateway rails refuse sub-₦50 amounts (Monipay: "at least 5000"), so a
+  // low artist minimum alone would strand the fan at the popup.
+  if (amountKobo < MIN_CHECKOUT_KOBO) {
+    return NextResponse.json(
+      { error: `Minimum payment is ${formatNaira(MIN_CHECKOUT_KOBO)} — pick a higher amount.` },
       { status: 400 },
     );
   }
