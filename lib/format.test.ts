@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatNaira, formatTimeLeft, formatUsd, isDropLive, isEndingSoon, sanitizeBio } from "./format";
+import { formatNaira, formatTimeLeft, formatUsd, isDropLive, isEndingSoon, sanitizeBio, timeAgo } from "./format";
 
 describe("formatNaira", () => {
   it("converts kobo to a naira display string", () => {
@@ -85,5 +85,16 @@ describe("sanitizeBio", () => {
 
   it("trims surrounding whitespace", () => {
     expect(sanitizeBio("  hi  ")).toBe("hi");
+  });
+});
+
+describe("timeAgo", () => {
+  it("compacts recent timestamps and dates older ones", () => {
+    const now = Date.now();
+    expect(timeAgo(new Date(now - 30_000).toISOString())).toBe("just now");
+    expect(timeAgo(new Date(now - 5 * 60_000).toISOString())).toBe("5m");
+    expect(timeAgo(new Date(now - 3 * 3_600_000).toISOString())).toBe("3h");
+    expect(timeAgo(new Date(now - 2 * 86_400_000).toISOString())).toBe("2d");
+    expect(timeAgo("2026-01-05T12:00:00Z")).toBe("Jan 5");
   });
 });

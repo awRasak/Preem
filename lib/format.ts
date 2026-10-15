@@ -48,6 +48,22 @@ export function isFreshRequest(createdAt: string, windowMs: number): boolean {
   return Date.now() - new Date(createdAt).getTime() < windowMs;
 }
 
+// "just now" / "5m" / "3h" / "Sep 20" -- compact past timestamps for
+// activity feeds. Anything older than 6 days gets a short date.
+export function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 0) return "just now";
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 6) return `${days}d`;
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })} ${d.getUTCDate()}`;
+}
+
 export function formatTimeLeft(windowEnd: string): string {
   const ms = new Date(windowEnd).getTime() - Date.now();
   if (ms <= 0) return "Closed";
