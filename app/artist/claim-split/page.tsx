@@ -104,24 +104,6 @@ export default async function ClaimSplitPage({
     );
   }
 
-  const { data: artist } = await admin
-    .from("artists")
-    .select("approval_status")
-    .eq("id", user.id)
-    .single();
-
-  if (artist?.approval_status !== "approved") {
-    return (
-      <main className="mx-auto w-full max-w-md flex-1 px-5 py-16 text-center sm:px-8">
-        <h1 className="mb-2 text-2xl font-bold">Under review</h1>
-        <p className="text-sm text-muted">
-          Your artist account is still under review. Reopen your invite link
-          after approval to claim your {percent}% of &ldquo;{track.title}&rdquo;.
-        </p>
-      </main>
-    );
-  }
-
   return (
     <main className="mx-auto w-full max-w-md flex-1 px-5 py-16 text-center sm:px-8">
       <h1 className="mb-2 text-2xl font-bold">Claim your {percent}%</h1>

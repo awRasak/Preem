@@ -139,12 +139,23 @@ export async function submitDropJob({
   const { data: drop } = await admin
     .from("drops")
     .select(
-      "id, title, release_type, genre, window_end, artwork_path, is_exclusive, artist_id, artist:artists!drops_artist_id_fkey(stage_name)",
+      "id, title, release_type, genre, window_end, artwork_path, is_exclusive, artist_id, artist:artists!drops_artist_id_fkey(stage_name, approval_status)",
     )
     .eq("id", dropId)
     .single();
   if (!drop || drop.artist_id !== artistId) {
     return { ok: false, error: "Drop not found", status: 404 };
+  }
+
+  // DSP delivery is externally public under Preem's account -- keep it behind
+  // the same admin review that gates the public site.
+  const artistRow = Array.isArray(drop.artist) ? drop.artist[0] : drop.artist;
+  if (artistRow?.approval_status !== "approved") {
+    return {
+      ok: false,
+      error: "Your artist account must be approved before distributing to streaming services.",
+      status: 403,
+    };
   }
 
   const { data: existing } = await admin
@@ -183,7 +194,6 @@ export async function submitDropJob({
     return { ok: false, error: "Drop has no audio to distribute yet.", status: 400 };
   }
 
-  const artist = Array.isArray(drop.artist) ? drop.artist[0] : drop.artist;
   const streetDate = streetDateFor(drop.window_end, streetDateOverride);
   const warning =
     leadTimeDays(streetDate) < LEAD_TIME_WARN_DAYS
@@ -218,7 +228,7 @@ export async function submitDropJob({
         genre: drop.genre,
         window_end: drop.window_end,
         artwork_path: drop.artwork_path,
-        artist: { stage_name: artist?.stage_name ?? "" },
+        artist: { stage_name: artistRow?.stage_name ?? "" },
       },
       tracks,
       artworkBytes: async () => {

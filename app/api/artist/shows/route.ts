@@ -39,16 +39,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const { data: artist } = await supabase
-    .from("artists")
-    .select("approval_status")
-    .eq("id", user.id)
-    .single();
-
-  if (!artist || artist.approval_status !== "approved") {
-    return NextResponse.json({ error: "Artists can't list shows until approved." }, { status: 403 });
-  }
-
   const start = new Date(start_at);
   if (!Number.isFinite(start.getTime())) {
     return NextResponse.json({ error: "Invalid start date" }, { status: 400 });

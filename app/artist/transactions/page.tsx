@@ -3,7 +3,6 @@ import { ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ArtistShell } from "@/components/ArtistShell";
-import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
@@ -246,33 +245,6 @@ export default async function ArtistTransactionsPage() {
 
   const receivedKobo = txs.reduce((sum, t) => sum + (t.direction === "in" ? t.amountKobo : 0), 0);
   const withdrawnKobo = txs.reduce((sum, t) => sum + (t.direction === "out" ? t.amountKobo : 0), 0);
-
-  if (artist.approval_status !== "approved") {
-    return (
-      <ArtistShell
-        active="transactions"
-        artistName={artist.stage_name}
-        avatarUrl={artist.avatar_url ?? null}
-        artistId={user.id}
-      >
-        <main className="mx-auto w-full max-w-lg flex-1 px-5 py-16 text-center">
-          <h1 className="mb-4 text-2xl font-bold">
-            {artist.approval_status === "pending"
-              ? "Your account is pending approval"
-              : "Your account was not approved"}
-          </h1>
-          <p className="mb-4 text-sm text-muted">
-            {artist.approval_status === "pending"
-              ? "An admin is reviewing your profile link. You'll be able to publish drops once approved."
-              : "Reach out to the Preem team if you think this is a mistake."}
-          </p>
-          <Badge status={artist.approval_status === "pending" ? "pending" : "closed"}>
-            {artist.approval_status === "pending" ? "Pending admin approval" : "Not approved"}
-          </Badge>
-        </main>
-      </ArtistShell>
-    );
-  }
 
   return (
     <ArtistShell

@@ -8,7 +8,6 @@ import { ApprovalCelebration } from "./ApprovalCelebration";
 import { WithdrawCard } from "./WithdrawCard";
 import { MIN_PAYOUT_KOBO, SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
 import { Button } from "@/components/Button";
-import { Badge } from "@/components/Badge";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, isDropLive } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
@@ -186,33 +185,6 @@ export default async function ArtistDashboardPage() {
     .sort((a, b) => b.sales.revenueKobo - a.sales.revenueKobo)
     .slice(0, 5);
 
-  if (artist.approval_status !== "approved") {
-    return (
-      <ArtistShell
-        active="home"
-        artistName={artist.stage_name}
-        avatarUrl={artist.avatar_url ?? null}
-        artistId={user.id}
-      >
-        <main className="mx-auto w-full max-w-lg flex-1 px-5 py-16 text-center">
-          <h1 className="mb-4 text-2xl font-bold">
-            {artist.approval_status === "pending"
-              ? "Your account is pending approval"
-              : "Your account was not approved"}
-          </h1>
-          <p className="mb-4 text-sm text-muted">
-            {artist.approval_status === "pending"
-              ? "An admin is reviewing your profile link. You'll be able to publish drops once approved."
-              : "Reach out to the Preem team if you think this is a mistake."}
-          </p>
-          <Badge status={artist.approval_status === "pending" ? "pending" : "closed"}>
-            {artist.approval_status === "pending" ? "Pending admin approval" : "Not approved"}
-          </Badge>
-        </main>
-      </ArtistShell>
-    );
-  }
-
   return (
     <ArtistShell
       active="home"
@@ -222,6 +194,20 @@ export default async function ArtistDashboardPage() {
     >
       {!artist.approval_seen && <ApprovalCelebration />}
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
+        {artist.approval_status !== "approved" && (
+          <div className="mb-6 rounded-xl border border-line bg-surface p-4">
+            <p className="text-sm font-bold">
+              {artist.approval_status === "pending"
+                ? "Profile under review"
+                : "Account not approved"}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {artist.approval_status === "pending"
+                ? "You can build everything here right away — your public profile and drops go live once an admin reviews your link."
+                : "Reach out to the Preem team if you think this is a mistake."}
+            </p>
+          </div>
+        )}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-xl font-bold">Home</h1>
           <Button href="/artist/drops/new" variant="primary">

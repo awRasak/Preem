@@ -13,10 +13,10 @@ export default async function ArtistShowsPage() {
 
   const { data: artist } = await supabase
     .from("artists")
-    .select("approval_status, stage_name, avatar_url")
+    .select("stage_name, avatar_url")
     .eq("id", user.id)
     .single();
-  if (!artist || artist.approval_status !== "approved") redirect("/artist/dashboard");
+  if (!artist) redirect("/artist/dashboard");
 
   const { data: shows } = await supabase
     .from("shows")

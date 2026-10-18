@@ -27,17 +27,11 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const { data: artist } = await admin
     .from("artists")
-    .select("id, approval_status")
+    .select("id")
     .eq("id", user.id)
     .single();
   if (!artist) {
     return NextResponse.json({ error: "Artist profile not found." }, { status: 403 });
-  }
-  if (artist.approval_status !== "approved") {
-    return NextResponse.json(
-      { error: "Your artist account is still under review -- come back after approval to claim." },
-      { status: 403 },
-    );
   }
 
   const { data: invite } = await admin

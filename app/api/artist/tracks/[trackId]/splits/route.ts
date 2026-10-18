@@ -122,7 +122,9 @@ export async function POST(
 
   const admin = createAdminClient();
 
-  // Every claimed payee must be an approved Preem artist.
+  // Every claimed payee must be an approved Preem artist -- except the
+  // requester themself, who may still be pending (their own money gates at
+  // withdraw, not at sheet creation).
   if (splits.length > 0) {
     const { data: artists } = await admin
       .from("artists")
@@ -131,10 +133,11 @@ export async function POST(
         "id",
         splits.map((s) => s.artistId),
       );
-    const approved = new Set(
+    const allowed = new Set(
       (artists ?? []).filter((a) => a.approval_status === "approved").map((a) => a.id),
     );
-    if (!splits.every((s) => approved.has(s.artistId))) {
+    allowed.add(user.id);
+    if (!splits.every((s) => allowed.has(s.artistId))) {
       return NextResponse.json(
         { error: "Every contributor must be an approved Preem artist -- use an invite for anyone off Preem." },
         { status: 400 },

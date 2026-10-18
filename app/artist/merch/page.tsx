@@ -15,10 +15,10 @@ export default async function ArtistMerchPage() {
 
   const { data: artist } = await supabase
     .from("artists")
-    .select("id, stage_name, avatar_url, approval_status")
+    .select("id, stage_name, avatar_url")
     .eq("id", user.id)
     .single();
-  if (!artist || artist.approval_status !== "approved") redirect("/artist/dashboard");
+  if (!artist) redirect("/artist/dashboard");
 
   const [{ data: items }, { data: orders }] = await Promise.all([
     supabase

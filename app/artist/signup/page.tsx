@@ -8,7 +8,6 @@ import { Nav, NavLink } from "@/components/Nav";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { Spinner } from "@/components/Loader";
-import { Badge } from "@/components/Badge";
 
 export default function ArtistSignupPage() {
   const router = useRouter();
@@ -63,10 +62,13 @@ export default function ArtistSignupPage() {
 
         {submitted ? (
           <div>
-            <p className="mb-4 text-sm text-muted">
+            <p className="mb-3 text-sm text-muted">
               Your account is created. Head to sign in to continue.
             </p>
-            <Badge status="pending">Pending admin approval</Badge>
+            <p className="text-xs text-muted">
+              You can start building drops right away — your public profile goes
+              live after a short review.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>

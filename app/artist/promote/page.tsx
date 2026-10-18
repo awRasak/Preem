@@ -25,10 +25,10 @@ export default async function ArtistPromotePage() {
 
   const { data: artist } = await supabase
     .from("artists")
-    .select("id, stage_name, avatar_url, slug, approval_status, featured_drop_id")
+    .select("id, stage_name, avatar_url, slug, featured_drop_id")
     .eq("id", user.id)
     .single();
-  if (!artist || artist.approval_status !== "approved") redirect("/artist/dashboard");
+  if (!artist) redirect("/artist/dashboard");
 
   const admin = createAdminClient();
   const [{ count: followerCount }, { data: drops }, { data: presaveDrops }, { data: sales }] =
