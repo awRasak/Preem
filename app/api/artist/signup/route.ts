@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     stage_name: stageName,
     profile_link: profileLink,
     avatar_url: avatarUrl,
-    approval_status: "pending",
+    approval_status: "approved",
   });
 
   if (roleError || artistError) {
