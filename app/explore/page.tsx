@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Nav, NavLink } from "@/components/Nav";
 import { Button } from "@/components/Button";
 import { ShowCard } from "@/components/ShowCard";
@@ -7,6 +8,12 @@ import { ExploreBrowser } from "./ExploreBrowser";
 import type { Artist, Drop } from "@/lib/types";
 
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Explore — artists, drops & live shows | Preem",
+  description:
+    "Discover Nigerian artists selling early access to unreleased music, tickets to live shows, and merch — direct to fans on Preem.",
+};
 
 export default async function ExplorePage() {
   const supabase = await createClient();

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { PlayerProvider } from "@/lib/player-context";
 import { PlayerBar } from "@/components/PlayerBar";
@@ -30,6 +31,19 @@ export const metadata: Metadata = {
   description:
     "Preem is a Naira-native, Paystack-powered direct-to-fan music marketplace. Sell early access to unreleased tracks straight to your fans.",
   manifest: "/manifest.json",
+  openGraph: {
+    type: "website",
+    siteName: "Preem",
+    title: "Preem — Live off your music",
+    description:
+      "Sell early access to unreleased drops, tickets and more — direct to your fans, priced in naira.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Preem — Live off your music",
+    description:
+      "Sell early access to unreleased drops, tickets and more — direct to your fans, priced in naira.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -58,6 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <PlayerBar />
         </PlayerProvider>
         <ServiceWorkerRegister />
+        <Analytics />
       </body>
     </html>
   );

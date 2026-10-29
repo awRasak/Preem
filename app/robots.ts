@@ -24,6 +24,8 @@ export default function robots(): MetadataRoute.Robots {
           "/artist/signup",
           "/artist/reset-password",
           "/artist/forgot-password",
+          "/artist/merch",
+          "/artist/claim-split",
           "/fans",
         ],
       },
