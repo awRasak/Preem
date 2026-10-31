@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   distributionEligibility,
+  markDistributionUnlockSuccess,
   perTrackPriceKobo,
   perTrackThresholdKobo,
 } from "./unlock";
@@ -152,5 +153,80 @@ describe("distributionEligibility", () => {
     expect(el.trackCount).toBe(1);
     expect(el.thresholdKobo).toBe(THRESHOLD_PER_TRACK);
     expect(el.priceKobo).toBe(PRICE_PER_TRACK);
+  });
+});
+
+describe("markDistributionUnlockSuccess", () => {
+  type Row = { drop_id: string; reference: string; amount_kobo: number; status: string };
+
+  // Row-backed double of the three chains the mark function runs: lookup by
+  // reference, the conditional pending -> paid update (three eq guards), and
+  // the re-read after a lost transition race.
+  function markAdmin(store: { row: Row | null }) {
+    const read = (col: string, v: string) => ({
+      maybeSingle: async () => ({
+        data: store.row && store.row[col as keyof Row] === v ? store.row : null,
+        error: null,
+      }),
+      single: async () => ({
+        data: store.row && store.row[col as keyof Row] === v ? { ...store.row } : null,
+        error: null,
+      }),
+    });
+    return {
+      from: () => ({
+        select: () => ({ eq: read }),
+        update: (patch: Partial<Row>) => ({
+          eq: (c1: keyof Row, v1: string) => ({
+            eq: (c2: keyof Row, v2: string) => ({
+              eq: (c3: keyof Row, v3: string) => ({
+                select: () => ({
+                  single: async () => {
+                    if (
+                      store.row &&
+                      store.row[c1] === v1 &&
+                      store.row[c2] === v2 &&
+                      store.row[c3] === v3
+                    ) {
+                      store.row = { ...store.row, ...patch };
+                      return { data: { ...store.row }, error: null };
+                    }
+                    return { data: null, error: null };
+                  },
+                }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    } as unknown as SupabaseClient;
+  }
+
+  const REF = "preem_test_ref";
+
+  it("flips a pending row to paid when the amount covers the recorded fee", async () => {
+    const store = { row: { drop_id: "d1", reference: REF, amount_kobo: 150_000, status: "pending" } };
+    const out = await markDistributionUnlockSuccess(markAdmin(store), REF, 150_000);
+    expect(out?.status).toBe("paid");
+    expect(store.row.status).toBe("paid");
+  });
+
+  it("refuses an underpaid confirmation", async () => {
+    const store = { row: { drop_id: "d1", reference: REF, amount_kobo: 150_000, status: "pending" } };
+    const out = await markDistributionUnlockSuccess(markAdmin(store), REF, 90_000);
+    expect(out).toBeNull();
+    expect(store.row.status).toBe("pending");
+  });
+
+  it("is idempotent on an already-paid row", async () => {
+    const store = { row: { drop_id: "d1", reference: REF, amount_kobo: 150_000, status: "paid" } };
+    const out = await markDistributionUnlockSuccess(markAdmin(store), REF, 150_000);
+    expect(out?.status).toBe("paid");
+  });
+
+  it("no-ops for a reference that isn't an unlock", async () => {
+    const store = { row: null };
+    const out = await markDistributionUnlockSuccess(markAdmin(store), "some_other_ref", 100);
+    expect(out).toBeNull();
   });
 });
