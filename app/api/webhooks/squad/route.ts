@@ -8,6 +8,7 @@ import {
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
 import { markGiftSuccess } from "@/lib/gifts";
+import { markDistributionUnlockSuccess } from "@/lib/distribution/unlock";
 
 // POST https://preem.ng/api/webhooks/squad
 // (paste this URL into Squad's dashboard webhook setting).
@@ -66,15 +67,17 @@ export async function POST(req: Request) {
     const paidAmount = typeof tx.amount === "number" ? tx.amount : undefined;
 
     const supabase = createAdminClient();
-    const [purchase, ticket, gift] = await Promise.all([
+    const [purchase, ticket, gift, unlock] = await Promise.all([
       markPurchaseSuccess(supabase, reference, paidAmount),
       markShowTicketSuccess(supabase, reference, paidAmount),
       markGiftSuccess(supabase, reference, paidAmount),
+      markDistributionUnlockSuccess(supabase, reference, paidAmount),
     ]);
     const matched =
       (purchase && purchase.status === "success") ||
       (ticket && ticket.status === "success") ||
-      (gift && gift.status === "success");
+      (gift && gift.status === "success") ||
+      (unlock && unlock.status === "paid");
     if (matched) {
       console.log(`squad webhook: matched ${reference}`);
       return NextResponse.json({ received: true, matched: true });

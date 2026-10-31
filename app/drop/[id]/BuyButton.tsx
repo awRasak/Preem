@@ -2,13 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { loadScript } from "@/lib/load-script";
-import { openSquadCheckout } from "@/lib/squad-widget";
-import {
-  dismissNewestMonipayPopup,
-  isMonipayPopupOpen,
-  monipayPopupErrorMessage,
-} from "@/lib/monipay";
+import { launchPayment } from "@/lib/payment-popup";
 import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Spinner } from "@/components/Loader";
@@ -19,39 +13,6 @@ import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { createClient } from "@/lib/supabase/client";
 import { usePlayer } from "@/lib/player-context";
 import { useBuyerDetails } from "@/components/useBuyerDetails";
-
-declare global {
-  interface Window {
-    PaystackPop: {
-      setup: (options: {
-        key: string;
-        email: string;
-        amount: number;
-        currency?: string;
-        ref: string;
-        onClose?: () => void;
-        callback?: (transaction: { reference: string }) => void;
-      }) => { openIframe: () => void };
-    };
-    Monipay: new () => {
-      checkout: (options: {
-        key: string;
-        email: string;
-        amount: number;
-        // Our reference travels via `metadata` (the v2 inline script merges
-        // it as extra /popup query keys) and the popup creates the order
-        // under it -- so the server must NOT pre-register the same
-        // reference. Confirmation still goes through verify-monipay, which
-        // tries ours first, then the popup payload's references.
-        metadata?: Record<string, string>;
-        onLoad?: () => void;
-        onSuccess?: (data: unknown) => void;
-        onCancel?: () => void;
-        onError?: (error: unknown) => void;
-      }) => void;
-    };
-  }
-}
 
 type Step =
   | "closed"
@@ -283,109 +244,28 @@ export function BuyButton({
 
     // The server geo-routes the payment: Nigeria goes local (Monipay),
     // everyone else international (Squad). The client never chooses.
-    if (body.gateway === "monipay") {
-      try {
-        await loadScript("https://js.monipay.ng/v2/inline.js");
-      } catch {
-        setError("Payment failed to load — try again.");
-        setStep("form");
-        payingRef.current = false;
-        return;
-      }
-      if (!window.Monipay) {
-        setError("Payment popup is still loading — try again in a second.");
-        setStep("form");
-        payingRef.current = false;
-        return;
-      }
-      // Never stack popups: if one is already on screen (modal closed
-      // mid-payment, then Continue tapped again), it IS the open payment --
-      // leave it front and center instead of opening the duplicate Monipay
-      // would reject. Its own onCancel/onError will release the guard.
-      if (isMonipayPopupOpen()) return;
-      new window.Monipay().checkout({
-        key: body.publicKey,
+    await launchPayment(
+      {
+        gateway: body.gateway,
+        reference: body.reference,
+        amountKobo: body.amountKobo,
+        publicKey: body.publicKey,
         email: fanEmail,
-        amount: body.amountKobo,
-        metadata: { reference: body.reference },
+        customerName: fanName,
+      },
+      {
+        onSuccess: (ref, payload) => afterPaymentSuccess(ref, payload),
         onCancel: () => {
           payingRef.current = false;
           setStep("form");
         },
-        onError: (err) => {
-          // Peel the errored popup off: if a live payment sits underneath,
-          // the fan lands back on it instead of a dead error screen.
-          const rescued = dismissNewestMonipayPopup();
-          setError(
-            rescued
-              ? "You're back at your open payment — finish it there."
-              : monipayPopupErrorMessage(err),
-          );
+        onError: (message) => {
+          setError(message);
           setStep("form");
           payingRef.current = false;
         },
-        onSuccess: (data) => afterPaymentSuccess(body.reference, data),
-      });
-      return;
-    }
-
-    if (body.gateway === "squad") {
-      // Squad's widget registers the transaction itself under
-      // `transaction_ref`, so -- exactly like Monipay -- this route must not
-      // pre-initiate one. Its onClose also fires AFTER onSuccess on the
-      // account_linked path, so only roll back when we're still waiting on
-      // it; a blanket reset would clobber the "verifying" step.
-      try {
-        await openSquadCheckout({
-          publicKey: body.publicKey,
-          email: fanEmail,
-          amountKobo: body.amountKobo,
-          reference: body.reference,
-          customerName: fanName,
-          onSuccess: () => afterPaymentSuccess(body.reference),
-          onClose: () => {
-            payingRef.current = false;
-            setStep((current) => (current === "submitting" ? "form" : current));
-          },
-        });
-      } catch {
-        setError("Payment failed to load — try again.");
-        setStep("form");
-        payingRef.current = false;
-      }
-      return;
-    }
-
-    try {
-      await loadScript("https://js.paystack.co/v1/inline.js");
-    } catch {
-      setError("Payment failed to load — try again.");
-      setStep("form");
-      payingRef.current = false;
-      return;
-    }
-    if (!window.PaystackPop) {
-      setError("Payment popup is still loading — try again in a second.");
-      setStep("form");
-      payingRef.current = false;
-      return;
-    }
-
-    window.PaystackPop.setup({
-      key: body.publicKey,
-      email: fanEmail,
-      amount: body.amountKobo,
-      // Pin NGN: without this Paystack bills international cards in USD
-      // (cents), which breaks the kobo-amount check in /api/checkout/verify.
-      // Foreign banks convert at their own rate; the fan still pays.
-      currency: "NGN",
-      ref: body.reference,
-      onClose: () => {
-        payingRef.current = false;
-        setStep("form");
       },
-      callback: (transaction) => afterPaymentSuccess(transaction.reference),
-    }).openIframe();
+    );
   }
 
   async function handleVerifyOtp(e: React.FormEvent) {

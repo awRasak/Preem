@@ -8,6 +8,7 @@ import {
   type DropForDistribution,
   type TrackForDistribution,
 } from "./mapper";
+import { distributionEligibility, type DistributionEligibility } from "./unlock";
 
 function contentTypeFor(path: string, fallback: string): string {
   const ext = path.split("?")[0].split(".").pop()?.toLowerCase();
@@ -109,7 +110,15 @@ export type DistributionJobRow = {
 
 export type SubmitDropJobResult =
   | { ok: true; job: DistributionJobRow; warning: string | null }
-  | { ok: false; error: string; status: number };
+  | {
+      ok: false;
+      error: string;
+      status: number;
+      // "locked" = the pay-or-sell eligibility gate (never a real failure --
+      // callers surface the meter, and the daily cron counts it separately).
+      code?: "locked";
+      locked?: DistributionEligibility;
+    };
 
 // A 'scheduled' row means "submit in flight" -- set before the provider call,
 // flipped to 'submitted' after. If the process dies mid-upload the row is
@@ -192,6 +201,26 @@ export async function submitDropJob({
   );
   if (tracks.length === 0) {
     return { ok: false, error: "Drop has no audio to distribute yet.", status: 400 };
+  }
+
+  // Earn-it-or-pay-it gate: the distributor bills per submitted track, so a
+  // drop must either have sold enough that Preem's commission covers that
+  // cost, or carry a paid one-time unlock. Checked here (not in the route)
+  // so the artist button, the wizard's auto-submit and the cron all share
+  // one enforcement point -- and before any job row is claimed.
+  const eligibility = await distributionEligibility({
+    admin,
+    dropId,
+    trackCount: tracks.length,
+  });
+  if (!eligibility.unlocked) {
+    return {
+      ok: false,
+      error: `This drop isn't eligible for distribution yet — ${eligibility.hint}`,
+      status: 403,
+      code: "locked",
+      locked: eligibility,
+    };
   }
 
   const streetDate = streetDateFor(drop.window_end, streetDateOverride);

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Nav, NavLink } from "@/components/Nav";
 import { DistributionGuidance } from "@/components/DistributionGuidance";
 import { formatNaira, isDropLive } from "@/lib/format";
+import { distributionEligibility } from "@/lib/distribution/unlock";
 import { DropHeaderEditable } from "./DropHeaderEditable";
 import { PreSavePanel } from "./PreSavePanel";
 import { TrackSplitManager } from "./TrackSplitManager";
@@ -67,6 +68,14 @@ export default async function ArtistDropDetailPage({
     .eq("drop_id", id)
     .maybeSingle();
 
+  // Paid-or-sold eligibility for the distribute gate (admin client: reads
+  // purchases/unlocks the artist's own session may not be policy'd for).
+  const eligibility = await distributionEligibility({
+    admin: createAdminClient(),
+    dropId: id,
+    trackCount: Math.max(tracks.filter((t) => t.audio_file_path).length, 1),
+  });
+
   // Pre-save counts (drafts only) come from the admin client -- drop_presaves
   // is RLS-locked and only server routes may read it.
   let presaveCount = 0;
@@ -100,6 +109,7 @@ export default async function ArtistDropDetailPage({
           dropTitle={drop.title as string}
           windowEnd={drop.window_end}
           isExclusive={Boolean(drop.is_exclusive)}
+          initialEligibility={eligibility}
           initialJob={
             distJob
               ? {

@@ -43,7 +43,10 @@ export async function POST(
     stores: parsed.data.stores ?? [],
   });
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
+    return NextResponse.json(
+      { error: result.error, code: result.code, locked: result.locked },
+      { status: result.status },
+    );
   }
   return NextResponse.json({ job: result.job, warning: result.warning });
 }

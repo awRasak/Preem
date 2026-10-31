@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/paystack";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
+import { markDistributionUnlockSuccess } from "@/lib/distribution/unlock";
 
 const FORWARD_URL = process.env.MOTOKA_WEBHOOK_FORWARD_URL;
 const FORWARD_TIMEOUT_MS = 10_000;
@@ -62,12 +63,13 @@ export async function POST(req: Request) {
     // callback path re-checks independently, so skipping here is safe.
     const paidAmount =
       typeof event.data?.amount === "number" ? event.data.amount : undefined;
-    // Either a drop purchase or a show ticket may carry this reference; the
-    // mark helpers are both idempotent and no-op when the reference isn't
-    // theirs, so it's safe to try both.
+    // Either a drop purchase, show ticket, or distribution unlock may carry
+    // this reference; the mark helpers are both idempotent and no-op when
+    // the reference isn't theirs, so it's safe to try all three.
     await Promise.all([
       markPurchaseSuccess(supabase, event.data.reference, paidAmount),
       markShowTicketSuccess(supabase, event.data.reference, paidAmount),
+      markDistributionUnlockSuccess(supabase, event.data.reference, paidAmount),
     ]);
   }
 

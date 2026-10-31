@@ -123,7 +123,8 @@ export function Step3Pricing({
           </span>
           <span className="mt-0.5 block text-[11px] text-muted">
             Pushed to Spotify, Apple Music, Boomplay and more with the street
-            date set to your window end. Retried from the drop page if it fails.
+            date set to your window end. Submits automatically once your drop
+            is eligible — earn it with sales, or unlock it from the drop page.
           </span>
         </span>
       </label>

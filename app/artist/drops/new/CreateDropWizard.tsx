@@ -426,9 +426,13 @@ export default function CreateDropWizard() {
         });
         if (!distRes.ok) {
           const body = await distRes.json().catch(() => null);
-          throw new Error(
-            body?.error ?? `Drop is live but distribution failed -- retry it on the drop page.`,
-          );
+          // Eligibility gate (sales/fee not yet met): publish still succeeds --
+          // the drop page's panel shows the meter and submits once unlocked.
+          if (body?.code !== "locked") {
+            throw new Error(
+              body?.error ?? `Drop is live but distribution failed -- retry it on the drop page.`,
+            );
+          }
         }
       }
 

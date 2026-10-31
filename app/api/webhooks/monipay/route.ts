@@ -6,6 +6,7 @@ import {
 } from "@/lib/monipay";
 import { markPurchaseSuccess } from "@/lib/purchases";
 import { markShowTicketSuccess } from "@/lib/show-tickets";
+import { markDistributionUnlockSuccess } from "@/lib/distribution/unlock";
 
 // POST https://preem.ng/api/webhooks/monipay
 // (paste this URL into the Monipay dashboard webhook setting).
@@ -65,13 +66,15 @@ export async function POST(req: Request) {
       const targets = [candidate];
       if (typeof ourRef === "string" && ourRef.length >= 4) targets.push(ourRef);
       for (const target of targets) {
-        const [purchase, ticket] = await Promise.all([
+        const [purchase, ticket, unlock] = await Promise.all([
           markPurchaseSuccess(supabase, target, paidAmount),
           markShowTicketSuccess(supabase, target, paidAmount),
+          markDistributionUnlockSuccess(supabase, target, paidAmount),
         ]);
         if (
           (purchase && purchase.status === "success") ||
-          (ticket && ticket.status === "success")
+          (ticket && ticket.status === "success") ||
+          (unlock && unlock.status === "paid")
         ) {
           matched = target;
           break;

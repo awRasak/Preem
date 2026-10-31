@@ -87,6 +87,7 @@ export async function GET(req: Request) {
 
   let submitted = 0;
   let failed = 0;
+  let locked = 0;
   for (const drop of pending) {
     const result = await submitDropJob({
       admin,
@@ -94,7 +95,11 @@ export async function GET(req: Request) {
       artistId: drop.artist_id,
     });
     if (result.ok && result.job.status === "submitted") submitted += 1;
-    else if (!result.ok) {
+    else if (!result.ok && result.code === "locked") {
+      // Not a failure -- the drop hasn't earned or paid for distribution.
+      // It becomes eligible once sales/fee land; a later run picks it up.
+      locked += 1;
+    } else if (!result.ok) {
       failed += 1;
       console.error(`auto-distribute failed for drop ${drop.id}:`, result.error);
     }
@@ -105,6 +110,7 @@ export async function GET(req: Request) {
     candidates: candidates.length,
     attempted: pending.length,
     submitted,
+    locked,
     failed,
   });
 }
