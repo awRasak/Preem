@@ -27,22 +27,22 @@ const esKlarheitPlakat = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng"),
-  title: "Preem — Live off your music",
+  title: "Preem — Sell your music direct to fans in Nigeria",
   description:
-    "Preem is a Naira-native, Paystack-powered direct-to-fan music marketplace. Sell early access to unreleased tracks straight to your fans.",
+    "Nigeria's direct-to-fan music marketplace. Sell early access to unreleased music in naira, distribute to Spotify & Boomplay, and get paid to your Nigerian bank.",
   manifest: "/manifest.json",
   openGraph: {
     type: "website",
     siteName: "Preem",
-    title: "Preem — Live off your music",
+    title: "Preem — Sell your music direct to fans in Nigeria",
     description:
-      "Sell early access to unreleased drops, tickets and more — direct to your fans, priced in naira.",
+      "Sell early access to unreleased music, tickets and merch in naira — direct to your fans, paid out to your Nigerian bank.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Preem — Live off your music",
+    title: "Preem — Sell your music direct to fans in Nigeria",
     description:
-      "Sell early access to unreleased drops, tickets and more — direct to your fans, priced in naira.",
+      "Sell early access to unreleased music, tickets and merch in naira — direct to your fans, paid out to your Nigerian bank.",
   },
   appleWebApp: {
     capable: true,

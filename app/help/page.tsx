@@ -4,7 +4,8 @@ import { Nav } from "@/components/Nav";
 
 export const metadata: Metadata = {
   title: "Help — Preem",
-  description: "Answers to common questions about buying and selling on Preem.",
+  description:
+    "Answers to common questions about buying and selling music on Preem — Nigeria's direct-to-fan music marketplace.",
 };
 
 const h2 = "mt-10 mb-4 text-lg font-bold";
@@ -100,6 +101,45 @@ export default function HelpPage() {
           Only you. Your dashboard shows the name and phone number of
           everyone who&apos;s bought each of your drops, so you know your
           fanbase — that data isn&apos;t shared with other artists.
+        </p>
+
+        <h2 className={h2}>Guides</h2>
+
+        <p className={q}>
+          <Link
+            href="/help/how-to-release-music-on-spotify-from-nigeria"
+            className="text-paper underline"
+          >
+            How to release music on Spotify from Nigeria
+          </Link>
+        </p>
+        <p className={a}>
+          Step-by-step: getting your song onto Spotify, Apple Music and
+          Boomplay from Nigeria — what it costs, how long it takes, and how
+          royalties reach a Nigerian bank.
+        </p>
+
+        <p className={q}>
+          <Link
+            href="/help/buy-music-before-release"
+            className="text-paper underline"
+          >
+            Where can fans buy music before it&apos;s released?
+          </Link>
+        </p>
+        <p className={a}>
+          How early access works on Preem — buying unreleased tracks in naira
+          and getting permanent streaming access before the song hits Spotify.
+        </p>
+
+        <p className={q}>
+          <Link href="/help/royalty-split-sheet" className="text-paper underline">
+            Music royalty split sheet tool
+          </Link>
+        </p>
+        <p className={a}>
+          Dividing royalties between artists, featured artists and producers —
+          and how Preem splits and pays everyone automatically on each sale.
         </p>
 
         <h2 className={h2}>Payments</h2>
