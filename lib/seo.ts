@@ -97,6 +97,103 @@ export function artistJsonLd({
   };
 }
 
+// Organization + WebSite schema for the homepage. Tells Google (and answer
+// engines parsing the page) exactly who runs preem.ng and what it is.
+export function organizationJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "Preem",
+        url: SITE_URL,
+        logo: `${SITE_URL}/icon.png`,
+        description:
+          "Preem is a direct-to-fan music marketplace built for Nigeria. Artists sell early access to music, show tickets and merch in naira; fans pay by card, transfer or USSD.",
+        sameAs: [],
+      },
+      {
+        "@type": "WebSite",
+        name: "Preem",
+        url: SITE_URL,
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${SITE_URL}/fans/search?q={search_term_string}`,
+          },
+        },
+      },
+    ],
+  };
+}
+
+export interface FaqPair {
+  q: string;
+  a: string;
+}
+
+// FAQPage schema. Each page already shows the same questions visually, so
+// Google sees matching content — the requirement for rich results. Answer
+// engines (ChatGPT, Perplexity, AI Overviews) parse this block directly.
+export function faqJsonLd(faqs: FaqPair[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+}
+
+export interface HowToStep {
+  name: string;
+  text: string;
+  url?: string;
+}
+
+// HowTo schema for step-by-step guides (distribution, releasing, etc.).
+export function howToJsonLd({
+  name,
+  description,
+  steps,
+  estimatedCost,
+  totalTime,
+}: {
+  name: string;
+  description: string;
+  steps: HowToStep[];
+  estimatedCost?: string;
+  totalTime?: string;
+}): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name,
+    description,
+    ...(estimatedCost ? { estimatedCost: { "@type": "MonetaryAmount", ...parseCost(estimatedCost) } } : {}),
+    ...(totalTime ? { totalTime } : {}),
+    step: steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+      ...(s.url ? { url: `${SITE_URL}${s.url}` } : {}),
+    })),
+  };
+}
+
+// Parse a string like "₦1,500 per track" into { value: 1500, currency: "NGN" }.
+function parseCost(cost: string): { value: number; currency: string } {
+  const match = cost.replace(/,/g, "").match(/(\d+(?:\.\d+)?)\s*(\D+)?/);
+  return {
+    value: match ? Number(match[1]) : 0,
+    currency: match?.[2]?.trim() === "$" ? "USD" : "NGN",
+  };
+}
+
 export function dropJsonLd({
   title,
   artistName,

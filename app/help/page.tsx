@@ -80,8 +80,8 @@ export default function HelpPage() {
           <Link href="/artist/signup" className="text-paper underline">
             Sign up
           </Link>{" "}
-          with your email and stage name. New accounts go through a quick
-          review before your drops go live.
+          with your email and stage name. You&apos;re in immediately — start
+          building drops from your dashboard right away.
         </p>
 
         <p className={q}>How much does Preem take?</p>
@@ -140,6 +140,46 @@ export default function HelpPage() {
         <p className={a}>
           Dividing royalties between artists, featured artists and producers —
           and how Preem splits and pays everyone automatically on each sale.
+        </p>
+
+        <p className={q}>
+          <Link
+            href="/help/best-music-distribution-nigeria"
+            className="text-paper underline"
+          >
+            Best music distribution for Nigerian artists
+          </Link>
+        </p>
+        <p className={a}>
+          DistroKid vs TuneCore vs CD Baby vs Preem — yearly costs in dollars,
+          ownership, and how payouts actually reach a Nigerian bank in naira.
+        </p>
+
+        <p className={q}>
+          <Link
+            href="/help/sell-concert-tickets-online-nigeria"
+            className="text-paper underline"
+          >
+            How to sell concert tickets online in Nigeria
+          </Link>
+        </p>
+        <p className={a}>
+          Your own online box office — card, transfer and USSD payments, 95% of
+          every ticket to you, paid out weekly alongside your drop earnings.
+        </p>
+
+        <p className={q}>
+          <Link
+            href="/help/music-pre-save-campaign"
+            className="text-paper underline"
+          >
+            What is a music pre-save campaign?
+          </Link>
+        </p>
+        <p className={a}>
+          Collecting fans before release day — how a pre-save page works, when
+          to start one, and how it turns into day-one sales instead of just
+          streams.
         </p>
 
         <h2 className={h2}>Payments</h2>

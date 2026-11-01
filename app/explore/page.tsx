@@ -10,9 +10,9 @@ import type { Artist, Drop } from "@/lib/types";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Explore — artists, drops & live shows | Preem",
+  title: "Explore — Nigerian artists, drops, tickets & live shows | Preem",
   description:
-    "Discover Nigerian artists selling early access to unreleased music, tickets to live shows, and merch — direct to fans on Preem.",
+    "Discover Nigerian artists selling early access to unreleased music, tickets to live shows, and merch — direct to fans in naira on Preem.",
 };
 
 export default async function ExplorePage() {
@@ -82,7 +82,13 @@ export default async function ExplorePage() {
         </Button>
       </Nav>
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 sm:px-8">
-        <h1 className="mb-6 text-2xl font-bold">Explore</h1>
+        <h1 className="mb-2 text-2xl font-bold">
+          Explore Nigerian artists&apos; drops &amp; live shows
+        </h1>
+        <p className="mb-6 text-sm text-muted">
+          Browse early-access music, upcoming concert tickets, and merch —
+          sold direct to fans, priced in naira.
+        </p>
         {shows.length > 0 && (
           <>
             <h2 className="mb-4 text-lg font-bold">Upcoming shows</h2>

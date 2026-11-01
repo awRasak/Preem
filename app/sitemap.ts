@@ -14,6 +14,21 @@ const STATIC_ROUTES: { path: string; changeFrequency: "weekly" | "monthly"; prio
   },
   { path: "/help/buy-music-before-release", changeFrequency: "monthly", priority: 0.5 },
   { path: "/help/royalty-split-sheet", changeFrequency: "monthly", priority: 0.5 },
+  {
+    path: "/help/best-music-distribution-nigeria",
+    changeFrequency: "monthly",
+    priority: 0.6,
+  },
+  {
+    path: "/help/sell-concert-tickets-online-nigeria",
+    changeFrequency: "monthly",
+    priority: 0.6,
+  },
+  {
+    path: "/help/music-pre-save-campaign",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
   { path: "/terms", changeFrequency: "monthly", priority: 0.2 },
   { path: "/privacy", changeFrequency: "monthly", priority: 0.2 },
 ];

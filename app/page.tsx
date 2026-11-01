@@ -15,6 +15,7 @@ import { HomeFAQ } from "@/components/HomeFAQ";
 import { HomeMobileCta } from "@/components/HomeMobileCta";
 import { createClient } from "@/lib/supabase/server";
 import { artworkFallback } from "@/lib/placeholder";
+import { organizationJsonLd } from "@/lib/seo";
 import type { Drop } from "@/lib/types";
 
 export const revalidate = 0;
@@ -116,9 +117,10 @@ export default async function MarketplacePage() {
                 your music.
               </h1>
               <p className="mx-auto mt-4 max-w-sm text-sm text-muted sm:text-base">
-                Sell early access to your next drop straight to your fans —
-                priced in naira, paid out to your account, no card ever
-                bounces.
+                Sell early access to your next drop straight to your fans in
+                Nigeria — priced in naira, paid out to your bank account, no
+                card ever bounces. Fans pay by card, transfer or USSD; you keep
+                80% and withdraw weekly.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Button href="/artist/signup" variant="primary">
@@ -384,20 +386,32 @@ export default async function MarketplacePage() {
             <Link href="/explore" className="hover:text-paper">
               Explore
             </Link>
+            <Link href="/artist/distribute" className="hover:text-paper">
+              Distribute to Spotify
+            </Link>
             <Link href="/artist/signup" className="hover:text-paper">
               For Artists
             </Link>
             <Link href="/artist/login" className="hover:text-paper">
               Sign In
             </Link>
+            <Link href="/help" className="hover:text-paper">
+              Help
+            </Link>
+            <Link href="/help/best-music-distribution-nigeria" className="hover:text-paper">
+              Best distribution
+            </Link>
+            <Link href="/help/sell-concert-tickets-online-nigeria" className="hover:text-paper">
+              Sell tickets
+            </Link>
+            <Link href="/help/music-pre-save-campaign" className="hover:text-paper">
+              Pre-save campaigns
+            </Link>
             <Link href="/terms" className="hover:text-paper">
               Terms
             </Link>
             <Link href="/privacy" className="hover:text-paper">
               Privacy
-            </Link>
-            <Link href="/help" className="hover:text-paper">
-              Help
             </Link>
           </footer>
         </div>
@@ -407,6 +421,13 @@ export default async function MarketplacePage() {
         accountHref={accountHref}
         accountLabel={accountLabel}
         showSignInLink={!sessionUser}
+      />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(organizationJsonLd()),
+        }}
       />
     </>
   );

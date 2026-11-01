@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "@/components/Nav";
+import { faqJsonLd, howToJsonLd, type FaqPair } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Distribute your music to Spotify, Apple Music & Boomplay from Nigeria",
@@ -16,7 +17,7 @@ const STEPS = [
   "Once it's live everywhere, share the links with the fans who bought early access here — they already have the track, but they'll want to stream/save it on their usual platform too.",
 ];
 
-const FAQ = [
+const FAQ: FaqPair[] = [
   {
     q: "How much does it cost to distribute my music from Nigeria?",
     a: "Uploading and releasing on Preem is free. DSP delivery is covered by your drop's sales — once sales cover the per-track distribution cost, distribution unlocks at no extra charge — or you can unlock it early with a one-time fee shown on your drop page. There's no monthly subscription and no yearly fee.",
@@ -82,6 +83,45 @@ export default function DistributeGuidePage() {
           </Link>{" "}
           or open your drop page to set up distribution.
         </p>
+        <p className="mt-5 text-sm text-muted">
+          Comparing your options? Read{" "}
+          <Link
+            href="/help/best-music-distribution-nigeria"
+            className="text-paper underline"
+          >
+            the best music distribution for Nigerian artists
+          </Link>{" "}
+          or the full{" "}
+          <Link
+            href="/help/how-to-release-music-on-spotify-from-nigeria"
+            className="text-paper underline"
+          >
+            how to release music on Spotify from Nigeria
+          </Link>{" "}
+          guide. Selling tickets to the release show?{" "}
+          <Link
+            href="/help/sell-concert-tickets-online-nigeria"
+            className="text-paper underline"
+          >
+            Sell concert tickets online
+          </Link>
+          .
+        </p>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              howToJsonLd({
+                name: "How to distribute your music to Spotify, Apple Music & Boomplay from Nigeria",
+                description:
+                  "Preem delivers your release to the DSPs from your drop page — no monthly or yearly fee, with earnings paid out in naira.",
+                steps: STEPS.map((s, i) => ({ name: `Step ${i + 1}`, text: s })),
+              }),
+              faqJsonLd(FAQ),
+            ]),
+          }}
+        />
       </main>
     </>
   );
