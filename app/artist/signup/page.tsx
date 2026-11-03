@@ -123,7 +123,7 @@ export default function ArtistSignupPage() {
                   <Spinner size="xs" tone="current" /> Submitting…
                 </span>
               ) : (
-                "Submit for review"
+                "Submit"
               )}
             </Button>
 
