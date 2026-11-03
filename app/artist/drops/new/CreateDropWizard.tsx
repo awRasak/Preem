@@ -310,7 +310,7 @@ export default function CreateDropWizard() {
 
       const dropInsert = {
         artist_id: user.id,
-        title: state.title,
+        title: state.title.trim(),
         description: state.description || null,
         release_type: state.releaseType,
         genre: state.genre,
@@ -325,6 +325,24 @@ export default function CreateDropWizard() {
         // publish-time call below never lands.
         distribute_on_release: mode === "publish" && state.distributeOnRelease,
       };
+
+      // Duplicate guard: an identical title from the same artist almost always
+      // means a retry after an earlier attempt half-succeeded (the drop row is
+      // inserted before tracks/splits, so a later failure strands it and a
+      // restart stacks a fresh copy). Block it instead of letting identical
+      // drops pile up. Existing rows are matched on the trimmed title, so
+      // titles are stored trimmed too.
+      const { data: existingDup } = await supabase
+        .from("drops")
+        .select("id, status")
+        .eq("artist_id", user.id)
+        .eq("title", dropInsert.title)
+        .limit(1);
+      if (existingDup && existingDup.length > 0) {
+        throw new Error(
+          `You already have a drop called "${dropInsert.title}" (${existingDup[0].status}). Open it from your dashboard instead of creating a duplicate.`,
+        );
+      }
 
       let { data: drop, error: dropError } = await supabase
         .from("drops")
@@ -378,7 +396,11 @@ export default function CreateDropWizard() {
           .insert(trackRows.map((r) => ({ ...r, drop_id: drop.id })))
           .select("id");
         if (tracksError || !createdTracks || createdTracks.length !== trackRows.length) {
-          throw new Error("Could not save the tracklist.");
+          // The drop row is already inserted above; without its tracks it's an
+          // unusable orphan that a retry would duplicate. Roll it back so the
+          // next attempt starts clean.
+          await supabase.from("drops").delete().eq("id", drop.id);
+          throw new Error("Could not save the tracklist — nothing was kept. Please try again.");
         }
         setProgress({ label: "Saving revenue splits", percent: null });
         for (let i = 0; i < createdTracks.length; i++) {
