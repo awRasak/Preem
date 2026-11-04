@@ -229,10 +229,11 @@ export async function sendNewArtistSignupEmail({
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `New artist signup: ${stageName}`,
+    subject: `We have a new signup: ${stageName}`,
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
-        <h2 style="margin-bottom: 4px;">New artist waiting for approval</h2>
+        <h2 style="margin-bottom: 4px;">We have a new signup</h2>
+        <p style="color: #555; margin-top: 0;">A new artist just joined Preem.</p>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777;">Stage name</td>
@@ -248,7 +249,7 @@ export async function sendNewArtistSignupEmail({
           </tr>
         </table>
         <p style="color: #555;">
-          Review it in the <a href="${appUrl}/admin" style="color: #1a1a1a;">admin dashboard</a>.
+          See them in the <a href="${appUrl}/admin" style="color: #1a1a1a;">admin dashboard</a>.
         </p>
       </div>
     `,
