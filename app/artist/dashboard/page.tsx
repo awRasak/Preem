@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { Wallet, Users, Radio, BarChart3 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -94,6 +95,7 @@ export default async function ArtistDashboardPage() {
     { data: payoutHistory },
     { data: unpaidTickets },
     { data: distJobs },
+    { data: royaltyRows },
   ] = await Promise.all([
     admin
       .from("gifts")
@@ -124,6 +126,10 @@ export default async function ArtistDashboardPage() {
     ownDropIds.length > 0
       ? admin.from("distribution_jobs").select("drop_id, status").in("drop_id", ownDropIds)
       : Promise.resolve({ data: [] as { drop_id: string; status: string }[] }),
+    admin
+      .from("royalty_earnings")
+      .select("amount_kobo, paid_out")
+      .eq("artist_id", user.id),
   ]);
   const distStatusByDrop = new Map(
     ((distJobs ?? []) as { drop_id: string; status: string }[]).map((j) => [j.drop_id, j.status] as [string, string]),
@@ -142,6 +148,12 @@ export default async function ArtistDashboardPage() {
     (sum, t) => sum + applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS),
     0,
   );
+  const royaltyRowList = (royaltyRows ?? []) as { amount_kobo: number; paid_out: boolean }[];
+  const royaltyLifetimeKobo = royaltyRowList.reduce((sum, r) => sum + r.amount_kobo, 0);
+  const royaltyUnpaidKobo = royaltyRowList
+    .filter((r) => !r.paid_out)
+    .reduce((sum, r) => sum + r.amount_kobo, 0);
+  withdrawableKobo += royaltyUnpaidKobo;
   const hasBankDetails = Boolean(
     artist.bank_code && artist.account_number && artist.account_name,
   );
@@ -241,6 +253,26 @@ export default async function ArtistDashboardPage() {
             created_at: p.created_at,
           }))}
         />
+
+        <Link
+          href="/artist/distribution"
+          className="mb-8 flex items-center justify-between gap-4 rounded-xl border border-line bg-surface p-4 transition-colors hover:bg-surface-2"
+        >
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold">Distribution</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              Releases, ISRCs and streaming royalties
+            </p>
+          </div>
+          <span className="flex-shrink-0 text-right">
+            <span className="block font-mono text-sm font-bold text-accent">
+              {formatNaira(royaltyLifetimeKobo)}
+            </span>
+            <span className="block text-[10px] font-bold uppercase tracking-wide text-muted">
+              royalties earned
+            </span>
+          </span>
+        </Link>
 
         {topDrops.length > 0 && (
           <div className="mb-8">

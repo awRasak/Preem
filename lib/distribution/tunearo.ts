@@ -3,6 +3,7 @@ import type {
   DistributionProvider,
   ReleaseHandle,
   ReleaseInput,
+  RoyaltySnapshot,
 } from "./provider";
 
 // Tunearo public API (https://api.tunearo.com, base dashboard.tunearo.com).
@@ -39,6 +40,7 @@ type TunearoStatusResponse = {
   status: string;
   rejection_reason?: string;
   upc?: string;
+  tracks?: { id: string; isrc?: string }[];
 };
 
 function toHandle(id: string, body: TunearoStatusResponse): ReleaseHandle {
@@ -56,6 +58,66 @@ function toHandle(id: string, body: TunearoStatusResponse): ReleaseHandle {
     status,
     rejectionReason: body.rejection_reason,
     upc: body.upc,
+    tracks: Array.isArray(body.tracks)
+      ? body.tracks
+          .filter((t) => t && typeof t.id === "string")
+          .map((t) => ({ id: t.id, ...(t.isrc ? { isrc: t.isrc } : {}) }))
+      : undefined,
+  };
+}
+
+type TunearoRoyaltyResponse = {
+  currency?: string;
+  // Money fields are decimal major units (GBP), not pence. When a period
+  // filter is applied the API scopes these aggregates to that range; with no
+  // data available to confirm the exact field, prefer lifetime_earnings and
+  // fall back to this_month_earnings.
+  lifetime_earnings?: number | string;
+  this_month_earnings?: number | string;
+  transaction_count?: number;
+  by_source?: {
+    source?: string;
+    name?: string;
+    store?: string;
+    platform?: string;
+    amount?: number | string;
+    earnings?: number | string;
+    total?: number | string;
+  }[];
+};
+
+function moneyToMinor(value: unknown): number {
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : NaN;
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100);
+}
+
+function toRoyaltySnapshot(
+  period: string,
+  body: TunearoRoyaltyResponse,
+): RoyaltySnapshot {
+  const gross = Math.max(
+    0,
+    body.lifetime_earnings !== undefined && body.lifetime_earnings !== null
+      ? moneyToMinor(body.lifetime_earnings)
+      : moneyToMinor(body.this_month_earnings),
+  );
+  return {
+    period,
+    currency: (body.currency ?? "GBP").toUpperCase(),
+    grossMinor: gross,
+    transactionCount: Number.isFinite(Number(body.transaction_count))
+      ? Number(body.transaction_count)
+      : 0,
+    bySource: (body.by_source ?? []).map((s) => ({
+      source: s.source ?? s.name ?? s.store ?? s.platform ?? "unknown",
+      amountMinor: moneyToMinor(s.amount ?? s.earnings ?? s.total),
+    })),
   };
 }
 
@@ -88,7 +150,7 @@ export const tunearoProvider: DistributionProvider = {
   },
 
   async addTrack(externalId: string, track: ReleaseInput["tracks"][number]) {
-    const body = await tunearoFetch<{ id: string }>(
+    const body = await tunearoFetch<{ id: string; isrc?: string }>(
       `/releases/${encodeURIComponent(externalId)}/tracks`,
       {
         method: "POST",
@@ -100,7 +162,7 @@ export const tunearoProvider: DistributionProvider = {
         }),
       },
     );
-    return { trackId: body.id };
+    return { trackId: body.id, ...(body.isrc ? { isrc: body.isrc } : {}) };
   },
 
   async audioUploadUrl(externalId: string, trackId: string): Promise<AssetUpload> {
@@ -122,6 +184,16 @@ export const tunearoProvider: DistributionProvider = {
       `/releases/${encodeURIComponent(externalId)}/status`,
     );
     return toHandle(externalId, body);
+  },
+
+  // GET /royalties?release_id=…&period=YYYY-MM. The public API exposes no
+  // per-track or per-transaction breakdown, so the release total is what we
+  // allocate (equally across tracks, then by each track's split sheet).
+  async royalties(externalId: string, period: string): Promise<RoyaltySnapshot> {
+    const body = await tunearoFetch<TunearoRoyaltyResponse>(
+      `/royalties?release_id=${encodeURIComponent(externalId)}&period=${encodeURIComponent(period)}`,
+    );
+    return toRoyaltySnapshot(period, body);
   },
 };
 

@@ -43,6 +43,14 @@ export async function GET(req: Request) {
       if (handle.status === "rejected") patch.rejection_reason = handle.rejectionReason ?? null;
       if (handle.upc) patch.upc = handle.upc;
       await admin.from("distribution_jobs").update(patch).eq("id", job.id);
+      // Provider may report per-track ISRCs once a release is approved.
+      for (const track of handle.tracks ?? []) {
+        if (!track.isrc) continue;
+        await admin
+          .from("drop_tracks")
+          .update({ isrc: track.isrc })
+          .eq("provider_track_id", track.id);
+      }
       updated += 1;
     } catch (err) {
       console.error(`distribution poll failed for job ${job.id}:`, err);

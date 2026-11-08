@@ -31,10 +31,24 @@ export type ReleaseHandle = {
   status: DistributionStatus;
   rejectionReason?: string;
   upc?: string;
+  // Present when the provider reports track-level identifiers in its status
+  // payload (Tunearo assigns ISRCs at submission).
+  tracks?: { id: string; isrc?: string }[];
 };
 
 export type AssetUpload = {
   uploadUrl: string;
+};
+
+// One release's earnings for one reporting month, normalised to the
+// provider's minor unit (pence for GBP). The provider is the source of
+// truth for its own cut; `grossMinor` is what it reports as payable.
+export type RoyaltySnapshot = {
+  period: string; // YYYY-MM
+  currency: string; // ISO 4217, e.g. "GBP"
+  grossMinor: number;
+  transactionCount: number;
+  bySource: { source: string; amountMinor: number }[];
 };
 
 export interface DistributionProvider {
@@ -44,8 +58,10 @@ export interface DistributionProvider {
   addTrack(
     externalId: string,
     track: ReleaseInput["tracks"][number],
-  ): Promise<{ trackId: string }>;
+  ): Promise<{ trackId: string; isrc?: string }>;
   audioUploadUrl(externalId: string, trackId: string): Promise<AssetUpload>;
   submit(externalId: string): Promise<void>;
   status(externalId: string): Promise<ReleaseHandle>;
+  // Provider-reported earnings for one release in one month.
+  royalties(externalId: string, period: string): Promise<RoyaltySnapshot>;
 }

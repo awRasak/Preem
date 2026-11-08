@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button";
 import { Spinner } from "@/components/Loader";
@@ -254,6 +255,15 @@ export function DistributionPanel({
           </Button>
         </div>
       )}
+
+      <div className="mt-3 border-t border-line pt-3">
+        <Link
+          href="/artist/distribution"
+          className="text-xs font-bold text-accent underline underline-offset-2"
+        >
+          Release details & streaming royalties →
+        </Link>
+      </div>
     </div>
   );
 }

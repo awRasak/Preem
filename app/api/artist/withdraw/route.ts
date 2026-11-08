@@ -96,7 +96,7 @@ export async function POST() {
     ctx,
   );
 
-  const [{ data: unpaidGifts }, { data: unpaidMerch }, { data: unpaidTickets }] =
+  const [{ data: unpaidGifts }, { data: unpaidMerch }, { data: unpaidTickets }, { data: unpaidRoyalties }] =
     await Promise.all([
       admin
         .from("gifts")
@@ -118,17 +118,26 @@ export async function POST() {
             .eq("status", "success")
             .eq("paid_out", false)
         : Promise.resolve({ data: [] as { id: string; amount_kobo: number }[] }),
+      // Streaming royalties are already net of the distributor's cut and are
+      // 100% the rights holders' -- no Preem commission applies.
+      admin
+        .from("royalty_earnings")
+        .select("id, amount_kobo")
+        .eq("artist_id", user.id)
+        .eq("paid_out", false),
     ]);
 
   const purchaseIds = [...shares.keys()];
   const giftIds = (unpaidGifts ?? []).map((g) => g.id);
   const merchIds = (unpaidMerch ?? []).map((m) => m.id);
   const ticketIds = ((unpaidTickets ?? []) as { id: string }[]).map((t) => t.id);
+  const royaltyIds = ((unpaidRoyalties ?? []) as { id: string }[]).map((r) => r.id);
   if (
     purchaseIds.length === 0 &&
     giftIds.length === 0 &&
     merchIds.length === 0 &&
-    ticketIds.length === 0
+    ticketIds.length === 0 &&
+    royaltyIds.length === 0
   ) {
     return NextResponse.json(
       {
@@ -145,6 +154,7 @@ export async function POST() {
   const claimedGiftIds: string[] = [];
   const claimedMerchIds: string[] = [];
   const claimedTicketIds: string[] = [];
+  const claimedRoyaltyIds: string[] = [];
   let claimedKobo = 0;
 
   try {
@@ -202,6 +212,20 @@ export async function POST() {
         claimedKobo += applyCommission(row.amount_kobo, SHOW_TICKET_COMMISSION_BPS);
       }
     }
+    if (royaltyIds.length > 0) {
+      const { data: claimed, error } = await admin
+        .from("royalty_earnings")
+        .update({ paid_out: true, paid_at: new Date().toISOString() })
+        .in("id", royaltyIds)
+        .eq("artist_id", user.id)
+        .eq("paid_out", false)
+        .select("id, amount_kobo");
+      if (error) throw new Error(error.message);
+      for (const row of claimed ?? []) {
+        claimedRoyaltyIds.push(row.id);
+        claimedKobo += row.amount_kobo;
+      }
+    }
 
     if (claimedKobo < MIN_PAYOUT_KOBO) {
       // Below the floor: release the claims so the rows keep accumulating
@@ -217,6 +241,12 @@ export async function POST() {
       }
       if (claimedTicketIds.length > 0) {
         await admin.from("show_tickets").update({ paid_out: false }).in("id", claimedTicketIds);
+      }
+      if (claimedRoyaltyIds.length > 0) {
+        await admin
+          .from("royalty_earnings")
+          .update({ paid_out: false, paid_at: null })
+          .in("id", claimedRoyaltyIds);
       }
       return NextResponse.json(
         {
@@ -278,6 +308,12 @@ export async function POST() {
     }
     if (claimedTicketIds.length > 0) {
       await admin.from("show_tickets").update({ paid_out: false }).in("id", claimedTicketIds);
+    }
+    if (claimedRoyaltyIds.length > 0) {
+      await admin
+        .from("royalty_earnings")
+        .update({ paid_out: false, paid_at: null })
+        .in("id", claimedRoyaltyIds);
     }
     if (err instanceof Error) {
       return NextResponse.json({ error: err.message }, { status: 502 });

@@ -33,6 +33,7 @@ export async function submitDropForDistribution({
   artworkBytes,
   audioBytesFor,
   streetDateOverride = null,
+  onTrackAdded,
 }: {
   drop: DropForDistribution;
   tracks: TrackForDistribution[];
@@ -42,6 +43,12 @@ export async function submitDropForDistribution({
     track: TrackForDistribution,
   ) => Promise<{ stream: ReadableStream<Uint8Array> | null; path: string } | null>;
   streetDateOverride?: string | null;
+  // Called as soon as the provider allocates a track id (and ISRC when it
+  // reports one), so identifiers are persisted even if a later upload fails.
+  onTrackAdded?: (
+    track: TrackForDistribution,
+    info: { trackId: string; isrc?: string },
+  ) => Promise<void>;
 }): Promise<{ externalId: string; streetDate: string }> {
   const provider = getProvider();
   if (!provider) {
@@ -73,11 +80,14 @@ export async function submitDropForDistribution({
   }
 
   for (const track of tracks) {
-    const { trackId } = await provider.addTrack(release.externalId, {
+    const { trackId, isrc } = await provider.addTrack(release.externalId, {
       title: track.title,
       trackNumber: track.track_number,
       ...(track.collaborators ? { featuredNames: track.collaborators } : {}),
     });
+    if (onTrackAdded) {
+      await onTrackAdded(track, { trackId, ...(isrc ? { isrc } : {}) });
+    }
     const audio = await audioBytesFor(track);
     if (!audio?.stream) {
       throw new Error(`Missing audio for "${track.title}".`);
@@ -274,6 +284,15 @@ export async function submitDropJob({
           .download(track.audio_file_path);
         if (error || !data) return null;
         return { stream: data.stream(), path: track.audio_file_path };
+      },
+      onTrackAdded: async (track, info) => {
+        await admin
+          .from("drop_tracks")
+          .update({
+            provider_track_id: info.trackId,
+            ...(info.isrc ? { isrc: info.isrc } : {}),
+          })
+          .eq("id", track.id);
       },
       streetDateOverride,
     });
