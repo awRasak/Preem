@@ -74,7 +74,7 @@ export function NewArtistForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Field label="Stage name">
+      <Field label="Stage name (must be unique)">
         <Input
           required
           value={stageName}

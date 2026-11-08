@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectPlatform, fetchOEmbed } from "@/lib/oembed";
 import { parseBody } from "@/lib/http";
+import { ARTIST_NAME_TAKEN, isArtistNameTaken } from "@/lib/artist-name";
 
 const schema = z.object({
   stageName: z.string().trim().min(1).max(80),
@@ -23,6 +24,11 @@ export async function POST(req: Request) {
   const profileLink = parsed.data.profileLink || null;
 
   const supabase = createAdminClient();
+
+  // Same uniqueness rule as self-signup: one artist per name/slug.
+  if (await isArtistNameTaken(supabase, stageName)) {
+    return NextResponse.json({ error: ARTIST_NAME_TAKEN }, { status: 409 });
+  }
 
   // No password -- the artist sets their own via the recovery link below.
   const { data: created, error: createError } = await supabase.auth.admin.createUser({
@@ -64,6 +70,9 @@ export async function POST(req: Request) {
 
   if (roleError || artistError) {
     await supabase.auth.admin.deleteUser(userId);
+    if (artistError?.code === "23505") {
+      return NextResponse.json({ error: ARTIST_NAME_TAKEN }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Could not finish setting up the artist profile." },
       { status: 500 },

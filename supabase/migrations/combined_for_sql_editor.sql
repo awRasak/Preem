@@ -1329,3 +1329,23 @@ create policy "royalty_earnings artist read"
 -- artist profile save failed with PGRST204. Idempotent.
 alter table public.artists add column if not exists facebook_url text;
 alter table public.artists add column if not exists snapchat_url text;
+
+-- One artist per public name: resolve the 2026-11-08 duplicate signup, then
+-- enforce uniqueness on the name and on the generated URL slug.
+update public.artists as dup
+set stage_name = dup.stage_name || ' (duplicate)',
+    approval_status = 'rejected'
+where dup.id = '2ad8f96e-cee4-48d2-b3e6-f182339b674a'
+  and exists (
+    select 1
+    from public.artists as keep
+    where keep.id <> dup.id
+      and keep.slug = dup.slug
+      and keep.approval_status <> 'rejected'
+  );
+
+create unique index if not exists artists_stage_name_unique
+  on public.artists (lower(btrim(stage_name)));
+
+create unique index if not exists artists_slug_unique
+  on public.artists (slug);

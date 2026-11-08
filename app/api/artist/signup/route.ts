@@ -5,6 +5,7 @@ import { detectPlatform, fetchOEmbed } from "@/lib/oembed";
 import { sendNewArtistSignupEmail } from "@/lib/email";
 import { parseBody } from "@/lib/http";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { ARTIST_NAME_TAKEN, isArtistNameTaken } from "@/lib/artist-name";
 
 const schema = z.object({
   stageName: z.string().trim().min(1).max(80),
@@ -29,6 +30,12 @@ export async function POST(req: Request) {
   const profileLink = parsed.data.profileLink || null;
 
   const supabase = createAdminClient();
+
+  // Names are unique across Preem (URL slugs come from them), so check
+  // before creating an auth user we would only have to delete again.
+  if (await isArtistNameTaken(supabase, stageName)) {
+    return NextResponse.json({ error: ARTIST_NAME_TAKEN }, { status: 409 });
+  }
 
   const { data: created, error: createError } =
     await supabase.auth.admin.createUser({
@@ -74,6 +81,9 @@ export async function POST(req: Request) {
 
   if (roleError || artistError) {
     await supabase.auth.admin.deleteUser(userId);
+    if (artistError?.code === "23505") {
+      return NextResponse.json({ error: ARTIST_NAME_TAKEN }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Could not finish setting up your artist profile." },
       { status: 500 },

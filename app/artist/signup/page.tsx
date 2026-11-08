@@ -72,7 +72,7 @@ export default function ArtistSignupPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <Field label="Artist / stage name">
+            <Field label="Artist / stage name (must be unique)">
               <Input
                 required
                 value={stageName}
