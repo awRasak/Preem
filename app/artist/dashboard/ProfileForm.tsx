@@ -86,7 +86,9 @@ export function ProfileForm({
     setSuccess(false);
 
     const supabase = createClient();
-    const { error: updateError } = await supabase
+    // .select() makes an RLS no-op visible: without it a 0-row update
+    // reports success and the artist silently loses their edits.
+    const { data: updated, error: updateError } = await supabase
       .from("artists")
       .update({
         avatar_url: avatarUrl,
@@ -98,11 +100,15 @@ export function ProfileForm({
         facebook_url: facebookUrl || null,
         snapchat_url: snapchatUrl || null,
       })
-      .eq("id", artistId);
+      .eq("id", artistId)
+      .select("id");
 
     setSaving(false);
-    if (updateError) {
-      setError("Could not save profile.");
+    if (updateError || !updated?.length) {
+      console.error("Profile save failed", updateError ?? "no rows updated");
+      setError(
+        "Could not save profile. Refresh and try again — if it keeps happening, contact support.",
+      );
       return;
     }
     setSuccess(true);

@@ -1323,3 +1323,9 @@ alter table public.royalty_earnings enable row level security;
 
 create policy "royalty_earnings artist read"
   on public.royalty_earnings for select using (artist_id = auth.uid());
+
+-- Repair: 0013 was appended to this file after some environments had already
+-- been provisioned, so facebook_url / snapchat_url were missing and every
+-- artist profile save failed with PGRST204. Idempotent.
+alter table public.artists add column if not exists facebook_url text;
+alter table public.artists add column if not exists snapchat_url text;
