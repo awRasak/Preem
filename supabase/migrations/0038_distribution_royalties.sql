@@ -1,14 +1,14 @@
 -- Distribution royalties: the money leg that was missing. The distributor
 -- reports earnings per release per month in GBP; Preem converts at a stored
--- rate, divides the release total equally across its tracks (the same rule
--- bundle purchases use), then each track's split sheet decides who is owed.
--- Amounts land in the existing single-pot withdrawal as naira.
+-- rate, divides each month's *new* money equally across its tracks (the same
+-- rule bundle purchases use), then each track's split sheet decides who is
+-- owed. Amounts land in the existing single-pot withdrawal as naira.
 --
--- Ledger rows are append-only increments. Each row records the cumulative
--- provider gross (source_gross_pence) that produced it and its own kobo
--- amount, so re-running an import for the same statement inserts nothing and
--- a later, larger statement only adds the difference. Adjustments downward
--- are never clawed back.
+-- Ledger rows are append-only increments keyed by the statement gross that
+-- produced them, so re-running an import inserts nothing and a later, larger
+-- statement only adds the difference. Only new money is allocated, so a
+-- split-sheet edit can never re-open money that was already paid. Adjustments
+-- downward are never clawed back.
 
 -- Provider identifiers: Tunearo issues ISRCs per track and its track ids are
 -- the join key for later status/metadata pushes. Both are nullable because
@@ -22,9 +22,9 @@ create index if not exists drop_tracks_provider_track_idx
   on public.drop_tracks (provider_track_id)
   where provider_track_id is not null;
 
--- One row per release per reporting month: the provider snapshot as imported,
--- with the exact FX rate used. Kept even when gross is zero so a month is
--- never re-fetched/re-priced during unrelated runs.
+-- One row per release per reporting month, recording the provider snapshot
+-- and the exact FX rate used. Only months with new money get a row; once one
+-- exists its rate is pinned so later increments are never re-priced.
 create table if not exists public.distribution_royalty_periods (
   id uuid primary key default gen_random_uuid(),
   job_id uuid not null references public.distribution_jobs (id) on delete cascade,

@@ -1251,15 +1251,15 @@ create policy "distribution_unlocks owner read"
 -- ===== 0038_distribution_royalties.sql =====
 -- Distribution royalties: the money leg that was missing. The distributor
 -- reports earnings per release per month in GBP; Preem converts at a stored
--- rate, divides the release total equally across its tracks (the same rule
--- bundle purchases use), then each track's split sheet decides who is owed.
--- Amounts land in the existing single-pot withdrawal as naira.
+-- rate, divides each month's *new* money equally across its tracks (the same
+-- rule bundle purchases use), then each track's split sheet decides who is
+-- owed. Amounts land in the existing single-pot withdrawal as naira.
 --
--- Ledger rows are append-only increments. Each row records the cumulative
--- provider gross (source_gross_pence) that produced it and its own kobo
--- amount, so re-running an import for the same statement inserts nothing and
--- a later, larger statement only adds the difference. Adjustments downward
--- are never clawed back.
+-- Ledger rows are append-only increments keyed by the statement gross that
+-- produced them, so re-running an import inserts nothing and a later, larger
+-- statement only adds the difference. Only new money is allocated, so a
+-- split-sheet edit can never re-open money that was already paid. Adjustments
+-- downward are never clawed back.
 
 alter table public.drop_tracks
   add column if not exists isrc text,
