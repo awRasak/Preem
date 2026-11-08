@@ -12,7 +12,7 @@ import { ThankYouForm } from "../dashboard/ThankYouForm";
 import type { ArtistLink, BioLink } from "@/lib/types";
 
 const SECTION_BLURBS: Record<string, string> = {
-  profile: "Photo, bio and social links",
+  profile: "Photo, bio and social links — all optional",
   payout: "Where weekly payouts go",
   discover: "Links shown under Discover more",
   biolinks: "Tappable slots on your public page",

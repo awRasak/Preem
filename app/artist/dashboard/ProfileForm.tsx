@@ -8,7 +8,11 @@ import { Avatar } from "@/components/Avatar";
 import { Field, Input, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { ProgressBar, Spinner } from "@/components/Loader";
+import { normalizeLink } from "@/lib/links";
 
+// Links are free-form: pasting "instagram.com/me" should work as well as a
+// full URL. Adding the scheme here keeps the public page's hrefs valid
+// without making the field mandatory or rejecting what the artist typed.
 export function ProfileForm({
   artistId,
   stageName,
@@ -93,12 +97,12 @@ export function ProfileForm({
       .update({
         avatar_url: avatarUrl,
         bio,
-        profile_link: profileLink,
-        instagram_url: instagramUrl || null,
-        twitter_url: twitterUrl || null,
-        tiktok_url: tiktokUrl || null,
-        facebook_url: facebookUrl || null,
-        snapchat_url: snapchatUrl || null,
+        profile_link: normalizeLink(profileLink),
+        instagram_url: normalizeLink(instagramUrl),
+        twitter_url: normalizeLink(twitterUrl),
+        tiktok_url: normalizeLink(tiktokUrl),
+        facebook_url: normalizeLink(facebookUrl),
+        snapchat_url: normalizeLink(snapchatUrl),
       })
       .eq("id", artistId)
       .select("id");
@@ -118,6 +122,9 @@ export function ProfileForm({
   return (
     <>
       <form onSubmit={handleSave}>
+        <p className="mb-4 text-xs text-muted">
+          Everything here is optional — add what you like and save.
+        </p>
         <div className="mb-4 flex items-center gap-4">
           <Avatar src={avatarUrl} seed={artistId} alt={stageName} size={64} />
           <label className="cursor-pointer text-xs font-bold text-paper underline">
@@ -140,7 +147,7 @@ export function ProfileForm({
         {uploading && (
           <ProgressBar label="Uploading photo" percent={uploadPercent} />
         )}
-        <Field label="Bio">
+        <Field label="Bio (optional)">
           <Textarea
             rows={3}
             value={bio}
@@ -148,9 +155,12 @@ export function ProfileForm({
             placeholder="Tell fans about yourself"
           />
         </Field>
-        <Field label="Link to your music">
+        <Field label="Link to your music (optional)">
           <Input
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={profileLink}
             onChange={(e) => setProfileLink(e.target.value)}
             placeholder="https://..."
@@ -158,7 +168,10 @@ export function ProfileForm({
         </Field>
         <Field label="Instagram (optional)">
           <Input
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={instagramUrl}
             onChange={(e) => setInstagramUrl(e.target.value)}
             placeholder="https://instagram.com/..."
@@ -166,7 +179,10 @@ export function ProfileForm({
         </Field>
         <Field label="X / Twitter (optional)">
           <Input
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={twitterUrl}
             onChange={(e) => setTwitterUrl(e.target.value)}
             placeholder="https://x.com/..."
@@ -174,7 +190,10 @@ export function ProfileForm({
         </Field>
         <Field label="TikTok (optional)">
           <Input
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={tiktokUrl}
             onChange={(e) => setTiktokUrl(e.target.value)}
             placeholder="https://tiktok.com/@..."
@@ -182,7 +201,10 @@ export function ProfileForm({
         </Field>
         <Field label="Facebook (optional)">
           <Input
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={facebookUrl}
             onChange={(e) => setFacebookUrl(e.target.value)}
             placeholder="https://facebook.com/..."
@@ -190,7 +212,10 @@ export function ProfileForm({
         </Field>
         <Field label="Snapchat (optional)">
           <Input
-            type="url"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={snapchatUrl}
             onChange={(e) => setSnapchatUrl(e.target.value)}
             placeholder="https://snapchat.com/add/..."
