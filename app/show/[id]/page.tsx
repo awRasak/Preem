@@ -47,7 +47,7 @@ async function resolveShow(idOrSlug: string): Promise<Resolved | null> {
   const base = supabase
     .from("shows")
     .select(
-      "*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)",
+      "*, artist:artists!shows_artist_id_fkey(id, stage_name, avatar_url, approval_status), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)",
     )
     .eq("status", "published");
 
