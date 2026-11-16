@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Badge } from "@/components/Badge";
+import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/Button";
 import { formatNaira, formatShowDate } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
@@ -28,6 +30,7 @@ const PAGE_SIZE = 12;
 export function EventsTable({ events }: { events: AdminEvent[] }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -120,21 +123,41 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                     </span>
                   </div>
 
-                  <div className="mt-2 flex gap-2">
-                    <Button
-                      href={"/admin/events/" + e.id}
-                      variant="outline"
-                      className="flex-1 px-3 py-1.5 text-xs"
+                  <div className="relative mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setOpenMenu(openMenu === e.id ? null : e.id)}
+                      aria-label="More actions"
+                      aria-expanded={openMenu === e.id}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong text-muted transition-colors hover:bg-surface-2 hover:text-paper"
                     >
-                      Edit
-                    </Button>
-                    <Button
-                      href={"/show/" + e.id}
-                      variant="outline"
-                      className="flex-1 px-3 py-1.5 text-xs"
-                    >
-                      View
-                    </Button>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                    {openMenu === e.id && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setOpenMenu(null)}
+                          aria-hidden="true"
+                        />
+                        <div className="absolute right-0 top-full z-50 mt-1 w-36 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
+                          <Link
+                            href={"/admin/events/" + e.id}
+                            onClick={() => setOpenMenu(null)}
+                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
+                          >
+                            Edit
+                          </Link>
+                          <Link
+                            href={"/show/" + e.id}
+                            onClick={() => setOpenMenu(null)}
+                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
+                          >
+                            View
+                          </Link>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
