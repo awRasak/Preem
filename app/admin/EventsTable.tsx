@@ -76,9 +76,9 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
               <div
                 key={e.id}
                 onClick={() => router.push("/admin/events/" + e.id)}
-                className="relative flex cursor-pointer gap-3 overflow-hidden rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
+                className="relative flex cursor-pointer gap-sp-2 overflow-hidden rounded-panel border border-line bg-surface p-sp-2 transition-colors hover:border-line-strong"
               >
-                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2 sm:h-24 sm:w-24">
+                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-ctl bg-surface-2 sm:h-24 sm:w-24">
                   <Image
                     src={e.coverArtPath || artworkFallback(e.id)}
                     alt={e.title}

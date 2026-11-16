@@ -17,6 +17,23 @@
   --color-dot-yellow: #fbbf24;
   --color-dot-purple: #a855f7;
 
+  /* Spacing scale (7px-based). Exposed as Tailwind utilities (p-sp-2,
+     gap-sp-3, mt-sp-1, ...) and as CSS vars for non-Tailwind use. */
+  --spacing-sp-1: 7px;
+  --spacing-sp-2: 14px;
+  --spacing-sp-3: 22px;
+  --spacing-sp-4: 29px;
+  --spacing-sp-5: 36px;
+  --spacing-sp-6: 43px;
+  --spacing-sp-8: 59px;
+  --spacing-pad-x: var(--spacing-sp-4);
+  --spacing-pad-y: var(--spacing-sp-3);
+  --spacing-gap: var(--spacing-sp-3);
+
+  /* Radii */
+  --radius-panel: 10px;
+  --radius-ctl: 6px;
+
   --font-sans: var(--font-es-klarheit), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, monospace;
   --font-plakat: var(--font-es-klarheit-plakat), var(--font-sans);
