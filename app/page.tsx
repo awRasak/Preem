@@ -45,7 +45,7 @@ export default async function MarketplacePage() {
       .eq("status", "published")
       .gte("start_at", new Date().toISOString())
       .order("start_at", { ascending: true })
-      .limit(8),
+      .limit(50),
   ]);
 
   const drops = ((data ?? []) as (Drop & {
@@ -99,6 +99,7 @@ export default async function MarketplacePage() {
     ticket_price_kobo: s.ticket_price_kobo,
     total_tickets: s.total_tickets,
     cover_art_path: s.cover_art_path,
+    featured: Boolean(s.featured_on_marquee),
     soldCount: soldByShow.get(s.id) ?? 0,
     artist: s.artist ?? undefined,
     tiers: (s.tiers ?? []).map((t) => ({
@@ -110,9 +111,17 @@ export default async function MarketplacePage() {
     })),
   }));
 
+  // Admin-curated: if any drops/shows are flagged, show only those;
+  // otherwise fall back to the most recent published items so the marquee
+  // is never blank.
+  const featuredDrops = drops.filter((d) => d.featured_on_marquee).slice(0, 20);
+  const featuredShows = previewShows.filter((s) => s.featured).slice(0, 20);
+  const chosenDrops = featuredDrops.length ? featuredDrops : previewDrops;
+  const chosenShows = featuredShows.length ? featuredShows : previewShows;
+
   const marqueeItems = [
-    ...previewDrops.map((d) => ({ kind: "drop" as const, drop: d })),
-    ...previewShows.map((s) => ({ kind: "show" as const, show: s })),
+    ...chosenDrops.map((d) => ({ kind: "drop" as const, drop: d })),
+    ...chosenShows.map((s) => ({ kind: "show" as const, show: s })),
   ];
 
   // The marketing header never checked who's signed in, so an already
@@ -142,7 +151,7 @@ export default async function MarketplacePage() {
 
   return (
     <>
-      <Nav>
+      <Nav searchable>
         <NavLink href="/explore">Explore</NavLink>
         {!sessionUser && <NavLink href="/artist/signup">For artists</NavLink>}
         <Button href={accountHref} variant="outline">

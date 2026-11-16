@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banknote, TriangleAlert, Music2, Mic2, Mic, CalendarDays, ShoppingBag, Plus } from "lucide-react";
+import { Banknote, TriangleAlert, Music2, Mic2, Mic, CalendarDays, ShoppingBag, Plus, GalleryHorizontal } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, timeAgo } from "@/lib/format";
@@ -306,6 +306,7 @@ export default async function AdminPage({
             { href: "/admin/songs/new", label: "Drop", icon: <Music2 className="h-5 w-5" /> },
             { href: "/admin/events/new", label: "Event", icon: <CalendarDays className="h-5 w-5" /> },
             { href: "/admin/merch/new", label: "Merch", icon: <ShoppingBag className="h-5 w-5" /> },
+            { href: "/admin/marquee", label: "Marquee", icon: <GalleryHorizontal className="h-5 w-5" /> },
           ].map((item) => (
             <Link
               key={item.href}

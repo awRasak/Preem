@@ -51,6 +51,7 @@ export type Drop = {
   window_end: string | null;
   presave_enabled: boolean;
   is_exclusive: boolean;
+  featured_on_marquee?: boolean;
   created_at: string;
   artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;
   tracks?: DropTrack[];
