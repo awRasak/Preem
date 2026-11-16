@@ -22,9 +22,11 @@ const ROLE_DOT: Record<NavRole, string> = {
 export function Nav({
   children,
   role,
+  searchable = false,
 }: {
   children?: ReactNode;
   role?: NavRole;
+  searchable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -80,6 +82,21 @@ export function Nav({
           )}
         </div>
 
+        {searchable && (
+          <form
+            action="/fans/search"
+            method="get"
+            className="hidden items-center lg:flex"
+          >
+            <input
+              type="search"
+              name="q"
+              placeholder="Search artists or songs…"
+              className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
+            />
+          </form>
+        )}
+
         {children && singleChild && (
           <div className="flex items-center gap-4">{children}</div>
         )}
@@ -99,6 +116,26 @@ export function Nav({
           </>
         )}
       </nav>
+
+      {searchable && (
+        <div className="border-b border-line bg-surface/95 px-5 py-2 backdrop-blur lg:hidden">
+          <form action="/fans/search" method="get" className="flex items-center gap-2">
+            <input
+              type="search"
+              name="q"
+              placeholder="Search artists or songs…"
+              className="flex-1 rounded-lg border border-line bg-surface-2 px-3.5 py-2 text-sm text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
+            />
+            <button
+              type="submit"
+              aria-label="Search"
+              className="rounded-lg border border-line-strong px-3 py-2 text-xs font-bold text-muted hover:text-paper"
+            >
+              Go
+            </button>
+          </form>
+        </div>
+      )}
 
       {children && !singleChild && (
         <>
@@ -128,6 +165,16 @@ export function Nav({
             >
               <X className="h-4 w-4" />
             </button>
+            {searchable && (
+              <form action="/fans/search" method="get" className="mt-2">
+                <input
+                  type="search"
+                  name="q"
+                  placeholder="Search artists or songs…"
+                  className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
+                />
+              </form>
+            )}
             {children}
           </div>
         </>
