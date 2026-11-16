@@ -15,6 +15,7 @@ export default async function ClaimSplitPage({
   if (!claim) {
     return (
       <main className="mx-auto w-full max-w-md flex-1 px-5 py-16 text-center sm:px-8">
+        <Link href="/" className="mb-6 inline-block text-sm text-muted hover:text-paper">← Home</Link>
         <h1 className="mb-2 text-2xl font-bold">Invalid claim link</h1>
         <p className="text-sm text-muted">
           This link doesn&apos;t look right -- open the claim button from your
@@ -95,6 +96,7 @@ export default async function ClaimSplitPage({
   if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
     return (
       <main className="mx-auto w-full max-w-md flex-1 px-5 py-16 text-center sm:px-8">
+        <Link href="/" className="mb-6 inline-block text-sm text-muted hover:text-paper">← Home</Link>
         <h1 className="mb-2 text-2xl font-bold">Wrong account</h1>
         <p className="text-sm text-muted">
           This invite belongs to {invite.email} -- you&apos;re signed in as{" "}
@@ -106,6 +108,7 @@ export default async function ClaimSplitPage({
 
   return (
     <main className="mx-auto w-full max-w-md flex-1 px-5 py-16 text-center sm:px-8">
+      <Link href="/" className="mb-6 inline-block text-sm text-muted hover:text-paper">← Home</Link>
       <h1 className="mb-2 text-2xl font-bold">Claim your {percent}%</h1>
       <p className="mb-6 text-sm text-muted">
         {owner?.stage_name} listed you as a paid contributor on &ldquo;

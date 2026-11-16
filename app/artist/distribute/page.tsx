@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nav } from "@/components/Nav";
+import { Nav, NavLink } from "@/components/Nav";
 import { faqJsonLd, howToJsonLd, type FaqPair } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -39,7 +39,9 @@ const FAQ: FaqPair[] = [
 export default function DistributeGuidePage() {
   return (
     <>
-      <Nav role="artist" />
+      <Nav role="artist">
+      <NavLink href="/artist/dashboard">← Dashboard</NavLink>
+    </Nav>
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 sm:px-8">
         <h1 className="text-2xl font-bold">
           Distribute your music to Spotify, Apple Music &amp; Boomplay from
