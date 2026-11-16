@@ -7,8 +7,8 @@ import Image from "next/image";
 import { Button } from "@/components/Button";
 import { Spinner } from "@/components/Loader";
 import { Field, Input, Textarea } from "@/components/Field";
-import { DateTimePicker } from "@/components/DateTimePicker";
 import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
+import { prepareArtworkFile } from "@/lib/client-image";
 
 type Artist = { id: string; stageName: string };
 
@@ -32,16 +32,21 @@ function toLocalInputValue(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function combineDateTime(date: string, time: string): string {
+  if (!date) return "";
+  return `${date}T${time || "00:00"}`;
+}
+
 export function NewEventForm({ artists }: { artists: Artist[] }) {
   const router = useRouter();
   const [artistId, setArtistId] = useState(artists[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [venue, setVenue] = useState("");
   const [city, setCity] = useState("");
-  const [startAt, setStartAt] = useState(toLocalInputValue(new Date()));
-  const [salesCloseAt, setSalesCloseAt] = useState("");
-  const [priceNaira, setPriceNaira] = useState("");
-  const [totalTickets, setTotalTickets] = useState("");
+  const [startDate, setStartDate] = useState(toLocalInputValue(new Date()).split("T")[0]);
+  const [startTime, setStartTime] = useState("19:00");
+  const [salesCloseDate, setSalesCloseDate] = useState("");
+  const [salesCloseTime, setSalesCloseTime] = useState("");
   const [description, setDescription] = useState("");
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [showTierForm, setShowTierForm] = useState(false);
@@ -66,7 +71,9 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
     setUploadPercent(0);
     setError(null);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
+      // Compress if > 500KB (handled inside prepareArtworkFile).
+      const prepared = await prepareArtworkFile(file);
+      const ext = prepared.name.split(".").pop() || "jpg";
       const path = `${artistId}/${crypto.randomUUID()}.${ext}`;
       const res = await fetch("/api/admin/upload-url", {
         method: "POST",
@@ -120,9 +127,6 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
     e.preventDefault();
     setError(null);
 
-    const hasTiers = tiers.length > 0;
-    const price = Math.round(Number(priceNaira) * 100);
-    const tickets = Math.round(Number(totalTickets));
     if (!artistId) {
       setError("Pick an artist.");
       return;
@@ -131,23 +135,19 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
       setError("Enter a title.");
       return;
     }
-    if (!hasTiers) {
-      if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) {
-        setError(`Ticket price must be at least ₦${MIN_CHECKOUT_KOBO / 100}.`);
-        return;
-      }
-      if (!Number.isInteger(tickets) || tickets <= 0) {
-        setError("Enter a valid number of tickets.");
-        return;
-      }
+    if (tiers.length === 0) {
+      setError("Add at least one ticket tier.");
+      return;
     }
-    if (!startAt) {
-      setError("Pick a start date and time.");
+    if (!startDate) {
+      setError("Pick a start date.");
       return;
     }
 
-    const startIso = new Date(startAt).toISOString();
-    const salesCloseIso = salesCloseAt ? new Date(salesCloseAt).toISOString() : null;
+    const startIso = new Date(combineDateTime(startDate, startTime)).toISOString();
+    const salesCloseIso = salesCloseDate
+      ? new Date(combineDateTime(salesCloseDate, salesCloseTime)).toISOString()
+      : null;
     if (salesCloseIso && new Date(salesCloseIso).getTime() > new Date(startIso).getTime()) {
       setError("Sales must close at or before the show starts.");
       return;
@@ -166,17 +166,15 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
           city: city.trim() || null,
           start_at: startIso,
           sales_close_at: salesCloseIso,
-          ticket_price_kobo: hasTiers ? Math.min(...tiers.map((t) => Math.round(Number(t.priceNaira) * 100))) : price,
-          total_tickets: hasTiers ? tiers.reduce((s, t) => s + Math.round(Number(t.quantity)), 0) : tickets,
+          ticket_price_kobo: Math.min(...tiers.map((t) => Math.round(Number(t.priceNaira) * 100))),
+          total_tickets: tiers.reduce((s, t) => s + Math.round(Number(t.quantity)), 0),
           cover_art_path: coverPath,
-          tiers: hasTiers
-            ? tiers.map((t) => ({
-                name: t.name,
-                price_kobo: Math.round(Number(t.priceNaira) * 100),
-                quantity: Math.round(Number(t.quantity)),
-                design: t.design,
-              }))
-            : undefined,
+          tiers: tiers.map((t) => ({
+            name: t.name,
+            price_kobo: Math.round(Number(t.priceNaira) * 100),
+            quantity: Math.round(Number(t.quantity)),
+            design: t.design,
+          })),
         }),
       });
       const body = await res.json().catch(() => null);
@@ -273,34 +271,40 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
           <Field label="City">
             <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lagos" />
           </Field>
-          <Field label="Start date & time">
-            <DateTimePicker value={startAt} onChange={setStartAt} />
-          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Start date">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+              />
+            </Field>
+            <Field label="Start time">
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+              />
+            </Field>
+          </div>
         </div>
-        <Field label="Sales close (optional — defaults to start time)">
-          <DateTimePicker value={salesCloseAt} onChange={setSalesCloseAt} />
-        </Field>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Ticket price (₦)">
-            <Input
-              required
-              type="number"
-              min="100"
-              step="100"
-              value={priceNaira}
-              onChange={(e) => setPriceNaira(e.target.value)}
-              placeholder="2000"
+          <Field label="Sales close date (optional)">
+            <input
+              type="date"
+              value={salesCloseDate}
+              onChange={(e) => setSalesCloseDate(e.target.value)}
+              className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
             />
           </Field>
-          <Field label="Number of tickets">
-            <Input
-              required
-              type="number"
-              min="1"
-              step="1"
-              value={totalTickets}
-              onChange={(e) => setTotalTickets(e.target.value)}
-              placeholder="100"
+          <Field label="Sales close time">
+            <input
+              type="time"
+              value={salesCloseTime}
+              onChange={(e) => setSalesCloseTime(e.target.value)}
+              className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
             />
           </Field>
         </div>
@@ -393,33 +397,6 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
             </div>
           )}
         </div>
-
-        {tiers.length === 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="Ticket price (₦)">
-              <Input
-                required
-                type="number"
-                min="100"
-                step="100"
-                value={priceNaira}
-                onChange={(e) => setPriceNaira(e.target.value)}
-                placeholder="2000"
-              />
-            </Field>
-            <Field label="Number of tickets">
-              <Input
-                required
-                type="number"
-                min="1"
-                step="1"
-                value={totalTickets}
-                onChange={(e) => setTotalTickets(e.target.value)}
-                placeholder="100"
-              />
-            </Field>
-          </div>
-        )}
 
         <Field label="Description">
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="What should fans expect?" />

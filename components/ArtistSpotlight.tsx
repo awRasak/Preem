@@ -10,14 +10,14 @@ export function ArtistSpotlight() {
           For Artists
         </p>
         <h2 className="mb-4 text-2xl font-bold leading-tight sm:text-3xl">
-          Built for the artist, not the algorithm.
+          Sell tickets to your next show.
         </h2>
         <p className="mb-5 max-w-sm text-sm text-muted">
-          Every drop, every sale, every fan — yours. Preem exists so the
-          relationship stays between you and the people who show up for you.
+          Create events, offer VIP and regular tiers, and let fans buy tickets
+          directly in naira. No middlemen, no delays — just you and your crowd.
         </p>
         <Button href="/artist/signup" variant="primary">
-          Start a drop
+          Create an Event
         </Button>
       </div>
       <div className="relative mx-auto aspect-square w-full max-w-[280px]">
@@ -31,10 +31,10 @@ export function ArtistSpotlight() {
           />
         </div>
         <div className="absolute -left-4 top-6 rounded-xl border border-line-strong bg-surface p-3 text-xs shadow-lg">
-          <div className="font-mono font-bold text-accent">New sale: ₦800</div>
+          <div className="font-mono font-bold text-accent">Ticket sold: ₦5,000</div>
         </div>
         <div className="absolute -right-2 bottom-8 rounded-xl border border-line-strong bg-surface p-3 text-xs shadow-lg">
-          <div className="font-bold">Fuji Nights is live</div>
+          <div className="font-bold">Lagos Takeover is live</div>
         </div>
       </div>
     </div>

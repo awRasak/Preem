@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
+// MIN_CHECKOUT_KOBO no longer needed - tiers handle pricing
 import { parseBody } from "@/lib/http";
 
 const tierSchema = z.object({
@@ -21,10 +21,10 @@ const schema = z.object({
   start_at: z.string().datetime({ offset: true }),
   end_at: z.string().datetime({ offset: true }).optional().nullable(),
   sales_close_at: z.string().datetime({ offset: true }).optional().nullable(),
-  ticket_price_kobo: z.number().int().positive().max(10_000_000),
-  total_tickets: z.number().int().positive().max(100_000),
+  ticket_price_kobo: z.number().int().positive().max(10_000_000).optional(),
+  total_tickets: z.number().int().positive().max(100_000).optional(),
   cover_art_path: z.string().trim().max(400).optional().nullable(),
-  tiers: z.array(tierSchema).optional(),
+  tiers: z.array(tierSchema).min(1, "At least one ticket tier is required."),
 });
 
 export async function POST(req: Request) {
@@ -44,8 +44,6 @@ export async function POST(req: Request) {
     start_at,
     end_at,
     sales_close_at,
-    ticket_price_kobo,
-    total_tickets,
     cover_art_path,
   } = parsed.data;
 
@@ -81,16 +79,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Artist not found." }, { status: 404 });
   }
 
-  const tiers = parsed.data.tiers ?? [];
-  // If tiers are provided, total capacity = sum of tier quantities,
-  // and the show's legacy ticket_price_kobo = lowest tier price (for
-  // display/fallback when no tiers are queried).
-  const totalTickets = tiers.length > 0
-    ? tiers.reduce((sum, t) => sum + t.quantity, 0)
-    : total_tickets;
-  const basePrice = tiers.length > 0
-    ? Math.min(...tiers.map((t) => t.price_kobo))
-    : ticket_price_kobo;
+  const tiers = parsed.data.tiers;
+  // Capacity and base price come from tiers (tiers are required).
+  const totalTickets = tiers.reduce((sum, t) => sum + t.quantity, 0);
+  const basePrice = Math.min(...tiers.map((t) => t.price_kobo));
 
   const { data, error } = await supabase
     .from("shows")

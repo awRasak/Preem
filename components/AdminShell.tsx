@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Mic2,
@@ -64,7 +64,17 @@ export function AdminShell({
   badges?: Partial<Record<AdminSection, number>>;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q.length >= 2) {
+      router.push(`/admin/search?q=${encodeURIComponent(q)}`);
+    }
+  }
 
   const active: AdminSection =
     NAV_ITEMS.find((item) => item.href !== "/admin" && pathname.startsWith(item.href))?.section ??
@@ -101,6 +111,26 @@ export function AdminShell({
             priority
           />
         </Link>
+        <form onSubmit={handleSearch} className="mb-4 px-1">
+          <div className="relative">
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search…"
+              className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 pr-8 text-sm text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
+            />
+            <button
+              type="submit"
+              aria-label="Search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-paper"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
+        </form>
         {NAV_ITEMS.map((item) => {
           const isActive = active === item.section;
           const Icon = item.icon;
@@ -146,7 +176,27 @@ export function AdminShell({
           <SignOutButton redirectTo="/admin/login" className="rounded-full border border-line-strong px-3 py-1.5 text-xs text-muted" />
         </nav>
 
-        <div className="pb-16 sm:pb-0">{children}</div>
+        <div className="pb-16 pt-12 sm:pb-0 sm:pt-0">{children}</div>
+      </div>
+
+      {/* Mobile search bar */}
+      <div className="fixed inset-x-0 top-0 z-40 border-b border-line bg-surface/95 px-4 py-2 backdrop-blur sm:hidden">
+        <form onSubmit={handleSearch} className="flex items-center gap-2">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search…"
+            className="flex-1 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
+          />
+          <button
+            type="submit"
+            aria-label="Search"
+            className="rounded-lg border border-line-strong px-3 py-2 text-xs font-bold text-muted hover:text-paper"
+          >
+            Go
+          </button>
+        </form>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">

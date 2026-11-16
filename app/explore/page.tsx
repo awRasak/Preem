@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { Nav, NavLink } from "@/components/Nav";
 import { Button } from "@/components/Button";
-import { ShowCard } from "@/components/ShowCard";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ExploreBrowser } from "./ExploreBrowser";
+import { ExploreTabs } from "./ExploreTabs";
 import type { Artist, Drop } from "@/lib/types";
 
 export const revalidate = 0;
@@ -73,6 +72,29 @@ export default async function ExplorePage() {
     } | null;
   })[]).filter((s) => s.artist);
 
+  const showCards = shows.map((show) => ({
+    id: show.id,
+    slug: show.slug,
+    title: show.title,
+    venue: show.venue,
+    city: show.city,
+    start_at: show.start_at,
+    sales_close_at: show.sales_close_at ?? null,
+    ticket_price_kobo: show.ticket_price_kobo,
+    total_tickets: show.total_tickets,
+    cover_art_path: show.cover_art_path,
+    soldCount: soldByShow.get(show.id) ?? 0,
+    artist: show.artist ?? undefined,
+    artist_name: show.artist?.stage_name,
+    tiers: (show.tiers ?? []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      price_kobo: t.price_kobo,
+      quantity: t.quantity,
+      design: t.design,
+    })),
+  }));
+
   return (
     <>
       <Nav>
@@ -89,41 +111,7 @@ export default async function ExplorePage() {
           Browse early-access music, upcoming concert tickets, and merch —
           sold direct to fans, priced in naira.
         </p>
-        {shows.length > 0 && (
-          <>
-            <h2 className="mb-4 text-lg font-bold">Upcoming shows</h2>
-            <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-              {shows.map((show) => (
-                <ShowCard
-                  key={show.id}
-                  show={{
-                    id: show.id,
-                    slug: show.slug,
-                    title: show.title,
-                    venue: show.venue,
-                    city: show.city,
-                    start_at: show.start_at,
-                    sales_close_at: show.sales_close_at ?? null,
-                    ticket_price_kobo: show.ticket_price_kobo,
-                    total_tickets: show.total_tickets,
-                    cover_art_path: show.cover_art_path,
-                    soldCount: soldByShow.get(show.id) ?? 0,
-                    artist: show.artist ?? undefined,
-                    tiers: (show.tiers ?? []).map((t) => ({
-                      id: t.id,
-                      name: t.name,
-                      price_kobo: t.price_kobo,
-                      quantity: t.quantity,
-                      design: t.design,
-                    })),
-                  }}
-                  showArtist
-                />
-              ))}
-            </div>
-          </>
-        )}
-        <ExploreBrowser drops={drops} artists={artists} />
+        <ExploreTabs drops={drops} artists={artists} shows={showCards} />
       </main>
     </>
   );

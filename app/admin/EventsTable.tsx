@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { formatNaira, formatShowDate } from "@/lib/format";
+import { artworkFallback } from "@/lib/placeholder";
 
 export type AdminEvent = {
   id: string;
@@ -18,9 +19,11 @@ export type AdminEvent = {
   ticketPriceKobo: number;
   ticketsSold: number;
   totalTickets: number;
+  coverArtPath: string | null;
+  tiers: { name: string; price_kobo: number; quantity: number; design: string }[];
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 
 export function EventsTable({ events }: { events: AdminEvent[] }) {
   const [query, setQuery] = useState("");
@@ -61,55 +64,94 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
       {pageItems.length === 0 ? (
         <p className="text-sm text-muted">No matching events.</p>
       ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="border-b-2 border-line-strong text-left text-[10.5px] uppercase text-muted">
-              <th className="pb-2 pr-4 font-bold">Event</th>
-              <th className="pb-2 pr-4 font-bold">Artist</th>
-              <th className="pb-2 pr-4 font-bold">Status</th>
-              <th className="pb-2 pr-4 font-bold">Price</th>
-              <th className="pb-2 pr-4 font-bold">Tickets</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageItems.map((e) => (
-              <tr key={e.id} className="border-b border-line text-sm last:border-none">
-                <td className="py-2.5 pr-4">
-                  <div className="font-medium">{e.title}</div>
-                  <div className="text-xs text-muted">
-                    {formatShowDate(e.startAt)} ·{" "}
-                    {[e.venue, e.city].filter(Boolean).join(" · ") || "TBA"}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {pageItems.map((e) => {
+            const soldOut = e.ticketsSold >= e.totalTickets;
+            return (
+              <div
+                key={e.id}
+                className="overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-strong"
+              >
+                <div className="relative aspect-video w-full overflow-hidden bg-surface-2">
+                  <Image
+                    src={e.coverArtPath || artworkFallback(e.id)}
+                    alt={e.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                  <div className="absolute right-2 top-2">
+                    <Badge status={e.status === "published" ? "live" : "closed"}>
+                      {e.status}
+                    </Badge>
                   </div>
-                </td>
-                <td className="py-2.5 pr-4">
-                  <Link href={`/artist/${e.artistId}`} className="text-muted hover:underline">
-                    {e.artistName}
-                  </Link>
-                </td>
-                <td className="py-2.5 pr-4">
-                  <Badge status={e.status === "published" ? "live" : "closed"}>
-                    {e.status}
-                  </Badge>
-                </td>
-                <td className="py-2.5 pr-4 font-mono">{formatNaira(e.ticketPriceKobo)}</td>
-                <td className="py-2.5 font-mono">
-                  {e.ticketsSold}/{e.totalTickets}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+                <div className="p-4">
+                  <h3 className="truncate text-base font-bold">{e.title}</h3>
+                  <p className="mt-1 text-xs text-muted">{e.artistName}</p>
+                  <p className="mt-1 font-mono text-xs text-muted">
+                    {formatShowDate(e.startAt)}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-muted">
+                    {[e.venue, e.city].filter(Boolean).join(" - ") || "TBA"}
+                  </p>
+
+                  {e.tiers.length > 0 ? (
+                    <div className="mt-3 space-y-1">
+                      {e.tiers.map((t, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <span className="font-medium">{t.name}</span>
+                          <span className="font-mono text-muted">
+                            {formatNaira(t.price_kobo)} - {t.quantity} cap
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-sm font-bold">
+                      {formatNaira(e.ticketPriceKobo)}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-muted">
+                    <span>
+                      {e.ticketsSold}/{e.totalTickets} sold
+                      {soldOut && " - Sold out"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      href={"/admin/events/" + e.id}
+                      variant="outline"
+                      className="flex-1 px-3 py-1.5 text-xs"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      href={"/show/" + e.id}
+                      variant="outline"
+                      className="flex-1 px-3 py-1.5 text-xs"
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between gap-4">
           <span className="text-xs text-muted">
-            Page {page_} of {totalPages} · {filtered.length} result{filtered.length === 1 ? "" : "s"}
+            Page {page_} of {totalPages} - {filtered.length} result{filtered.length === 1 ? "" : "s"}
           </span>
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="!px-4 !py-1.5 text-xs"
+              className="px-4 py-1.5 text-xs"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page_ === 1}
             >
@@ -117,7 +159,7 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
             </Button>
             <Button
               variant="outline"
-              className="!px-4 !py-1.5 text-xs"
+              className="px-4 py-1.5 text-xs"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page_ === totalPages}
             >

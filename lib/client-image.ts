@@ -16,7 +16,8 @@ export async function prepareArtworkFile(file: File): Promise<File> {
   if (!bitmap) return file;
 
   const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
-  if (scale === 1 && file.size <= 5 * 1024 * 1024) {
+  // Compress if dimensions exceed the max OR file size exceeds 500KB.
+  if (scale === 1 && file.size <= 500 * 1024) {
     bitmap.close();
     return file;
   }
