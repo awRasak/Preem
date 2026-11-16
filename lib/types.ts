@@ -141,6 +141,7 @@ export type Show = {
   ticket_price_kobo: number;
   total_tickets: number;
   cover_art_path: string | null;
+  featured_on_marquee?: boolean;
   status: ShowStatus;
   created_at: string;
   artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;

@@ -86,6 +86,7 @@ export default async function MarketplacePage() {
     ticket_price_kobo: number;
     total_tickets: number;
     cover_art_path: string | null;
+    featured_on_marquee: boolean | null;
     artist: { id: string; stage_name: string; avatar_url: string | null } | null;
     tiers: { id: string; name: string; price_kobo: number; quantity: number; design: string }[] | null;
   }>).filter((s) => s.artist).map((s) => ({

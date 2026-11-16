@@ -49,13 +49,6 @@ export async function POST(req: Request) {
     cover_art_path,
   } = parsed.data;
 
-  if (ticket_price_kobo < MIN_CHECKOUT_KOBO) {
-    return NextResponse.json(
-      { error: "Ticket price must be at least ₦50." },
-      { status: 400 },
-    );
-  }
-
   const start = new Date(start_at);
   if (!Number.isFinite(start.getTime())) {
     return NextResponse.json({ error: "Invalid start date" }, { status: 400 });
