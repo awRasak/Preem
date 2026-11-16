@@ -151,7 +151,7 @@ export default async function MarketplacePage() {
 
   return (
     <>
-      <Nav searchable>
+      <Nav>
         <NavLink href="/explore">Explore</NavLink>
         {!sessionUser && <NavLink href="/artist/signup">For artists</NavLink>}
         <Button href={accountHref} variant="outline">
