@@ -73,7 +73,7 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
             return (
               <div
                 key={e.id}
-                className="flex gap-3 overflow-hidden rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
+                className="relative flex gap-3 overflow-hidden rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
               >
                 <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2 sm:h-24 sm:w-24">
                   <Image
@@ -90,7 +90,43 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-base font-bold">{e.title}</h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="min-w-0 flex-1 truncate text-base font-bold">{e.title}</h3>
+                    <button
+                      type="button"
+                      onClick={() => setOpenMenu(openMenu === e.id ? null : e.id)}
+                      aria-label="More actions"
+                      aria-expanded={openMenu === e.id}
+                      className="-mr-1 -mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-paper"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                    {openMenu === e.id && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setOpenMenu(null)}
+                          aria-hidden="true"
+                        />
+                        <div className="absolute right-3 top-10 z-50 w-36 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
+                          <Link
+                            href={"/admin/events/" + e.id}
+                            onClick={() => setOpenMenu(null)}
+                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
+                          >
+                            Edit
+                          </Link>
+                          <Link
+                            href={"/show/" + e.id}
+                            onClick={() => setOpenMenu(null)}
+                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
+                          >
+                            View
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                  </div>
                   <p className="mt-1 text-xs text-muted">{e.artistName}</p>
                   <p className="mt-1 font-mono text-xs text-muted">
                     {formatShowDate(e.startAt)}

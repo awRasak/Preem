@@ -265,7 +265,7 @@ export function BuyTicketButton({
 
       {step !== "closed" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="relative max-h-[90vh] w-full max-w-xs overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
+          <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-line-strong bg-surface p-6 sm:max-w-2xl sm:p-8">
             <button
               type="button"
               onClick={() => setStep("closed")}
@@ -275,7 +275,7 @@ export function BuyTicketButton({
               ✕
             </button>
             {step === "done" ? (
-              <div className="mx-auto w-full max-w-xs text-center">
+              <div className="mx-auto w-full max-w-md text-center">
                 <h3 className="mb-2 text-lg font-bold">You&apos;re going!</h3>
                 <p className="mb-4 text-sm text-muted">
                   Your ticket to <strong className="text-paper">“{show.title}”</strong> is
@@ -309,7 +309,7 @@ export function BuyTicketButton({
                 </Button>
               </div>
             ) : step === "error" ? (
-              <div className="mx-auto w-full max-w-xs text-center">
+              <div className="mx-auto w-full max-w-md text-center">
                 <span className="mb-3 inline-flex">
                   <Spinner size="md" />
                 </span>
