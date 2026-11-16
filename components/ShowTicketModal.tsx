@@ -52,6 +52,7 @@ type Step = "closed" | "form" | "submitting" | "verifying" | "done" | "error";
 export function BuyTicketButton({
   show,
   artistName,
+  tiers,
 }: {
   show: {
     id: string;
@@ -63,6 +64,7 @@ export function BuyTicketButton({
     ticket_price_kobo: number;
   };
   artistName: string;
+  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; soldCount?: number }[];
 }) {
   const [step, setStep] = useState<Step>("closed");
   const {
@@ -83,7 +85,12 @@ export function BuyTicketButton({
   // back to the form.
   const payingRef = useRef(false);
 
-  const amountKobo = show.ticket_price_kobo;
+  const hasTiers = !!tiers && tiers.length > 0;
+  const [selectedTierId, setSelectedTierId] = useState<string | null>(
+    hasTiers ? (tiers![0]?.id ?? null) : null,
+  );
+  const selectedTier = hasTiers ? tiers!.find((t) => t.id === selectedTierId) : null;
+  const amountKobo = selectedTier ? selectedTier.price_kobo : show.ticket_price_kobo;
   // eslint-disable-next-line react-hooks/purity -- snapshot at render/open; server revalidates on initialize.
   const salesClosed = new Date(show.sales_close_at ?? show.start_at).getTime() <= Date.now();
 
@@ -126,6 +133,7 @@ export function BuyTicketButton({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         showId: show.id,
+        tierId: selectedTierId,
         amountKobo,
         fanName,
         fanPhone,
@@ -315,6 +323,39 @@ export function BuyTicketButton({
               <form onSubmit={handlePay} className="sm:grid sm:grid-cols-2 sm:gap-x-8">
                 <div>
                 <h3 className="mb-1 text-base font-bold">{show.title}</h3>
+                {hasTiers && (
+                  <div className="mb-4 space-y-2">
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted">Choose a ticket</p>
+                    {tiers!.map((t) => {
+                      const tierLeft = Math.max(0, t.quantity - (t.soldCount ?? 0));
+                      const tierSoldOut = (t.soldCount ?? 0) >= t.quantity;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          disabled={tierSoldOut}
+                          onClick={() => setSelectedTierId(t.id)}
+                          className={`flex w-full items-center justify-between rounded-lg border p-3 text-left text-sm transition-colors ${
+                            selectedTierId === t.id
+                              ? "border-accent bg-accent/10"
+                              : "border-line bg-surface-2/50 hover:border-line-strong"
+                          } ${tierSoldOut ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <div>
+                            <span className="font-bold">{t.name}</span>
+                            <span className="ml-2 text-xs text-muted capitalize">{t.design}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold">{formatNaira(t.price_kobo)}</div>
+                            <div className="text-[11px] text-muted">
+                              {tierSoldOut ? "Sold out" : `${tierLeft} left`}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className="mb-3 text-xs text-muted">
                   {formatShowDate(show.start_at)} ·{" "}
                   {[show.venue, show.city].filter(Boolean).join(", ") || "TBA"}

@@ -46,7 +46,7 @@ export default async function ExplorePage() {
   const admin = createAdminClient();
   const { data: showsData } = await supabase
     .from("shows")
-    .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url)")
+    .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)")
     .eq("status", "published")
     .gte("start_at", new Date().toISOString())
     .order("start_at", { ascending: true });
@@ -56,7 +56,7 @@ export default async function ExplorePage() {
     showIds.length > 0
       ? await admin
           .from("show_tickets")
-          .select("show_id")
+          .select("show_id, tier_id")
           .in("show_id", showIds)
           .eq("status", "success")
       : { data: [] };
@@ -109,6 +109,13 @@ export default async function ExplorePage() {
                     cover_art_path: show.cover_art_path,
                     soldCount: soldByShow.get(show.id) ?? 0,
                     artist: show.artist ?? undefined,
+                    tiers: (show.tiers ?? []).map((t) => ({
+                      id: t.id,
+                      name: t.name,
+                      price_kobo: t.price_kobo,
+                      quantity: t.quantity,
+                      design: t.design,
+                    })),
                   }}
                   showArtist
                 />

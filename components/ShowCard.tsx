@@ -21,6 +21,7 @@ export type ShowCardShow = {
   soldCount: number;
   artist?: { id: string; stage_name: string; avatar_url: string | null };
   artist_name?: string;
+  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string }[];
 };
 
 export function ShowCard({
@@ -79,7 +80,11 @@ export function ShowCard({
       </Link>
       <div className="mt-3 flex items-center justify-between gap-2">
         <div>
-          <div className="text-sm font-bold">{formatNaira(show.ticket_price_kobo)}</div>
+          <div className="text-sm font-bold">
+            {show.tiers && show.tiers.length > 0
+              ? `From ${formatNaira(Math.min(...show.tiers.map((t) => t.price_kobo)))}`
+              : formatNaira(show.ticket_price_kobo)}
+          </div>
           <div className="text-[11px] text-muted">
             {Math.max(0, show.total_tickets - show.soldCount)} left
           </div>
@@ -100,6 +105,14 @@ export function ShowCard({
               ticket_price_kobo: show.ticket_price_kobo,
             }}
             artistName={artistName}
+            tiers={show.tiers?.map((t) => ({
+              id: t.id,
+              name: t.name,
+              price_kobo: t.price_kobo,
+              quantity: t.quantity,
+              design: t.design,
+              soldCount: 0,
+            }))}
           />
         )}
       </div>

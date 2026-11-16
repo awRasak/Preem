@@ -11,6 +11,7 @@ import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 
 const schema = z.object({
   showId: z.string().uuid(),
+  tierId: z.string().uuid().optional().nullable(),
   amountKobo: z.number().int().positive(),
   fanName: z.string().trim().min(1).max(120),
   fanPhone: z
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
 
   const parsed = await parseBody(req, schema);
   if (!parsed.ok) return parsed.response;
-  const { showId, amountKobo, fanName, fanEmail } = parsed.data;
+  const { showId, tierId, amountKobo, fanName, fanEmail } = parsed.data;
   const fanPhone = normalizePhone(parsed.data.fanPhone);
 
   const supabase = createAdminClient();
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
   // 0036_show_sales_close_and_ticket_claim.sql.
   const { data: claim, error: claimError } = await supabase.rpc("create_show_ticket", {
     p_show_id: showId,
+    p_tier_id: tierId ?? null,
     p_fan_name: fanName,
     p_fan_phone: fanPhone,
     p_fan_email: fanEmail,
@@ -127,7 +129,7 @@ export async function POST(req: Request) {
   }
 
   const row = (Array.isArray(claim) ? claim[0] : claim) as
-    | { ticket_id: string | null; ticket_amount_kobo: number | null; error_code: string | null }
+    | { ticket_id: string | null; ticket_amount_kobo: number | null; ticket_tier_name: string | null; ticket_tier_design: string | null; error_code: string | null }
     | null;
 
   if (!row || row.error_code || !row.ticket_id) {
@@ -161,5 +163,7 @@ export async function POST(req: Request) {
     gateway,
     accessCode,
     publicKey: publicKeyForGateway(gateway),
+    tierName: row.ticket_tier_name ?? null,
+    tierDesign: row.ticket_tier_design ?? "standard",
   });
 }

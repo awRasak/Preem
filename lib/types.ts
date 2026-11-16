@@ -112,6 +112,19 @@ export type ArtistLink = {
 
 export type ShowStatus = "published" | "cancelled";
 
+export type TicketDesign = "standard" | "vip" | "premium" | "table" | "backstage";
+
+export type ShowTicketTier = {
+  id: string;
+  show_id: string;
+  name: string;
+  price_kobo: number;
+  quantity: number;
+  design: TicketDesign;
+  sort_order: number;
+  created_at: string;
+};
+
 export type Show = {
   id: string;
   artist_id: string;
@@ -130,6 +143,7 @@ export type Show = {
   status: ShowStatus;
   created_at: string;
   artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;
+  tiers?: ShowTicketTier[];
 };
 
 export type TrackChangeStatus = "pending" | "approved" | "rejected" | "cancelled";
@@ -149,6 +163,7 @@ export type TrackChangeRequest = {
 export type ShowTicket = {
   id: string;
   show_id: string;
+  tier_id: string | null;
   fan_name: string;
   fan_phone: string;
   fan_email: string;
@@ -158,6 +173,7 @@ export type ShowTicket = {
   status: PurchaseStatus;
   purchased_at: string | null;
   created_at: string;
+  tier?: Pick<ShowTicketTier, "name" | "design"> | null;
 };
 
 export type Purchase = {

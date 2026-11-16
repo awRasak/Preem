@@ -33,6 +33,7 @@ type ShowRow = {
     | { id: string; stage_name: string; avatar_url: string | null; approval_status?: string }
     | { id: string; stage_name: string; avatar_url: string | null; approval_status?: string }[]
     | null;
+  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; sort_order: number; soldCount?: number }[];
 };
 
 type Resolved = {
@@ -46,7 +47,7 @@ async function resolveShow(idOrSlug: string): Promise<Resolved | null> {
   const base = supabase
     .from("shows")
     .select(
-      "*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status)",
+      "*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)",
     )
     .eq("status", "published");
 
@@ -69,13 +70,26 @@ async function resolveShow(idOrSlug: string): Promise<Resolved | null> {
   if (!show || !artist || artist.approval_status !== "approved") return null;
 
   const admin = createAdminClient();
-  const { count } = await admin
+  const { data: soldTickets } = await admin
     .from("show_tickets")
-    .select("id", { count: "exact", head: true })
+    .select("tier_id")
     .eq("show_id", show.id)
     .eq("status", "success");
 
-  return { show, artist, soldCount: count ?? 0 };
+  const soldByTier = new Map<string | null, number>();
+  for (const t of soldTickets ?? []) {
+    const key = t.tier_id ?? null;
+    soldByTier.set(key, (soldByTier.get(key) ?? 0) + 1);
+  }
+  const totalSold = soldTickets?.length ?? 0;
+
+  // Attach sold counts to tiers.
+  const tiers = (show.tiers ?? []).map((t) => ({
+    ...t,
+    soldCount: soldByTier.get(t.id) ?? 0,
+  }));
+
+  return { show: { ...show, tiers }, artist, soldCount: totalSold };
 }
 
 export async function generateMetadata({
@@ -112,11 +126,16 @@ export default async function ShowPage({
   if (!resolved) notFound();
   const { show, artist, soldCount } = resolved;
 
-  const soldOut = soldCount >= show.total_tickets;
+  const tiers = (show.tiers ?? []) as NonNullable<ShowRow["tiers"]>;
+  const hasTiers = tiers.length > 0;
+  const totalCapacity = hasTiers
+    ? tiers.reduce((s, t) => s + t.quantity, 0)
+    : show.total_tickets;
+  const soldOut = soldCount >= totalCapacity;
   const salesCloseAt = new Date(show.sales_close_at ?? show.start_at).getTime();
   // eslint-disable-next-line react-hooks/purity -- server-render time determines sales-open state for this request.
   const salesClosed = salesCloseAt <= Date.now();
-  const left = Math.max(0, show.total_tickets - soldCount);
+  const left = Math.max(0, totalCapacity - soldCount);
 
   return (
     <>
@@ -164,10 +183,43 @@ export default async function ShowPage({
             )}
 
             <div className="mb-5 rounded-xl border border-line bg-surface p-4">
-              <div className="mb-1 text-2xl font-bold">{formatNaira(show.ticket_price_kobo)}</div>
-              <div className="text-sm text-muted">
-                {soldOut ? "No tickets left" : salesClosed ? "Ticket sales are closed" : `${left} of ${show.total_tickets} tickets left`}
-              </div>
+              {hasTiers ? (
+                <div className="space-y-2">
+                  {tiers
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map((t) => {
+                      const tierSold = t.soldCount ?? 0;
+                      const tierLeft = Math.max(0, t.quantity - tierSold);
+                      const tierSoldOut = tierSold >= t.quantity;
+                      return (
+                        <div key={t.id} className="flex items-center justify-between">
+                          <div>
+                            <span className="font-bold">{t.name}</span>
+                            <span className="ml-2 text-xs text-muted capitalize">{t.design}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold">{formatNaira(t.price_kobo)}</div>
+                            <div className="text-[11px] text-muted">
+                              {tierSoldOut ? "Sold out" : `${tierLeft} left`}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : (
+                <>
+                  <div className="mb-1 text-2xl font-bold">{formatNaira(show.ticket_price_kobo)}</div>
+                  <div className="text-sm text-muted">
+                    {soldOut ? "No tickets left" : salesClosed ? "Ticket sales are closed" : `${left} of ${show.total_tickets} tickets left`}
+                  </div>
+                </>
+              )}
+              {!hasTiers && (
+                <div className="text-sm text-muted">
+                  {soldOut ? "No tickets left" : salesClosed ? "Ticket sales are closed" : `${left} of ${totalCapacity} tickets left`}
+                </div>
+              )}
               {show.sales_close_at && !salesClosed && (
                 <div className="mt-2 text-xs text-muted">
                   Sales close {formatShowDate(show.sales_close_at)}
@@ -187,6 +239,14 @@ export default async function ShowPage({
                   ticket_price_kobo: show.ticket_price_kobo,
                 }}
                 artistName={artist?.stage_name ?? ""}
+                tiers={tiers.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  price_kobo: t.price_kobo,
+                  quantity: t.quantity,
+                  design: t.design,
+                  soldCount: t.soldCount ?? 0,
+                }))}
               />
             ) : (
               <div className="rounded-xl border border-line bg-surface-2 p-4 text-sm text-muted">

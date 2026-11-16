@@ -12,6 +12,21 @@ import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 
 type Artist = { id: string; stageName: string };
 
+type Tier = {
+  name: string;
+  priceNaira: string;
+  quantity: string;
+  design: "standard" | "vip" | "premium" | "table" | "backstage";
+};
+
+const DESIGN_OPTIONS: { value: Tier["design"]; label: string }[] = [
+  { value: "standard", label: "Standard" },
+  { value: "vip", label: "VIP" },
+  { value: "premium", label: "Premium" },
+  { value: "table", label: "Table" },
+  { value: "backstage", label: "Backstage" },
+];
+
 function toLocalInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -28,6 +43,12 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
   const [priceNaira, setPriceNaira] = useState("");
   const [totalTickets, setTotalTickets] = useState("");
   const [description, setDescription] = useState("");
+  const [tiers, setTiers] = useState<Tier[]>([]);
+  const [showTierForm, setShowTierForm] = useState(false);
+  const [tierName, setTierName] = useState("");
+  const [tierPrice, setTierPrice] = useState("");
+  const [tierQty, setTierQty] = useState("");
+  const [tierDesign, setTierDesign] = useState<Tier["design"]>("standard");
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -74,10 +95,32 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
     }
   }
 
+  function addTier() {
+    if (!tierName.trim()) return;
+    const price = Math.round(Number(tierPrice) * 100);
+    const qty = Math.round(Number(tierQty));
+    if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) return;
+    if (!Number.isInteger(qty) || qty <= 0) return;
+    setTiers((prev) => [
+      ...prev,
+      { name: tierName.trim(), priceNaira: tierPrice, quantity: tierQty, design: tierDesign },
+    ]);
+    setTierName("");
+    setTierPrice("");
+    setTierQty("");
+    setTierDesign("standard");
+    setShowTierForm(false);
+  }
+
+  function removeTier(index: number) {
+    setTiers((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
+    const hasTiers = tiers.length > 0;
     const price = Math.round(Number(priceNaira) * 100);
     const tickets = Math.round(Number(totalTickets));
     if (!artistId) {
@@ -88,13 +131,15 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
       setError("Enter a title.");
       return;
     }
-    if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) {
-      setError(`Ticket price must be at least ₦${MIN_CHECKOUT_KOBO / 100}.`);
-      return;
-    }
-    if (!Number.isInteger(tickets) || tickets <= 0) {
-      setError("Enter a valid number of tickets.");
-      return;
+    if (!hasTiers) {
+      if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) {
+        setError(`Ticket price must be at least ₦${MIN_CHECKOUT_KOBO / 100}.`);
+        return;
+      }
+      if (!Number.isInteger(tickets) || tickets <= 0) {
+        setError("Enter a valid number of tickets.");
+        return;
+      }
     }
     if (!startAt) {
       setError("Pick a start date and time.");
@@ -121,9 +166,17 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
           city: city.trim() || null,
           start_at: startIso,
           sales_close_at: salesCloseIso,
-          ticket_price_kobo: price,
-          total_tickets: tickets,
+          ticket_price_kobo: hasTiers ? Math.min(...tiers.map((t) => Math.round(Number(t.priceNaira) * 100))) : price,
+          total_tickets: hasTiers ? tiers.reduce((s, t) => s + Math.round(Number(t.quantity)), 0) : tickets,
           cover_art_path: coverPath,
+          tiers: hasTiers
+            ? tiers.map((t) => ({
+                name: t.name,
+                price_kobo: Math.round(Number(t.priceNaira) * 100),
+                quantity: Math.round(Number(t.quantity)),
+                design: t.design,
+              }))
+            : undefined,
         }),
       });
       const body = await res.json().catch(() => null);
@@ -251,6 +304,123 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
             />
           </Field>
         </div>
+        {/* Ticket tiers */}
+        <div className="rounded-xl border border-line bg-surface-2/30 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold">Ticket tiers</h3>
+            <button
+              type="button"
+              onClick={() => setShowTierForm(!showTierForm)}
+              className="text-xs font-bold text-accent underline"
+            >
+              {showTierForm ? "Cancel" : "+ Add tier"}
+            </button>
+          </div>
+          {tiers.length === 0 && !showTierForm && (
+            <p className="text-xs text-muted">
+              No tiers yet — the event will use a single price. Add tiers for VIP, Regular, Table for 4, etc.
+            </p>
+          )}
+          {tiers.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {tiers.map((t, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg border border-line bg-surface p-2 text-xs">
+                  <span className="font-bold">{t.name}</span>
+                  <span className="text-muted">·</span>
+                  <span>₦{Number(t.priceNaira).toLocaleString()}</span>
+                  <span className="text-muted">·</span>
+                  <span>{t.quantity} tickets</span>
+                  <span className="text-muted">·</span>
+                  <span className="capitalize">{t.design}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTier(i)}
+                    className="ml-auto text-muted hover:text-[#ff6b6b]"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {showTierForm && (
+            <div className="grid gap-2 rounded-lg border border-line bg-surface p-3">
+              <Field label="Tier name">
+                <Input
+                  value={tierName}
+                  onChange={(e) => setTierName(e.target.value)}
+                  placeholder="e.g. VIP, Regular, Table for 4"
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Price (₦)">
+                  <Input
+                    type="number"
+                    min="100"
+                    step="100"
+                    value={tierPrice}
+                    onChange={(e) => setTierPrice(e.target.value)}
+                    placeholder="5000"
+                  />
+                </Field>
+                <Field label="Quantity">
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={tierQty}
+                    onChange={(e) => setTierQty(e.target.value)}
+                    placeholder="50"
+                  />
+                </Field>
+              </div>
+              <Field label="Ticket design">
+                <select
+                  value={tierDesign}
+                  onChange={(e) => setTierDesign(e.target.value as Tier["design"])}
+                  className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+                >
+                  {DESIGN_OPTIONS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Button type="button" variant="primary" className="w-full" onClick={addTier}>
+                Add tier
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {tiers.length === 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Ticket price (₦)">
+              <Input
+                required
+                type="number"
+                min="100"
+                step="100"
+                value={priceNaira}
+                onChange={(e) => setPriceNaira(e.target.value)}
+                placeholder="2000"
+              />
+            </Field>
+            <Field label="Number of tickets">
+              <Input
+                required
+                type="number"
+                min="1"
+                step="1"
+                value={totalTickets}
+                onChange={(e) => setTotalTickets(e.target.value)}
+                placeholder="100"
+              />
+            </Field>
+          </div>
+        )}
+
         <Field label="Description">
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="What should fans expect?" />
         </Field>
