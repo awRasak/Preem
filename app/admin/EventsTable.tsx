@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/Badge";
-import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/Button";
 import { formatNaira, formatShowDate } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
+import { MoreHorizontal } from "lucide-react";
 
 export type AdminEvent = {
   id: string;
@@ -76,79 +76,77 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
               <div
                 key={e.id}
                 onClick={() => router.push("/admin/events/" + e.id)}
-                className="relative flex cursor-pointer gap-sp-2 overflow-hidden rounded-panel border border-line bg-surface p-sp-2 transition-colors hover:border-line-strong"
+                className="group relative cursor-pointer overflow-hidden rounded-panel border border-line bg-surface transition-colors hover:border-line-strong"
               >
-                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-ctl bg-surface-2 sm:h-24 sm:w-24">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-2">
                   <Image
                     src={e.coverArtPath || artworkFallback(e.id)}
                     alt={e.title}
                     fill
-                    className="object-cover"
-                    sizes="96px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    sizes="(max-width: 640px) 100vw, 50vw"
                   />
-                  <div className="absolute right-1 top-1">
+                  <div className="absolute right-sp-2 top-sp-2">
                     <Badge status={e.status === "published" ? "live" : "closed"}>
                       {e.status}
                     </Badge>
                   </div>
+                  <button
+                    type="button"
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      setOpenMenu(openMenu === e.id ? null : e.id);
+                    }}
+                    aria-label="More actions"
+                    aria-expanded={openMenu === e.id}
+                    className="absolute bottom-sp-2 right-sp-2 flex h-8 w-8 items-center justify-center rounded-full border border-line-strong bg-surface/80 text-muted backdrop-blur transition-colors hover:bg-surface hover:text-paper"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                  {openMenu === e.id && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setOpenMenu(null)}
+                        aria-hidden="true"
+                      />
+                      <div className="absolute bottom-12 right-sp-2 z-50 w-36 overflow-hidden rounded-panel border border-line bg-surface py-1 shadow-lg">
+                        <Link
+                          href={"/admin/events/" + e.id}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            setOpenMenu(null);
+                          }}
+                          className="block px-sp-3 py-sp-1 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
+                        >
+                          Edit
+                        </Link>
+                        <Link
+                          href={"/show/" + e.id}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            setOpenMenu(null);
+                          }}
+                          className="block px-sp-3 py-sp-1 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="min-w-0 flex-1 truncate text-base font-bold">{e.title}</h3>
-                    <button
-                      type="button"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        setOpenMenu(openMenu === e.id ? null : e.id);
-                      }}
-                      aria-label="More actions"
-                      aria-expanded={openMenu === e.id}
-                      className="-mr-1 -mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-paper"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                    {openMenu === e.id && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setOpenMenu(null)}
-                          aria-hidden="true"
-                        />
-                        <div className="absolute right-3 top-10 z-50 w-36 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
-                          <Link
-                            href={"/admin/events/" + e.id}
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              setOpenMenu(null);
-                            }}
-                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
-                          >
-                            Edit
-                          </Link>
-                          <Link
-                            href={"/show/" + e.id}
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              setOpenMenu(null);
-                            }}
-                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
-                          >
-                            View
-                          </Link>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-muted">{e.artistName}</p>
-                  <p className="mt-1 font-mono text-xs text-muted">
+                <div className="p-sp-2">
+                  <h3 className="truncate text-base font-bold">{e.title}</h3>
+                  <p className="mt-sp-1 text-xs text-muted">{e.artistName}</p>
+                  <p className="mt-sp-1 font-mono text-xs text-muted">
                     {formatShowDate(e.startAt)}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-muted">
+                  <p className="mt-sp-1 truncate text-xs text-muted">
                     {[e.venue, e.city].filter(Boolean).join(" - ") || "TBA"}
                   </p>
 
                   {e.tiers.length > 0 ? (
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-sp-2 space-y-1">
                       {e.tiers.map((t, i) => (
                         <div key={i} className="flex items-center justify-between text-xs">
                           <span className="font-medium">{t.name}</span>
@@ -159,19 +157,15 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-2 text-sm font-bold">
+                    <div className="mt-sp-2 text-sm font-bold">
                       {formatNaira(e.ticketPriceKobo)}
                     </div>
                   )}
 
-                  <div className="mt-2 flex items-center justify-between text-xs text-muted">
-                    <span>
-                      {e.ticketsSold}/{e.totalTickets} sold
-                      {soldOut && " - Sold out"}
-                    </span>
+                  <div className="mt-sp-2 text-xs text-muted">
+                    {e.ticketsSold}/{e.totalTickets} sold
+                    {soldOut && " - Sold out"}
                   </div>
-
-
                 </div>
               </div>
             );
