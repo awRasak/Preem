@@ -111,26 +111,6 @@ export function AdminShell({
             priority
           />
         </Link>
-        <form onSubmit={handleSearch} className="mb-4 px-1">
-          <div className="relative">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search…"
-              className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 pr-8 text-sm text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
-            />
-            <button
-              type="submit"
-              aria-label="Search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-paper"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-          </div>
-        </form>
         {NAV_ITEMS.map((item) => {
           const isActive = active === item.section;
           const Icon = item.icon;
@@ -156,7 +136,27 @@ export function AdminShell({
             </Link>
           );
         })}
-        <div className="mt-auto pt-4">
+        <div className="mt-auto space-y-3 pt-4">
+          <form onSubmit={handleSearch} className="px-1">
+            <div className="relative">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search…"
+                className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 pr-8 text-sm text-paper placeholder:text-muted focus:border-line-strong focus:outline-none"
+              />
+              <button
+                type="submit"
+                aria-label="Search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-paper"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            </div>
+          </form>
           <SignOutButton redirectTo="/admin/login" />
         </div>
       </aside>
