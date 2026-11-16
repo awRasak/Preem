@@ -59,6 +59,7 @@ export function BuyTicketButton({
     venue: string | null;
     city: string | null;
     start_at: string;
+    sales_close_at?: string | null;
     ticket_price_kobo: number;
   };
   artistName: string;
@@ -83,6 +84,8 @@ export function BuyTicketButton({
   const payingRef = useRef(false);
 
   const amountKobo = show.ticket_price_kobo;
+  // eslint-disable-next-line react-hooks/purity -- snapshot at render/open; server revalidates on initialize.
+  const salesClosed = new Date(show.sales_close_at ?? show.start_at).getTime() <= Date.now();
 
   function afterPaymentSuccess(paidReference: string, monipayData?: unknown) {
     setStep("verifying");
@@ -325,6 +328,11 @@ export function BuyTicketButton({
                     minimum -- the artist needs to raise the price before it can be sold.
                   </p>
                 )}
+                {salesClosed && (
+                  <p className="mb-4 rounded-lg border border-line bg-surface-2 p-3 text-xs text-muted">
+                    Ticket sales for this show are closed.
+                  </p>
+                )}
                 </div>
                 <div>
                 <Field label="Name">
@@ -370,7 +378,8 @@ export function BuyTicketButton({
                     disabled={
                       step === "submitting" ||
                       step === "verifying" ||
-                      amountKobo < MIN_CHECKOUT_KOBO
+                      amountKobo < MIN_CHECKOUT_KOBO ||
+                      salesClosed
                     }
                   >
                     {step === "submitting" ? (

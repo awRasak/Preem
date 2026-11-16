@@ -9,10 +9,10 @@ import { createClient } from "@/lib/supabase/server";
 import { PHONE_SESSION_COOKIE, verifyPhoneSessionCookieValue } from "@/lib/phone-session";
 import { PhoneLookupForm } from "./PhoneLookupForm";
 import { PlayerRow } from "./PlayerRow";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatShowDate } from "@/lib/format";
 import type { PlayerTrack } from "@/lib/player-context";
 import type { Drop } from "@/lib/types";
-import { trackPath, dropPath } from "@/lib/slug";
+import { trackPath, dropPath, showPath } from "@/lib/slug";
 import { type FanIdentity } from "@/lib/fan-identity";
 import {
   NewDropNotifications,
@@ -111,6 +111,7 @@ export default async function MyDropsPage({
         {fan ? (
           <>
             <MyDropsLibrary userId={fan.id} userEmail={fan.email ?? undefined} sortMode={sortMode} continueSection />
+            <ShowTicketsSection userEmail={fan.email ?? undefined} />
             <MerchOrdersSection userEmail={fan.email ?? undefined} />
           </>
         ) : !phoneSession ? (
@@ -123,6 +124,7 @@ export default async function MyDropsPage({
               sortMode={sortMode}
               continueSection
             />
+            <ShowTicketsSection phone={phoneSession.phone} email={phoneSession.email} />
             <MerchOrdersSection phone={phoneSession.phone} email={phoneSession.email} />
           </>
         )}
@@ -572,6 +574,108 @@ async function MerchOrdersSection({
       </div>
       <p className="mt-2 text-xs text-muted">
         Shipped by Preem. Problems with an order? Contact Preem support.
+      </p>
+    </section>
+  );
+}
+
+async function ShowTicketsSection({
+  userEmail,
+  phone,
+  email,
+}: {
+  userEmail?: string;
+  phone?: string;
+  email?: string | null;
+}) {
+  const admin = createAdminClient();
+  let query = admin
+    .from("show_tickets")
+    .select(
+      "id, amount_kobo, status, paystack_ref, created_at, purchased_at, shows(id, slug, title, venue, city, start_at, cover_art_path, status)",
+    )
+    .eq("status", "success")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (phone && email) {
+    query = query.eq("fan_phone", phone).ilike("fan_email", email);
+  } else if (userEmail) {
+    query = query.ilike("fan_email", userEmail);
+  } else {
+    return null;
+  }
+
+  const { data } = await query;
+  const tickets = (data ?? []) as unknown as {
+    id: string;
+    amount_kobo: number;
+    status: string;
+    paystack_ref: string;
+    created_at: string;
+    purchased_at: string | null;
+    shows:
+      | {
+          id: string;
+          slug: string | null;
+          title: string;
+          venue: string | null;
+          city: string | null;
+          start_at: string;
+          cover_art_path: string | null;
+          status: string;
+        }
+      | {
+          id: string;
+          slug: string | null;
+          title: string;
+          venue: string | null;
+          city: string | null;
+          start_at: string;
+          cover_art_path: string | null;
+          status: string;
+        }[]
+      | null;
+  }[];
+
+  if (tickets.length === 0) return null;
+
+  return (
+    <section className="mb-10 mt-10">
+      <h2 className="mb-4 text-lg font-bold">Your tickets</h2>
+      <div className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+        {tickets.map((t) => {
+          const show = Array.isArray(t.shows) ? t.shows[0] : t.shows;
+          const where = [show?.venue, show?.city].filter(Boolean).join(" · ") || "Venue TBA";
+          const cancelled = show?.status === "cancelled";
+          return (
+            <div key={t.id} className="flex items-center gap-3 p-4">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">
+                  {show ? (
+                    <Link href={showPath(show.slug || show.id)} className="hover:underline">
+                      {show.title}
+                    </Link>
+                  ) : (
+                    "Show"
+                  )}
+                </div>
+                <div className="mt-1 text-xs text-muted">
+                  {show ? `${formatShowDate(show.start_at)} · ${where}` : "Details unavailable"}
+                  {cancelled ? " · Cancelled by artist" : ""}
+                </div>
+                <div className="mt-1 font-mono text-[11px] text-muted">Ref {t.paystack_ref}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-bold">{formatNaira(t.amount_kobo)}</div>
+                <div className="text-[11px] text-muted">Paid</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        Keep your reference handy for entry. A receipt was sent to your email.
       </p>
     </section>
   );

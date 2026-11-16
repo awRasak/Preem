@@ -50,12 +50,16 @@ export default async function ArtistShowsPage() {
         <h1 className="mb-6 text-xl font-bold">Shows</h1>
         <ShowsManager
           artistId={user.id}
-          shows={(shows as Show[] | null)?.map((show) => ({
+          shows={(shows as (Show & { sales_close_at?: string | null })[] | null)?.map((show) => ({
             id: show.id,
+            slug: show.slug ?? null,
             title: show.title,
+            description: show.description ?? null,
             venue: show.venue,
             city: show.city,
             start_at: show.start_at,
+            end_at: show.end_at ?? null,
+            sales_close_at: show.sales_close_at ?? null,
             ticket_price_kobo: show.ticket_price_kobo,
             total_tickets: show.total_tickets,
             cover_art_path: show.cover_art_path,

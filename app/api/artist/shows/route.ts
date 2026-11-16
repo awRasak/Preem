@@ -10,6 +10,7 @@ const schema = z.object({
   city: z.string().trim().max(120).optional().nullable(),
   start_at: z.string().datetime({ offset: true }),
   end_at: z.string().datetime({ offset: true }).optional().nullable(),
+  sales_close_at: z.string().datetime({ offset: true }).optional().nullable(),
   ticket_price_kobo: z.number().int().positive().max(10_000_000),
   total_tickets: z.number().int().positive().max(100_000),
   cover_art_path: z.string().trim().max(400).optional().nullable(),
@@ -28,8 +29,18 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { title, description, venue, city, start_at, end_at, ticket_price_kobo, total_tickets, cover_art_path } =
-    parsed.data;
+  const {
+    title,
+    description,
+    venue,
+    city,
+    start_at,
+    end_at,
+    sales_close_at,
+    ticket_price_kobo,
+    total_tickets,
+    cover_art_path,
+  } = parsed.data;
 
   // Rails won't process sub-₦50 amounts -- block unpayable ticket prices.
   if (ticket_price_kobo < MIN_CHECKOUT_KOBO) {
@@ -43,6 +54,16 @@ export async function POST(req: Request) {
   if (!Number.isFinite(start.getTime())) {
     return NextResponse.json({ error: "Invalid start date" }, { status: 400 });
   }
+  const salesClose = sales_close_at ? new Date(sales_close_at) : null;
+  if (salesClose && !Number.isFinite(salesClose.getTime())) {
+    return NextResponse.json({ error: "Invalid sales close date" }, { status: 400 });
+  }
+  if (salesClose && salesClose.getTime() > start.getTime()) {
+    return NextResponse.json(
+      { error: "Sales must close at or before the show starts." },
+      { status: 400 },
+    );
+  }
 
   const { data, error } = await supabase
     .from("shows")
@@ -54,12 +75,13 @@ export async function POST(req: Request) {
       city: city?.trim() ? city : null,
       start_at: start.toISOString(),
       end_at: end_at ? new Date(end_at).toISOString() : null,
+      sales_close_at: salesClose ? salesClose.toISOString() : null,
       ticket_price_kobo,
       total_tickets,
       cover_art_path: cover_art_path ?? null,
       status: "published",
     })
-    .select("slug, title, start_at")
+    .select("id, slug, title, start_at")
     .single();
 
   if (error) {

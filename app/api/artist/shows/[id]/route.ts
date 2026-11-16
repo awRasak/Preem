@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 
-// v1 show management is intentionally minimal: create + cancel. Editing an
-// existing show (date moves, price changes) can come later -- cancellation
-// is the fast-safe action that stops ticket sales immediately.
+const editSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(2000).optional().nullable(),
+  venue: z.string().trim().max(200).optional().nullable(),
+  city: z.string().trim().max(120).optional().nullable(),
+  start_at: z.string().datetime({ offset: true }),
+  end_at: z.string().datetime({ offset: true }).optional().nullable(),
+  sales_close_at: z.string().datetime({ offset: true }).optional().nullable(),
+  ticket_price_kobo: z.number().int().positive().max(10_000_000),
+  total_tickets: z.number().int().positive().max(100_000),
+  cover_art_path: z.string().trim().max(400).optional().nullable(),
+});
+
+function validId(id: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+// PATCH { action: "cancel" } cancels the show (stops sales). PUT edits details.
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -16,7 +34,7 @@ export async function PATCH(
   if (!user) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+  if (!validId(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 
@@ -26,6 +44,98 @@ export async function PATCH(
     .eq("id", id)
     .eq("artist_id", user.id)
     .select("id, title")
+    .single();
+
+  if (!data) {
+    return NextResponse.json({ error: "Show not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ show: data });
+}
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  }
+  if (!validId(id)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
+
+  const parsed = editSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
+  const {
+    title,
+    description,
+    venue,
+    city,
+    start_at,
+    end_at,
+    sales_close_at,
+    ticket_price_kobo,
+    total_tickets,
+    cover_art_path,
+  } = parsed.data;
+
+  if (ticket_price_kobo < MIN_CHECKOUT_KOBO) {
+    return NextResponse.json({ error: "Ticket price must be at least ₦50." }, { status: 400 });
+  }
+
+  const start = new Date(start_at);
+  if (!Number.isFinite(start.getTime())) {
+    return NextResponse.json({ error: "Invalid start date" }, { status: 400 });
+  }
+  const salesClose = sales_close_at ? new Date(sales_close_at) : null;
+  if (salesClose && !Number.isFinite(salesClose.getTime())) {
+    return NextResponse.json({ error: "Invalid sales close date" }, { status: 400 });
+  }
+  if (salesClose && salesClose.getTime() > start.getTime()) {
+    return NextResponse.json(
+      { error: "Sales must close at or before the show starts." },
+      { status: 400 },
+    );
+  }
+
+  // Never shrink capacity below seats already sold or held pending.
+  const admin = createAdminClient();
+  const { count: reservedCount } = await admin
+    .from("show_tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("show_id", id)
+    .in("status", ["pending", "success"]);
+  if (total_tickets < (reservedCount ?? 0)) {
+    return NextResponse.json(
+      { error: `Total tickets can't be less than ${reservedCount ?? 0} already sold/reserved.` },
+      { status: 400 },
+    );
+  }
+
+  const { data } = await supabase
+    .from("shows")
+    .update({
+      title,
+      description: description?.trim() ? description : null,
+      venue: venue?.trim() ? venue : null,
+      city: city?.trim() ? city : null,
+      start_at: start.toISOString(),
+      end_at: end_at ? new Date(end_at).toISOString() : null,
+      sales_close_at: salesClose ? salesClose.toISOString() : null,
+      ticket_price_kobo,
+      total_tickets,
+      cover_art_path: cover_art_path ?? null,
+    })
+    .eq("id", id)
+    .eq("artist_id", user.id)
+    .select("id, slug, title")
     .single();
 
   if (!data) {

@@ -47,9 +47,10 @@ export async function POST(req: Request) {
     );
   }
 
+  // Basic existence/readable state before rate limiting the fan.
   const { data: show } = await supabase
     .from("shows")
-    .select("id, ticket_price_kobo, total_tickets, start_at, status")
+    .select("id, ticket_price_kobo, total_tickets, start_at, sales_close_at, status")
     .eq("id", showId)
     .single();
 
@@ -57,8 +58,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Show not found" }, { status: 404 });
   }
 
-  // Tickets stop selling once the doors are about to open.
-  if (new Date(show.start_at).getTime() <= Date.now()) {
+  const salesCloseAt = new Date(show.sales_close_at ?? show.start_at).getTime();
+  if (salesCloseAt <= Date.now()) {
     return NextResponse.json({ error: "Ticket sales for this show have closed." }, { status: 400 });
   }
 
@@ -79,22 +80,12 @@ export async function POST(req: Request) {
   const windowStart = new Date(
     Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
   ).toISOString();
-  const [{ count: ticketsSold }, { count: recentAttempts }] = await Promise.all([
-    supabase
-      .from("show_tickets")
-      .select("id", { count: "exact", head: true })
-      .eq("show_id", showId)
-      .eq("status", "success"),
-    supabase
-      .from("show_tickets")
-      .select("id", { count: "exact", head: true })
-      .eq("fan_phone", fanPhone)
-      .gte("created_at", windowStart),
-  ]);
+  const { count: recentAttempts } = await supabase
+    .from("show_tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("fan_phone", fanPhone)
+    .gte("created_at", windowStart);
 
-  if ((ticketsSold ?? 0) >= show.total_tickets) {
-    return NextResponse.json({ error: "This show is sold out." }, { status: 400 });
-  }
   if ((recentAttempts ?? 0) >= RATE_LIMIT_MAX_ATTEMPTS) {
     // "Later" is when the oldest attempt in this window expires.
     const { data: oldest } = await supabase
@@ -118,20 +109,45 @@ export async function POST(req: Request) {
 
   const reference = `preem_tkt_${crypto.randomUUID()}`;
 
-  const { error: insertError } = await supabase.from("show_tickets").insert({
-    show_id: showId,
-    fan_name: fanName,
-    fan_phone: fanPhone,
-    fan_email: fanEmail,
-    amount_kobo: show.ticket_price_kobo,
-    paystack_ref: reference,
-    status: "pending",
-    gateway,
+  // Atomic reservation (row-lock + capacity check inside the DB) so
+  // concurrent checkouts can't oversell the last seats. See
+  // 0036_show_sales_close_and_ticket_claim.sql.
+  const { data: claim, error: claimError } = await supabase.rpc("create_show_ticket", {
+    p_show_id: showId,
+    p_fan_name: fanName,
+    p_fan_phone: fanPhone,
+    p_fan_email: fanEmail,
+    p_amount_kobo: amountKobo,
+    p_paystack_ref: reference,
+    p_gateway: gateway,
   });
 
-  if (insertError) {
+  if (claimError) {
     return NextResponse.json({ error: "Could not start checkout." }, { status: 500 });
   }
+
+  const row = (Array.isArray(claim) ? claim[0] : claim) as
+    | { ticket_id: string | null; ticket_amount_kobo: number | null; error_code: string | null }
+    | null;
+
+  if (!row || row.error_code || !row.ticket_id) {
+    const code = row?.error_code;
+    if (code === "not_found") {
+      return NextResponse.json({ error: "Show not found" }, { status: 404 });
+    }
+    if (code === "sales_closed") {
+      return NextResponse.json({ error: "Ticket sales for this show have closed." }, { status: 400 });
+    }
+    if (code === "sold_out") {
+      return NextResponse.json({ error: "This show is sold out." }, { status: 400 });
+    }
+    if (code === "under_price") {
+      return NextResponse.json({ error: "Amount is below the ticket price." }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Could not start checkout." }, { status: 500 });
+  }
+
+  const ticketAmount = row.ticket_amount_kobo ?? show.ticket_price_kobo;
 
   // NOTE: no server-side Monipay /transaction/initialize -- the order must
   // be registered exactly ONCE, by the popup under our metadata reference.
@@ -141,7 +157,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     reference,
-    amountKobo: show.ticket_price_kobo,
+    amountKobo: ticketAmount,
     gateway,
     accessCode,
     publicKey: publicKeyForGateway(gateway),

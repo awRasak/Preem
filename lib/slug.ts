@@ -36,3 +36,7 @@ export function trackPath(
 ): string {
   return `${dropPath(artistName, dropTitle)}/${slugify(trackTitle)}`;
 }
+
+export function showPath(slugOrId: string): string {
+  return `/show/${slugOrId}`;
+}

@@ -122,6 +122,8 @@ export type Show = {
   city: string | null;
   start_at: string;
   end_at: string | null;
+  /** When ticket sales stop. null = close at start_at. */
+  sales_close_at: string | null;
   ticket_price_kobo: number;
   total_tickets: number;
   cover_art_path: string | null;

@@ -98,10 +98,12 @@ export default async function ExplorePage() {
                   key={show.id}
                   show={{
                     id: show.id,
+                    slug: show.slug,
                     title: show.title,
                     venue: show.venue,
                     city: show.city,
                     start_at: show.start_at,
+                    sales_close_at: show.sales_close_at ?? null,
                     ticket_price_kobo: show.ticket_price_kobo,
                     total_tickets: show.total_tickets,
                     cover_art_path: show.cover_art_path,

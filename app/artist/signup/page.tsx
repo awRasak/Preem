@@ -66,8 +66,7 @@ export default function ArtistSignupPage() {
               Your account is created. Head to sign in to continue.
             </p>
             <p className="text-xs text-muted">
-              You can start building drops right away — your public profile goes
-              live after a short review.
+              You can start building drops and shows right away.
             </p>
           </div>
         ) : (
