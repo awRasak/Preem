@@ -82,28 +82,37 @@ export function Nav({
           )}
         </div>
 
-        {searchable && (
-          <form
-            action="/fans/search"
-            method="get"
-            className="hidden items-center lg:flex"
-          >
-            <input
-              type="search"
-              name="q"
-              placeholder="Search artists or songs…"
-              className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
-            />
-          </form>
-        )}
-
         {children && singleChild && (
-          <div className="flex items-center gap-4">{children}</div>
+          <div className="flex items-center gap-4">
+            {children}
+            {searchable && (
+              <form action="/fans/search" method="get" className="hidden items-center lg:flex">
+                <input
+                  type="search"
+                  name="q"
+                  placeholder="Search artists or songs…"
+                  className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
+                />
+              </form>
+            )}
+          </div>
         )}
 
         {children && !singleChild && (
           <>
-            <div className="hidden items-center gap-4 lg:flex">{children}</div>
+            <div className="hidden items-center gap-4 lg:flex">
+              {children}
+              {searchable && (
+                <form action="/fans/search" method="get" className="flex items-center">
+                  <input
+                    type="search"
+                    name="q"
+                    placeholder="Search artists or songs…"
+                    className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
+                  />
+                </form>
+              )}
+            </div>
 
             <button
               onClick={() => setOpen((v) => !v)}
@@ -114,6 +123,17 @@ export function Nav({
               <Menu className="h-4 w-4" />
             </button>
           </>
+        )}
+
+        {!children && searchable && (
+          <form action="/fans/search" method="get" className="hidden items-center lg:flex">
+            <input
+              type="search"
+              name="q"
+              placeholder="Search artists or songs…"
+              className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
+            />
+          </form>
         )}
       </nav>
 
