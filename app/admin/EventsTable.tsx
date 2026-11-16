@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/Badge";
@@ -31,6 +32,7 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const router = useRouter();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -73,7 +75,8 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
             return (
               <div
                 key={e.id}
-                className="relative flex gap-3 overflow-hidden rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
+                onClick={() => router.push("/admin/events/" + e.id)}
+                className="relative flex cursor-pointer gap-3 overflow-hidden rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
               >
                 <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2 sm:h-24 sm:w-24">
                   <Image
@@ -94,7 +97,10 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                     <h3 className="min-w-0 flex-1 truncate text-base font-bold">{e.title}</h3>
                     <button
                       type="button"
-                      onClick={() => setOpenMenu(openMenu === e.id ? null : e.id)}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setOpenMenu(openMenu === e.id ? null : e.id);
+                      }}
                       aria-label="More actions"
                       aria-expanded={openMenu === e.id}
                       className="-mr-1 -mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-paper"
@@ -111,14 +117,20 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                         <div className="absolute right-3 top-10 z-50 w-36 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
                           <Link
                             href={"/admin/events/" + e.id}
-                            onClick={() => setOpenMenu(null)}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setOpenMenu(null);
+                            }}
                             className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
                           >
                             Edit
                           </Link>
                           <Link
                             href={"/show/" + e.id}
-                            onClick={() => setOpenMenu(null)}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setOpenMenu(null);
+                            }}
                             className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
                           >
                             View
@@ -159,42 +171,7 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                     </span>
                   </div>
 
-                  <div className="relative mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setOpenMenu(openMenu === e.id ? null : e.id)}
-                      aria-label="More actions"
-                      aria-expanded={openMenu === e.id}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong text-muted transition-colors hover:bg-surface-2 hover:text-paper"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                    {openMenu === e.id && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setOpenMenu(null)}
-                          aria-hidden="true"
-                        />
-                        <div className="absolute right-0 top-full z-50 mt-1 w-36 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
-                          <Link
-                            href={"/admin/events/" + e.id}
-                            onClick={() => setOpenMenu(null)}
-                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
-                          >
-                            Edit
-                          </Link>
-                          <Link
-                            href={"/show/" + e.id}
-                            onClick={() => setOpenMenu(null)}
-                            className="block px-3.5 py-2 text-sm font-medium text-paper transition-colors hover:bg-surface-2/60"
-                          >
-                            View
-                          </Link>
-                        </div>
-                      </>
-                    )}
-                  </div>
+
                 </div>
               </div>
             );
