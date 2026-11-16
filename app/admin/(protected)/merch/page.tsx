@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Button } from "@/components/Button";
 import { MerchOpsTable } from "./MerchOpsTable";
 
 // Preem ships every merch order: this is the ops queue. Advance each order
@@ -30,7 +31,12 @@ export default async function AdminMerchPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
-      <h1 className="mb-6 text-xl font-bold">Merch ops</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold">Merch ops</h1>
+        <Button href="/admin/merch/new" variant="primary" className="!px-4 !py-2 text-xs">
+          + New merch item
+        </Button>
+      </div>
       <MerchOpsTable
         orders={(orders ?? []) as unknown as import("./MerchOpsTable").OpsOrder[]}
         items={(items ?? []) as unknown as import("./MerchOpsTable").OpsItem[]}

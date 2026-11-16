@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banknote, TriangleAlert, Music2, Mic2 } from "lucide-react";
+import { Banknote, TriangleAlert, Music2, Mic2, Mic, CalendarDays, ShoppingBag, Plus } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, timeAgo } from "@/lib/format";
@@ -298,6 +298,32 @@ export default async function AdminPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 space-y-10 px-5 py-8 sm:px-8">
+      <section>
+        <h2 className="mb-3 text-lg font-bold">Quick create</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { href: "/admin/artists/new", label: "Artist", icon: <Mic className="h-5 w-5" /> },
+            { href: "/admin/songs/new", label: "Drop", icon: <Music2 className="h-5 w-5" /> },
+            { href: "/admin/events/new", label: "Event", icon: <CalendarDays className="h-5 w-5" /> },
+            { href: "/admin/merch/new", label: "Merch", icon: <ShoppingBag className="h-5 w-5" /> },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-col items-center gap-2 rounded-xl border border-line bg-surface p-4 text-center transition-colors hover:border-accent hover:bg-surface-2/50"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-accent">
+                {item.icon}
+              </span>
+              <span className="text-sm font-bold">
+                <Plus className="mr-1 inline h-3 w-3" />
+                {item.label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <section>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="col-span-2 flex flex-col justify-between gap-4 rounded-2xl border border-line bg-surface p-5 sm:col-span-2">

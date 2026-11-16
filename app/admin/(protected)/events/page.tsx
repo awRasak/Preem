@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/Button";
 import { EventsTable, type AdminEvent } from "../../EventsTable";
 
 export const revalidate = 0;
@@ -45,7 +46,12 @@ export default async function AdminEventsPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
-      <h1 className="mb-6 text-xl font-bold">Events ({events.length})</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold">Events ({events.length})</h1>
+        <Button href="/admin/events/new" variant="primary" className="!px-4 !py-2 text-xs">
+          + New event
+        </Button>
+      </div>
       <EventsTable events={events} />
     </main>
   );
