@@ -1366,3 +1366,11 @@ alter table public.drops
 
 alter table public.shows
   add column if not exists featured_on_marquee boolean not null default false;
+
+-- 0042: keep every retired unlock reference so a payment completed under an
+-- older reference can still be matched after a re-initialize rotated it.
+alter table public.distribution_unlocks
+  add column if not exists previous_references text[] not null default '{}';
+
+comment on column public.distribution_unlocks.previous_references is
+  'References retired by a re-initialize. A successful payment under any of these still unlocks the drop.';

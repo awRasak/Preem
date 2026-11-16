@@ -100,11 +100,23 @@ export async function markDistributionUnlockSuccess(
   reference: string,
   expectedAmountKobo?: number,
 ) {
-  const { data: unlock } = await supabase
+  let { data: unlock } = await supabase
     .from("distribution_unlocks")
     .select("*")
     .eq("reference", reference)
     .maybeSingle();
+
+  // A re-initialize rotates the row's live reference (0042). A payment that
+  // completed under a retired one still belongs to this drop, so match the
+  // history too before giving up.
+  if (!unlock) {
+    const { data: byHistory } = await supabase
+      .from("distribution_unlocks")
+      .select("*")
+      .contains("previous_references", [reference])
+      .maybeSingle();
+    unlock = byHistory ?? null;
+  }
 
   if (!unlock) return null;
   if (unlock.status === "paid") return unlock;
@@ -122,7 +134,6 @@ export async function markDistributionUnlockSuccess(
     .from("distribution_unlocks")
     .update({ status: "paid" })
     .eq("drop_id", unlock.drop_id)
-    .eq("reference", reference)
     .eq("status", "pending")
     .select()
     .single();

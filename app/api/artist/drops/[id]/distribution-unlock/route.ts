@@ -64,11 +64,24 @@ export async function POST(
   const reference = `preem_${crypto.randomUUID()}`;
   // Re-initializing (abandoned popup, new attempt) rotates the reference --
   // the popup must create the order itself under a fresh one (see the NOTE
-  // in app/api/checkout/initialize/route.ts).
+  // in app/api/checkout/initialize/route.ts). Retire the old reference onto
+  // the row instead of overwriting it: a payment completed under it before
+  // the retry must still be able to unlock the drop (0042).
+  const { data: previous } = await admin
+    .from("distribution_unlocks")
+    .select("reference, previous_references")
+    .eq("drop_id", id)
+    .maybeSingle();
+  const history = [...(previous?.previous_references ?? [])];
+  if (previous?.reference && previous.reference !== reference) {
+    history.push(previous.reference);
+  }
+
   const { error: upsertError } = await admin.from("distribution_unlocks").upsert(
     {
       drop_id: id,
       reference,
+      previous_references: history,
       amount_kobo: eligibility.priceKobo,
       status: "pending",
     },

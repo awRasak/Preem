@@ -159,46 +159,58 @@ describe("distributionEligibility", () => {
 describe("markDistributionUnlockSuccess", () => {
   type Row = { drop_id: string; reference: string; amount_kobo: number; status: string };
 
-  // Row-backed double of the three chains the mark function runs: lookup by
-  // reference, the conditional pending -> paid update (three eq guards), and
-  // the re-read after a lost transition race.
+  // Row-backed double of the chains the mark function runs: lookup by
+  // reference, fallback lookup by retired-reference history, the conditional
+  // pending -> paid update (guards on drop_id + status), and the re-read after
+  // a lost transition race.
   function markAdmin(store: { row: Row | null }) {
-    const read = (col: string, v: string) => ({
-      maybeSingle: async () => ({
-        data: store.row && store.row[col as keyof Row] === v ? store.row : null,
-        error: null,
-      }),
-      single: async () => ({
-        data: store.row && store.row[col as keyof Row] === v ? { ...store.row } : null,
-        error: null,
-      }),
-    });
     return {
-      from: () => ({
-        select: () => ({ eq: read }),
-        update: (patch: Partial<Row>) => ({
-          eq: (c1: keyof Row, v1: string) => ({
-            eq: (c2: keyof Row, v2: string) => ({
-              eq: (c3: keyof Row, v3: string) => ({
-                select: () => ({
-                  single: async () => {
-                    if (
-                      store.row &&
-                      store.row[c1] === v1 &&
-                      store.row[c2] === v2 &&
-                      store.row[c3] === v3
-                    ) {
-                      store.row = { ...store.row, ...patch };
-                      return { data: { ...store.row }, error: null };
-                    }
-                    return { data: null, error: null };
-                  },
-                }),
-              }),
-            }),
-          }),
-        }),
-      }),
+      from: () => {
+        const state: {
+          filters: Record<string, unknown>;
+          isUpdate: boolean;
+          patch: Partial<Row>;
+        } = { filters: {}, isUpdate: false, patch: {} };
+        const matches = () => {
+          if (!store.row) return false;
+          return Object.entries(state.filters).every(([k, v]) => {
+            if (k === "previous_references") {
+              const history = (store.row as unknown as Record<string, unknown>)
+                .previous_references;
+              const wanted = Array.isArray(v) ? v : [v];
+              return Array.isArray(history) && wanted.some((w) => history.includes(w));
+            }
+            return (store.row as unknown as Record<string, unknown>)[k] === v;
+          });
+        };
+        const chain: Record<string, unknown> = {};
+        chain.select = () => chain;
+        chain.eq = (c: string, v: unknown) => {
+          state.filters[c] = v;
+          return chain;
+        };
+        chain.contains = (c: string, v: unknown) => {
+          state.filters[c] = v;
+          return chain;
+        };
+        chain.update = (patch: Partial<Row>) => {
+          state.isUpdate = true;
+          state.patch = patch;
+          return chain;
+        };
+        chain.maybeSingle = async () => ({
+          data: matches() ? store.row : null,
+          error: null,
+        });
+        chain.single = async () => {
+          if (state.isUpdate && matches() && store.row) {
+            store.row = { ...store.row, ...state.patch };
+            return { data: { ...store.row }, error: null };
+          }
+          return { data: matches() ? { ...store.row } : null, error: null };
+        };
+        return chain;
+      },
     } as unknown as SupabaseClient;
   }
 
@@ -228,5 +240,21 @@ describe("markDistributionUnlockSuccess", () => {
     const store = { row: null };
     const out = await markDistributionUnlockSuccess(markAdmin(store), "some_other_ref", 100);
     expect(out).toBeNull();
+  });
+
+  it("unlocks from a retired reference after a re-initialize rotated the row", async () => {
+    const RETIRED = "preem_retired_ref";
+    const store = {
+      row: {
+        drop_id: "d1",
+        reference: "preem_new_ref",
+        previous_references: [RETIRED],
+        amount_kobo: 150_000,
+        status: "pending",
+      } as Row & { previous_references: string[] },
+    };
+    const out = await markDistributionUnlockSuccess(markAdmin(store), RETIRED, 150_000);
+    expect(out?.status).toBe("paid");
+    expect(store.row.status).toBe("paid");
   });
 });
