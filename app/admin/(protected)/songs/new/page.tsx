@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AdminDropWizard } from "./AdminDropWizard";
 
@@ -14,8 +15,13 @@ export default async function AdminNewSongPage() {
     .limit(500);
 
   return (
-    <AdminDropWizard
-      artists={(artists ?? []).map((a) => ({ id: a.id, stageName: a.stage_name }))}
-    />
+    <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
+      <Link href="/admin/songs" className="mb-4 inline-block text-sm text-muted hover:text-paper">
+        ← Songs
+      </Link>
+      <AdminDropWizard
+        artists={(artists ?? []).map((a) => ({ id: a.id, stageName: a.stage_name }))}
+      />
+    </main>
   );
 }

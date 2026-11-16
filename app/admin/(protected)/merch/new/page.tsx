@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { NewMerchForm } from "./NewMerchForm";
 
@@ -15,6 +16,9 @@ export default async function AdminNewMerchPage() {
 
   return (
     <main className="mx-auto w-full max-w-lg flex-1 px-5 py-8 sm:px-8">
+      <Link href="/admin/merch" className="mb-4 inline-block text-sm text-muted hover:text-paper">
+        ← Merch
+      </Link>
       <h1 className="mb-6 text-xl font-bold">New merch item</h1>
       <NewMerchForm
         artists={(artists ?? []).map((a) => ({ id: a.id, stageName: a.stage_name }))}
