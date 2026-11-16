@@ -64,29 +64,29 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
       {pageItems.length === 0 ? (
         <p className="text-sm text-muted">No matching events.</p>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {pageItems.map((e) => {
             const soldOut = e.ticketsSold >= e.totalTickets;
             return (
               <div
                 key={e.id}
-                className="flex gap-4 overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-strong"
+                className="flex gap-3 overflow-hidden rounded-xl border border-line bg-surface p-3 transition-colors hover:border-line-strong"
               >
-                <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden bg-surface-2 sm:h-32 sm:w-32">
+                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2 sm:h-24 sm:w-24">
                   <Image
                     src={e.coverArtPath || artworkFallback(e.id)}
                     alt={e.title}
                     fill
                     className="object-cover"
-                    sizes="128px"
+                    sizes="96px"
                   />
-                  <div className="absolute right-1.5 top-1.5">
+                  <div className="absolute right-1 top-1">
                     <Badge status={e.status === "published" ? "live" : "closed"}>
                       {e.status}
                     </Badge>
                   </div>
                 </div>
-                <div className="min-w-0 flex-1 py-3 pr-4">
+                <div className="min-w-0 flex-1">
                   <h3 className="truncate text-base font-bold">{e.title}</h3>
                   <p className="mt-1 text-xs text-muted">{e.artistName}</p>
                   <p className="mt-1 font-mono text-xs text-muted">
