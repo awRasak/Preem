@@ -14,6 +14,7 @@ import { FilmstripGallery } from "@/components/FilmstripGallery";
 import { HomeFAQ } from "@/components/HomeFAQ";
 import { HomeMobileCta } from "@/components/HomeMobileCta";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { artworkFallback } from "@/lib/placeholder";
 import { organizationJsonLd } from "@/lib/seo";
 import type { Drop } from "@/lib/types";
@@ -30,7 +31,7 @@ export default async function MarketplacePage() {
   // slowest of the two instead of the sum.
   const [{ data }, {
     data: { user: sessionUser },
-  }] = await Promise.all([
+  }, { data: showsData }] = await Promise.all([
     supabase
       .from("drops")
       .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url, approval_status)")
@@ -38,6 +39,13 @@ export default async function MarketplacePage() {
       .or(`window_end.is.null,window_end.gt.${new Date().toISOString()}`)
       .order("created_at", { ascending: false }),
     supabase.auth.getUser(),
+    supabase
+      .from("shows")
+      .select("*, artist:artists!drops_artist_id_fkey(id, stage_name, avatar_url), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)")
+      .eq("status", "published")
+      .gte("start_at", new Date().toISOString())
+      .order("start_at", { ascending: true })
+      .limit(8),
   ]);
 
   const drops = ((data ?? []) as (Drop & {
@@ -51,6 +59,61 @@ export default async function MarketplacePage() {
 
   const previewDrops = drops.slice(0, 8);
   const filmstripDrops = drops.slice(0, 10);
+
+  // Sold counts need the service role (show_tickets has no anon RLS).
+  const showIds = (showsData ?? []).map((s: { id: string }) => s.id);
+  const admin = createAdminClient();
+  const { data: soldTickets } =
+    showIds.length > 0
+      ? await admin
+          .from("show_tickets")
+          .select("show_id")
+          .in("show_id", showIds)
+          .eq("status", "success")
+      : { data: [] };
+  const soldByShow = new Map<string, number>();
+  for (const t of soldTickets ?? []) {
+    soldByShow.set(t.show_id, (soldByShow.get(t.show_id) ?? 0) + 1);
+  }
+  const previewShows = ((showsData ?? []) as Array<{
+    id: string;
+    slug: string | null;
+    title: string;
+    venue: string | null;
+    city: string | null;
+    start_at: string;
+    sales_close_at: string | null;
+    ticket_price_kobo: number;
+    total_tickets: number;
+    cover_art_path: string | null;
+    artist: { id: string; stage_name: string; avatar_url: string | null } | null;
+    tiers: { id: string; name: string; price_kobo: number; quantity: number; design: string }[] | null;
+  }>).filter((s) => s.artist).map((s) => ({
+    id: s.id,
+    slug: s.slug,
+    title: s.title,
+    venue: s.venue,
+    city: s.city,
+    start_at: s.start_at,
+    sales_close_at: s.sales_close_at,
+    ticket_price_kobo: s.ticket_price_kobo,
+    total_tickets: s.total_tickets,
+    cover_art_path: s.cover_art_path,
+    soldCount: soldByShow.get(s.id) ?? 0,
+    artist: s.artist ?? undefined,
+    tiers: (s.tiers ?? []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      price_kobo: t.price_kobo,
+      quantity: t.quantity,
+      design: t.design,
+    })),
+  }));
+
+  const marqueeItems = [
+    ...previewDrops.map((d) => ({ kind: "drop" as const, drop: d })),
+    ...previewShows.map((s) => ({ kind: "show" as const, show: s })),
+  ];
 
   // The marketing header never checked who's signed in, so an already
   // authenticated artist or fan always saw a generic "Sign in" button here
@@ -133,17 +196,17 @@ export default async function MarketplacePage() {
             </div>
           </section>
 
-          {/* Live drops */}
+          {/* Live drops + upcoming shows */}
           <div className="mb-6 mt-24 flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Live drops</h2>
+            <h2 className="text-2xl font-bold">Explore</h2>
             <Link
               href="/explore"
               className="text-xs font-bold text-accent underline"
             >
-              Explore all drops →
+              Explore all →
             </Link>
           </div>
-          {previewDrops.length === 0 && (
+          {marqueeItems.length === 0 && (
             <p className="text-sm text-muted">
               Nothing live yet — check back soon.
             </p>
@@ -151,7 +214,7 @@ export default async function MarketplacePage() {
         </div>
 
         {/* Full-bleed: touches the actual screen edges, 0 margin */}
-        {previewDrops.length > 0 && <LiveDropsMarquee drops={previewDrops} />}
+        {marqueeItems.length > 0 && <LiveDropsMarquee items={marqueeItems} />}
 
         <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
           {/* Feature carousel */}
