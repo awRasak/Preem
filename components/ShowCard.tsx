@@ -27,9 +27,11 @@ export type ShowCardShow = {
 export function ShowCard({
   show,
   showArtist = false,
+  hideActions = false,
 }: {
   show: ShowCardShow;
   showArtist?: boolean;
+  hideActions?: boolean;
 }) {
   const soldOut = show.soldCount >= show.total_tickets;
   const salesCloseAt = new Date(show.sales_close_at ?? show.start_at).getTime();
@@ -46,7 +48,7 @@ export function ShowCard({
             src={show.cover_art_path || artworkFallback(show.id)}
             alt={show.title}
             fill
-            className="object-contain"
+            className="object-cover"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute right-2 top-2">
@@ -78,44 +80,46 @@ export function ShowCard({
           {[show.venue, show.city].filter(Boolean).join(" · ") || "TBA"}
         </div>
       </Link>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div>
-          <div className="text-sm font-bold">
-            {show.tiers && show.tiers.length > 0
-              ? `From ${formatNaira(Math.min(...show.tiers.map((t) => t.price_kobo)))}`
-              : formatNaira(show.ticket_price_kobo)}
+      {!hideActions && (
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div>
+            <div className="text-sm font-bold">
+              {show.tiers && show.tiers.length > 0
+                ? `From ${formatNaira(Math.min(...show.tiers.map((t) => t.price_kobo)))}`
+                : formatNaira(show.ticket_price_kobo)}
+            </div>
+            <div className="text-[11px] text-muted">
+              {Math.max(0, show.total_tickets - show.soldCount)} left
+            </div>
           </div>
-          <div className="text-[11px] text-muted">
-            {Math.max(0, show.total_tickets - show.soldCount)} left
-          </div>
+          {soldOut ? (
+            <Badge status="closed">Sold out</Badge>
+          ) : salesClosed ? (
+            <Badge status="closed">Closed</Badge>
+          ) : (
+            <BuyTicketButton
+              show={{
+                id: show.id,
+                title: show.title,
+                venue: show.venue,
+                city: show.city,
+                start_at: show.start_at,
+                sales_close_at: show.sales_close_at ?? null,
+                ticket_price_kobo: show.ticket_price_kobo,
+              }}
+              artistName={artistName}
+              tiers={show.tiers?.map((t) => ({
+                id: t.id,
+                name: t.name,
+                price_kobo: t.price_kobo,
+                quantity: t.quantity,
+                design: t.design,
+                soldCount: 0,
+              }))}
+            />
+          )}
         </div>
-        {soldOut ? (
-          <Badge status="closed">Sold out</Badge>
-        ) : salesClosed ? (
-          <Badge status="closed">Closed</Badge>
-        ) : (
-          <BuyTicketButton
-            show={{
-              id: show.id,
-              title: show.title,
-              venue: show.venue,
-              city: show.city,
-              start_at: show.start_at,
-              sales_close_at: show.sales_close_at ?? null,
-              ticket_price_kobo: show.ticket_price_kobo,
-            }}
-            artistName={artistName}
-            tiers={show.tiers?.map((t) => ({
-              id: t.id,
-              name: t.name,
-              price_kobo: t.price_kobo,
-              quantity: t.quantity,
-              design: t.design,
-              soldCount: 0,
-            }))}
-          />
-        )}
-      </div>
+      )}
     </div>
   );
 }

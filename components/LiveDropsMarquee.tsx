@@ -18,7 +18,7 @@ function Track({ items }: { items: MarqueeItem[] }) {
           {item.kind === "drop" ? (
             <DropCard drop={item.drop} />
           ) : (
-            <ShowCard show={item.show} showArtist />
+            <ShowCard show={item.show} showArtist hideActions />
           )}
         </div>
       ))}
