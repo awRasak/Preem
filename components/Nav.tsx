@@ -84,34 +84,34 @@ export function Nav({
 
         {children && singleChild && (
           <div className="flex items-center gap-4">
-            {children}
             {searchable && (
               <form action="/fans/search" method="get" className="hidden items-center lg:flex">
                 <input
                   type="search"
                   name="q"
                   placeholder="Search artists or songs…"
-                  className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
+                  className="w-48 rounded-full border border-line-strong bg-transparent px-3.5 py-1.5 text-[13px] text-muted placeholder:text-muted transition-all duration-150 ease-out hover:scale-[1.04] hover:border-line-strong hover:bg-surface-2 hover:text-paper focus:border-line-strong focus:bg-surface-2 focus:text-paper focus:outline-none xl:w-64"
                 />
               </form>
             )}
+            {children}
           </div>
         )}
 
         {children && !singleChild && (
           <>
             <div className="hidden items-center gap-4 lg:flex">
-              {children}
               {searchable && (
                 <form action="/fans/search" method="get" className="flex items-center">
                   <input
                     type="search"
                     name="q"
                     placeholder="Search artists or songs…"
-                    className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
+                    className="w-48 rounded-full border border-line-strong bg-transparent px-3.5 py-1.5 text-[13px] text-muted placeholder:text-muted transition-all duration-150 ease-out hover:scale-[1.04] hover:border-line-strong hover:bg-surface-2 hover:text-paper focus:border-line-strong focus:bg-surface-2 focus:text-paper focus:outline-none xl:w-64"
                   />
                 </form>
               )}
+              {children}
             </div>
 
             <button
@@ -131,7 +131,7 @@ export function Nav({
               type="search"
               name="q"
               placeholder="Search artists or songs…"
-              className="w-48 rounded-full border border-line-strong bg-surface-2 px-3.5 py-1.5 text-[13px] text-paper placeholder:text-muted focus:border-line-strong focus:outline-none xl:w-64"
+              className="w-48 rounded-full border border-line-strong bg-transparent px-3.5 py-1.5 text-[13px] text-muted placeholder:text-muted transition-all duration-150 ease-out hover:scale-[1.04] hover:border-line-strong hover:bg-surface-2 hover:text-paper focus:border-line-strong focus:bg-surface-2 focus:text-paper focus:outline-none xl:w-64"
             />
           </form>
         )}
