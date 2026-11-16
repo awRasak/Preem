@@ -9,6 +9,7 @@ import { Spinner } from "@/components/Loader";
 import { Field, Input, Textarea } from "@/components/Field";
 import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { prepareArtworkFile } from "@/lib/client-image";
+import { createClient } from "@/lib/supabase/client";
 
 type Artist = { id: string; stageName: string };
 
