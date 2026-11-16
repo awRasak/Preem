@@ -8,6 +8,7 @@ import { Spinner } from "@/components/Loader";
 import { Field, Input, Textarea } from "@/components/Field";
 import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { prepareArtworkFile } from "@/lib/client-image";
+import { createClient } from "@/lib/supabase/client";
 
 type Artist = { id: string; stageName: string };
 
@@ -119,7 +120,9 @@ export function EditEventForm({
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.send(prepared);
       });
-      setCoverPath(path);
+      const supabase = createClient();
+      const { data } = supabase.storage.from("artwork").getPublicUrl(path);
+      setCoverPath(data.publicUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not upload cover art.");
     } finally {

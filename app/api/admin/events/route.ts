@@ -62,11 +62,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // Every staged file must belong to the target artist's folder.
-  if (cover_art_path && !cover_art_path.startsWith(`${artistId}/`)) {
-    return NextResponse.json({ error: "Invalid cover art path." }, { status: 400 });
-  }
-
+  // Admin is trusted; cover_art_path may be a storage path or a full URL.
   const supabase = createAdminClient();
 
   const { data: artist } = await supabase

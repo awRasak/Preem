@@ -93,7 +93,9 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.send(file);
       });
-      setCoverPath(path);
+      const supabase = createClient();
+      const { data } = supabase.storage.from("artwork").getPublicUrl(path);
+      setCoverPath(data.publicUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not upload cover art.");
     } finally {

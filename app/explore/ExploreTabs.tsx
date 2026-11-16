@@ -145,7 +145,7 @@ export function ExploreTabs({
           {shelves.exclusive.length > 0 && (
             <section className="mb-10">
               <h2 className="mb-4 text-lg font-bold">Exclusive</h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {shelves.exclusive.map((drop) => (
                   <DropCard key={drop.id} drop={drop} />
                 ))}
@@ -155,7 +155,7 @@ export function ExploreTabs({
           {shelves.endingSoon.length > 0 && (
             <section className="mb-10">
               <h2 className="mb-4 text-lg font-bold">Ending soon</h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {shelves.endingSoon.map((drop) => (
                   <DropCard key={drop.id} drop={drop} />
                 ))}
@@ -165,7 +165,7 @@ export function ExploreTabs({
           {shelves.liveNow.length > 0 && (
             <section className="mb-10">
               <h2 className="mb-4 text-lg font-bold">Live now</h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {shelves.liveNow.map((drop) => (
                   <DropCard key={drop.id} drop={drop} />
                 ))}
@@ -175,7 +175,7 @@ export function ExploreTabs({
           {shelves.closed.length > 0 && (
             <section className="mb-10">
               <h2 className="mb-4 text-lg font-bold">Past drops</h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {shelves.closed.map((drop) => (
                   <DropCard key={drop.id} drop={drop} />
                 ))}
