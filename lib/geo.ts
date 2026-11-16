@@ -22,8 +22,13 @@ export function gatewayForCountry(
   gateways: GatewayToggles,
 ): Gateway | null {
   const normalized = country ?? "NG";
+  // Default to Monipay. Monipay is not used for:
+  //   1. International payments → Squad
+  //   2. When Monipay fails → Paystack (fallback)
   const order: Gateway[] =
-    normalized === "NG" ? ["monipay", "paystack", "squad"] : ["squad", "paystack", "monipay"];
+    normalized === "NG"
+      ? ["monipay", "paystack"]
+      : ["squad", "paystack"];
   return order.find((gateway) => gateways[`${gateway}Enabled`]) ?? null;
 }
 
