@@ -79,9 +79,15 @@ export async function POST(req: Request) {
     );
   }
 
+  // Send them to the set-password page, not the site root -- otherwise the
+  // recovery tokens land on the homepage, the password form never shows, and
+  // the artist falls through to /artist/signup where their (already-created)
+  // name is correctly rejected as taken.
+  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://preem.ng"}/artist/reset-password`;
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
     type: "recovery",
     email,
+    options: { redirectTo },
   });
   if (linkError || !linkData.properties?.action_link) {
     return NextResponse.json({
