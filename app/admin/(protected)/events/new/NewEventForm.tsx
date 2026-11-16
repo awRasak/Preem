@@ -152,107 +152,123 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-3">
-      <Field label="Artist">
-        <select
-          value={artistId}
-          onChange={(e) => setArtistId(e.target.value)}
-          className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-        >
-          {artists.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.stageName}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Title">
-        <Input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Lagos takeover night" />
-      </Field>
-      <Field label="Venue">
-        <Input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="e.g. The Shrine" />
-      </Field>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="City">
-          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lagos" />
-        </Field>
-        <Field label="Start date & time">
-          <DateTimePicker value={startAt} onChange={setStartAt} />
-        </Field>
-      </div>
-      <Field label="Sales close (optional — defaults to start time)">
-        <DateTimePicker value={salesCloseAt} onChange={setSalesCloseAt} />
-      </Field>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Ticket price (₦)">
-          <Input
-            required
-            type="number"
-            min="100"
-            step="100"
-            value={priceNaira}
-            onChange={(e) => setPriceNaira(e.target.value)}
-            placeholder="2000"
-          />
-        </Field>
-        <Field label="Number of tickets">
-          <Input
-            required
-            type="number"
-            min="1"
-            step="1"
-            value={totalTickets}
-            onChange={(e) => setTotalTickets(e.target.value)}
-            placeholder="100"
-          />
-        </Field>
-      </div>
-      <Field label="Description">
-        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="What should fans expect?" />
-      </Field>
-      <Field label="Cover art (optional)">
-        <div className="flex items-center gap-3">
-          {coverPath && (
-            <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
-              <Image src={coverPath} alt="" fill className="object-cover" sizes="64px" />
+    <form onSubmit={handleSubmit} className="grid gap-6 sm:grid-cols-[260px_1fr]">
+      {/* Cover art — full-height stack on the side */}
+      <div className="flex flex-col gap-3">
+        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl border border-line bg-surface-2">
+          {coverPath ? (
+            <Image src={coverPath} alt="Cover art" fill className="object-cover" sizes="260px" />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted">
+              <span className="text-4xl">🖼️</span>
+              <span className="text-xs">No cover art</span>
             </div>
           )}
-          <label className="cursor-pointer">
-            <span className="text-xs font-bold text-accent underline">
-              {uploading ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Spinner size="xs" /> Uploading… {uploadPercent !== null ? `${uploadPercent}%` : ""}
-                </span>
-              ) : coverPath ? (
-                "Replace art"
-              ) : (
-                "Upload art"
-              )}
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleCoverChange}
-              disabled={uploading}
-            />
-          </label>
         </div>
-      </Field>
-      {error && <p className="text-sm text-[#ff6b6b]">{error}</p>}
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={() => router.push("/admin/events")}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="primary" className="flex-1" disabled={saving || uploading}>
-          {saving ? (
-            <span className="inline-flex items-center gap-2">
-              <Spinner size="xs" tone="current" /> Creating…
-            </span>
-          ) : (
-            "Create event"
-          )}
-        </Button>
+        <label className="cursor-pointer">
+          <span className="block w-full rounded-lg border border-line-strong bg-surface-2 px-3 py-2 text-center text-xs font-bold text-accent transition-colors hover:bg-surface">
+            {uploading ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Spinner size="xs" /> Uploading… {uploadPercent !== null ? `${uploadPercent}%` : ""}
+              </span>
+            ) : coverPath ? (
+              "Replace art"
+            ) : (
+              "Upload art"
+            )}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverChange}
+            disabled={uploading}
+          />
+        </label>
+        {uploadPercent !== null && (
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${uploadPercent}%` }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Form fields */}
+      <div className="grid gap-3">
+        <Field label="Artist">
+          <select
+            value={artistId}
+            onChange={(e) => setArtistId(e.target.value)}
+            className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+          >
+            {artists.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.stageName}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Title">
+          <Input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Lagos takeover night" />
+        </Field>
+        <Field label="Venue">
+          <Input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="e.g. The Shrine" />
+        </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="City">
+            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lagos" />
+          </Field>
+          <Field label="Start date & time">
+            <DateTimePicker value={startAt} onChange={setStartAt} />
+          </Field>
+        </div>
+        <Field label="Sales close (optional — defaults to start time)">
+          <DateTimePicker value={salesCloseAt} onChange={setSalesCloseAt} />
+        </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Ticket price (₦)">
+            <Input
+              required
+              type="number"
+              min="100"
+              step="100"
+              value={priceNaira}
+              onChange={(e) => setPriceNaira(e.target.value)}
+              placeholder="2000"
+            />
+          </Field>
+          <Field label="Number of tickets">
+            <Input
+              required
+              type="number"
+              min="1"
+              step="1"
+              value={totalTickets}
+              onChange={(e) => setTotalTickets(e.target.value)}
+              placeholder="100"
+            />
+          </Field>
+        </div>
+        <Field label="Description">
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="What should fans expect?" />
+        </Field>
+        {error && <p className="text-sm text-[#ff6b6b]">{error}</p>}
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={() => router.push("/admin/events")}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" className="flex-1" disabled={saving || uploading}>
+            {saving ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner size="xs" tone="current" /> Creating…
+              </span>
+            ) : (
+              "Create event"
+            )}
+          </Button>
+        </div>
       </div>
     </form>
   );

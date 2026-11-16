@@ -14,7 +14,7 @@ export default async function AdminNewEventPage() {
     .limit(500);
 
   return (
-    <main className="mx-auto w-full max-w-lg flex-1 px-5 py-8 sm:px-8">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
       <h1 className="mb-6 text-xl font-bold">New event</h1>
       <NewEventForm
         artists={(artists ?? []).map((a) => ({ id: a.id, stageName: a.stage_name }))}
