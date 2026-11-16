@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wallet, Banknote, TriangleAlert, Music2, Mic2 } from "lucide-react";
+import { Banknote, TriangleAlert, Music2, Mic2 } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, timeAgo } from "@/lib/format";
@@ -37,7 +37,9 @@ export default async function AdminPage({
   const { range: rawRange } = await searchParams;
   const range = parseRange(rawRange);
   const rangeDays = RANGES.find((r) => r.id === range)!.days;
-  const cutoff = rangeDays === null ? null : Date.now() - rangeDays * 86_400_000;
+  // eslint-disable-next-line react-hooks/purity -- server-render time defines the range window for this request.
+  const now = Date.now();
+  const cutoff = rangeDays === null ? null : now - rangeDays * 86_400_000;
 
   const supabase = createAdminClient();
 
@@ -100,17 +102,17 @@ export default async function AdminPage({
       .from("purchases")
       .select("id", { count: "exact", head: true })
       .eq("status", "failed")
-      .gte("created_at", new Date(Date.now() - 24 * 3_600_000).toISOString()),
+      .gte("created_at", new Date(now - 24 * 3_600_000).toISOString()),
     supabase
       .from("show_tickets")
       .select("id", { count: "exact", head: true })
       .eq("status", "failed")
-      .gte("created_at", new Date(Date.now() - 24 * 3_600_000).toISOString()),
+      .gte("created_at", new Date(now - 24 * 3_600_000).toISOString()),
     supabase
       .from("merch_orders")
       .select("id", { count: "exact", head: true })
       .eq("status", "failed")
-      .gte("created_at", new Date(Date.now() - 24 * 3_600_000).toISOString()),
+      .gte("created_at", new Date(now - 24 * 3_600_000).toISOString()),
     supabase
       .from("purchases")
       .select("fan_name, amount_kobo, created_at, drops(title, artist:artists!drops_artist_id_fkey(stage_name))")

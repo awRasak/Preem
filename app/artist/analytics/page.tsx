@@ -117,7 +117,9 @@ export default async function ArtistAnalyticsPage({
   const atOf = (p: Purchase) => p.purchased_at ?? p.created_at;
 
   // Everything below (except the momentum line) is scoped to the range.
-  const cutoff = rangeDef.days === null ? null : Date.now() - rangeDef.days * DAY_MS;
+  // eslint-disable-next-line react-hooks/purity -- server-render time defines analytics windows for this request.
+  const now = Date.now();
+  const cutoff = rangeDef.days === null ? null : now - rangeDef.days * DAY_MS;
   const inRange = (iso: string | null, fallback: string) =>
     cutoff === null || new Date(iso ?? fallback).getTime() >= cutoff;
   const purchases =
@@ -185,7 +187,6 @@ export default async function ArtistAnalyticsPage({
 
   // Momentum: rolling 7 days vs the 7 before it, always on all data -- a
   // business-health read independent of the selected window.
-  const now = Date.now();
   let thisWeekKobo = 0;
   let lastWeekKobo = 0;
   for (const p of allPurchases) {

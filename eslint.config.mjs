@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Nested build artifacts and local tool worktrees (not source).
+    "**/.next/**",
+    "**/.claude/**",
+    "**/coverage/**",
+    "**/playwright-report/**",
   ]),
 ]);
 

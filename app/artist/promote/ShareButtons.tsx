@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 // One share row for any artist link (main page, drop, pre-save, signup).
 // WhatsApp and X get real prefilled intents. Instagram and TikTok accept no
@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 // tap copies pre-written text + link to paste in-app. On phones with a
 // native share sheet, the Share button covers every installed app
 // (including WhatsApp Status) in one tap.
+const subscribe = () => () => {};
+
 export function ShareButtons({
   path,
   title,
@@ -19,16 +21,14 @@ export function ShareButtons({
 }) {
   // SSR/prerender-safe fallback: relative path until the client resolves the
   // real origin (local dev, preview deploys, and prod each differ).
-  const [url, setUrl] = useState(path);
-  const [canNativeShare, setCanNativeShare] = useState(false);
+  const origin = useSyncExternalStore(subscribe, () => window.location.origin, () => "");
+  const url = origin ? `${origin}${path}` : path;
+  const canNativeShare = useSyncExternalStore(
+    subscribe,
+    () => typeof navigator !== "undefined" && "share" in navigator,
+    () => false,
+  );
   const [flash, setFlash] = useState<string | null>(null);
-
-  useEffect(() => {
-    setUrl(`${window.location.origin}${path}`);
-    setCanNativeShare(
-      typeof navigator !== "undefined" && "share" in navigator,
-    );
-  }, [path]);
 
   const caption = `${message}: ${url}`;
 

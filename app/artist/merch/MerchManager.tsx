@@ -8,7 +8,6 @@ import { uploadFileWithProgress } from "@/lib/storage-upload";
 import { Field, Input } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { Badge } from "@/components/Badge";
-import { Spinner } from "@/components/Loader";
 import { formatNaira } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import type { MerchItem } from "@/lib/types";

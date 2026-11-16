@@ -19,10 +19,7 @@ import { isSheetValid, buildSheetPayload } from "@/components/SplitSheetEditor";
 import { MIN_CHECKOUT_KOBO } from "@/lib/minimum-price";
 import { initialWizardState } from "./types";
 import type { WizardState } from "./types";
-import {
-  uploadFileWithProgress as uploadFile,
-  type UploadProgress,
-} from "@/lib/storage-upload";
+import { uploadFileWithProgress as uploadFile } from "@/lib/storage-upload";
 import {
   draftStorageKey,
   isEmptyDraft,

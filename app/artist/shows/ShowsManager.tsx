@@ -334,6 +334,7 @@ export function ShowsManager({ shows, artistId }: { shows: ManagedShow[]; artist
       {error && !adding && !editingId && <p className="mb-3 text-sm text-[#ff6b6b]">{error}</p>}
       <div className="rounded-xl border border-line">
         {shows.map((show) => {
+          // eslint-disable-next-line react-hooks/purity -- snapshot at render; refreshed on navigation.
           const salesClosed = new Date(show.sales_close_at ?? show.start_at).getTime() <= Date.now();
           const soldOut = show.soldCount >= show.total_tickets;
           const isEditing = editingId === show.id;
