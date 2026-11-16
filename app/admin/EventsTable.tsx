@@ -72,12 +72,13 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                 key={e.id}
                 className="overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-strong"
               >
-                <div className="relative aspect-video w-full overflow-hidden bg-surface-2">
+                <div className="relative w-full overflow-hidden bg-surface-2">
                   <Image
                     src={e.coverArtPath || artworkFallback(e.id)}
                     alt={e.title}
-                    fill
-                    className="object-cover"
+                    width={800}
+                    height={1200}
+                    className="w-full h-auto"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                   <div className="absolute right-2 top-2">

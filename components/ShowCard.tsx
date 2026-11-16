@@ -41,13 +41,14 @@ export function ShowCard({
   return (
     <div className="card-inset-glow rounded-xl border border-line bg-card p-3 transition-all duration-200 ease-out">
       <Link href={href} className="block">
-        <div className="relative mb-3 aspect-video overflow-hidden rounded-lg bg-surface-2">
+        <div className="relative mb-3 overflow-hidden rounded-lg bg-surface-2">
           <Image
             src={show.cover_art_path || artworkFallback(show.id)}
             alt={show.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, 25vw"
+            width={800}
+            height={1000}
+            className="w-full h-auto"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
           <div className="absolute right-2 top-2">
             {soldOut ? (
