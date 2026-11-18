@@ -392,7 +392,7 @@ export default async function ArtistProfilePage({
         {(shows ?? []).length > 0 && (
           <>
             <h2 className="mb-4 text-lg font-bold">Upcoming shows</h2>
-            <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+            <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {(shows ?? []).map((show) => (
                 <ShowCard
                   key={show.id}

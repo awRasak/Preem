@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
-import { formatNaira, formatShowDate } from "@/lib/format";
+import { formatNaira } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { MoreHorizontal } from "lucide-react";
 
@@ -140,7 +140,7 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                   <h3 className="truncate text-base font-bold">{e.title}</h3>
                   <p className="mt-sp-1 text-xs text-muted">{e.artistName}</p>
                   <p className="mt-sp-1 font-mono text-xs text-muted">
-                    {formatShowDate(e.startAt)}
+                    {new Date(e.startAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                   </p>
                   <p className="mt-sp-1 truncate text-xs text-muted">
                     {[e.venue, e.city].filter(Boolean).join(" - ") || "TBA"}
