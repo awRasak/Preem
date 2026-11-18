@@ -63,6 +63,7 @@ alter table public.show_tickets
   alter column ticket_code set not null;
 
 -- Update the atomic ticket claim RPC to generate a ticket_code on insert.
+drop function if exists public.create_show_ticket(uuid, uuid, text, text, text, int, text, text);
 create or replace function public.create_show_ticket(
   p_show_id uuid,
   p_tier_id uuid,
