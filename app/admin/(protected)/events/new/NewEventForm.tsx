@@ -54,15 +54,12 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
   const [editingTierIndex, setEditingTierIndex] = useState<number | null>(null);
 
   // Event schedule (red carpet, main event, after party, etc.)
-  type EventTime = { label: string; startDate: string; startTime: string; endDate: string; endTime: string };
+  type EventTime = { label: string; startTime: string };
   const [times, setTimes] = useState<EventTime[]>([]);
   const [showTimeForm, setShowTimeForm] = useState(false);
   const [editingTimeIndex, setEditingTimeIndex] = useState<number | null>(null);
   const [timeLabel, setTimeLabel] = useState("");
-  const [timeStartDate, setTimeStartDate] = useState("");
   const [timeStartTime, setTimeStartTime] = useState("");
-  const [timeEndDate, setTimeEndDate] = useState("");
-  const [timeEndTime, setTimeEndTime] = useState("");
   const [tierName, setTierName] = useState("");
   const [tierPrice, setTierPrice] = useState("");
   const [tierQty, setTierQty] = useState("");
@@ -152,13 +149,13 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
   }
 
   function addTime() {
-    if (!timeLabel.trim() || !timeStartDate) return;
+    if (!timeLabel.trim() || !timeStartTime) return;
     const entry = {
       label: timeLabel.trim(),
-      startDate: timeStartDate,
-      startTime: timeStartTime || "00:00",
-      endDate: timeEndDate,
-      endTime: timeEndTime || "",
+      startDate: startDate,
+      startTime: timeStartTime,
+      endDate: "",
+      endTime: "",
     };
     if (editingTimeIndex !== null) {
       setTimes((prev) => prev.map((t, i) => (i === editingTimeIndex ? entry : t)));
@@ -167,20 +164,14 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
       setTimes((prev) => [...prev, entry]);
     }
     setTimeLabel("");
-    setTimeStartDate("");
     setTimeStartTime("");
-    setTimeEndDate("");
-    setTimeEndTime("");
     setShowTimeForm(false);
   }
 
   function editTime(index: number) {
     const t = times[index];
     setTimeLabel(t.label);
-    setTimeStartDate(t.startDate);
     setTimeStartTime(t.startTime);
-    setTimeEndDate(t.endDate);
-    setTimeEndTime(t.endTime);
     setEditingTimeIndex(index);
     setShowTimeForm(true);
   }
@@ -237,8 +228,8 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
           cover_art_path: coverPath,
           times: times.map((t, i) => ({
             label: t.label,
-            start_at: new Date(t.startDate + "T" + (t.startTime || "00:00")).toISOString(),
-            end_at: t.endDate ? new Date(t.endDate + "T" + (t.endTime || "00:00")).toISOString() : null,
+            start_at: new Date(startDate + "T" + (t.startTime || "00:00")).toISOString(),
+            end_at: null,
             sort_order: i,
           })),
           tiers: tiers.map((t) => ({
@@ -393,13 +384,7 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
                 <div key={i} className="flex items-center gap-2 rounded-lg border border-line bg-surface p-2 text-xs">
                   <span className="font-bold">{t.label}</span>
                   <span className="text-muted">·</span>
-                  <span>{t.startDate} {t.startTime}</span>
-                  {t.endDate && (
-                    <>
-                      <span className="text-muted">→</span>
-                      <span>{t.endDate} {t.endTime}</span>
-                    </>
-                  )}
+                  <span>{t.startTime}</span>
                   <div className="ml-auto flex gap-2">
                     <button
                       type="button"
@@ -422,49 +407,21 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
           )}
           {showTimeForm && (
             <div className="grid gap-2 rounded-lg border border-line bg-surface p-3">
-              <Field label="Label">
+              <Field label="Program title">
                 <Input
                   value={timeLabel}
                   onChange={(e) => setTimeLabel(e.target.value)}
                   placeholder="e.g. Red Carpet, Main Event, After Party"
                 />
               </Field>
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="Start date">
-                  <input
-                    type="date"
-                    value={timeStartDate}
-                    onChange={(e) => setTimeStartDate(e.target.value)}
-                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-                  />
-                </Field>
-                <Field label="Start time">
-                  <input
-                    type="time"
-                    value={timeStartTime}
-                    onChange={(e) => setTimeStartTime(e.target.value)}
-                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-                  />
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="End date (optional)">
-                  <input
-                    type="date"
-                    value={timeEndDate}
-                    onChange={(e) => setTimeEndDate(e.target.value)}
-                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-                  />
-                </Field>
-                <Field label="End time">
-                  <input
-                    type="time"
-                    value={timeEndTime}
-                    onChange={(e) => setTimeEndTime(e.target.value)}
-                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-                  />
-                </Field>
-              </div>
+              <Field label="Start time">
+                <input
+                  type="time"
+                  value={timeStartTime}
+                  onChange={(e) => setTimeStartTime(e.target.value)}
+                  className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+                />
+              </Field>
               <div className="flex gap-2">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setShowTimeForm(false)}>
                   Cancel
