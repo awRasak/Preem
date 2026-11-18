@@ -12,7 +12,7 @@ export async function markShowTicketSuccess(
 ) {
   const { data: ticket } = await supabase
     .from("show_tickets")
-    .select("*, shows(id, title, venue, city, start_at, artist:artists(stage_name))")
+    .select("*, shows(id, title, venue, city, start_at, cover_art_path, artist:artists(stage_name))")
     .eq("paystack_ref", reference)
     .single();
 
@@ -45,6 +45,7 @@ export async function markShowTicketSuccess(
       venue: string | null;
       city: string | null;
       start_at: string;
+      cover_art_path: string | null;
       artist: { stage_name: string } | { stage_name: string }[] | null;
     };
     const rawShow = updated.shows as ShowInfo | ShowInfo[] | null;
@@ -61,6 +62,7 @@ export async function markShowTicketSuccess(
       amountKobo: updated.amount_kobo,
       reference: updated.paystack_ref,
       ticketCode: updated.ticket_code ?? null,
+      coverArtPath: show?.cover_art_path ?? null,
     }).catch((err) => console.error("sendTicketReceiptEmail failed:", err));
   }
 

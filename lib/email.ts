@@ -148,6 +148,7 @@ export async function sendTicketReceiptEmail({
   amountKobo,
   reference,
   ticketCode,
+  coverArtPath,
 }: {
   to: string;
   fanName: string;
@@ -159,6 +160,7 @@ export async function sendTicketReceiptEmail({
   amountKobo: number;
   reference: string;
   ticketCode?: string | null;
+  coverArtPath?: string | null;
 }) {
   if (!resend) return;
 
@@ -190,6 +192,7 @@ export async function sendTicketReceiptEmail({
     subject: `Your ticket to "${showTitle}"`,
     html: `
       <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        ${coverArtPath ? `<img src="${escapeHtml(coverArtPath)}" alt="${safeShowTitle}" style="width: 100%; border-radius: 8px; margin-bottom: 16px;" />` : ""}
         <h2 style="margin-bottom: 4px;">See you there, ${safeFanName}!</h2>
         <p style="color: #555;">Your ticket to <strong>${safeShowTitle}</strong>${safeArtistName ? ` by ${safeArtistName}` : ""} is confirmed.</p>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
