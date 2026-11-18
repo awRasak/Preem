@@ -68,9 +68,17 @@ export function ArtistsTable({ artists }: { artists: AdminArtist[] }) {
             {pageItems.map((a) => (
               <tr key={a.id} className="border-b border-line text-sm last:border-none">
                 <td className="py-2.5 pr-4">
-                  <Link href={`/artist/${a.id}`} className="font-medium hover:underline">
-                    {a.stageName}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/artist/${a.id}`} className="font-medium hover:underline">
+                      {a.stageName}
+                    </Link>
+                    <Link
+                      href={`/admin/artists/${a.id}`}
+                      className="rounded-full border border-line-strong px-2 py-0.5 text-[11px] text-muted transition-colors hover:bg-surface-2 hover:text-paper"
+                    >
+                      Edit
+                    </Link>
+                  </div>
                   {a.profileLink && (
                     // Capped so a full Spotify URL can't stretch column 1 --
                     // auto table layout otherwise sizes to the nowrap text and
