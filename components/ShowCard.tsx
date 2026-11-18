@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatNaira, formatShowDate } from "@/lib/format";
+import { formatNaira } from "@/lib/format";
 import { artworkFallback } from "@/lib/placeholder";
 import { showPath } from "@/lib/slug";
 import { Avatar } from "./Avatar";
@@ -74,7 +74,7 @@ export function ShowCard({
         )}
         <div className="truncate text-[15px] font-medium">{show.title}</div>
         <div className="mt-1 font-mono text-[11px] text-muted">
-          {formatShowDate(show.start_at)}
+          {new Date(show.start_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
         </div>
         <div className="mt-0.5 truncate text-[11px] text-muted">
           {[show.venue, show.city].filter(Boolean).join(" · ") || "TBA"}
