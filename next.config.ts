@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Self-hosted optimizer (app/api/image) instead of /_next/image, so the
+    // Vercel Hobby 5,000-transformation quota is never touched.
+    loader: "custom",
+    loaderFile: "./lib/image-loader.ts",
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
