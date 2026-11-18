@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { loadScript } from "@/lib/load-script";
 import { openSquadCheckout } from "@/lib/squad-widget";
@@ -64,7 +65,7 @@ export function BuyTicketButton({
     ticket_price_kobo: number;
   };
   artistName: string;
-  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; soldCount?: number }[];
+  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; design_image_path?: string | null; soldCount?: number }[];
 }) {
   const [step, setStep] = useState<Step>("closed");
   const {
@@ -356,9 +357,22 @@ export function BuyTicketButton({
                               : "border-line bg-surface-2/50 hover:border-line-strong"
                           } ${tierSoldOut ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
-                          <div>
-                            <span className="font-bold">{t.name}</span>
-                            <span className="ml-2 text-xs text-muted capitalize">{t.design}</span>
+                          <div className="flex items-center gap-2">
+                            {t.design_image_path && (
+                              <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded bg-surface-2">
+                                <Image
+                                  src={t.design_image_path}
+                                  alt={t.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="32px"
+                                />
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-bold">{t.name}</span>
+                              <span className="ml-2 text-xs text-muted capitalize">{t.design}</span>
+                            </div>
                           </div>
                           <div className="text-right">
                             <div className="font-bold">{formatNaira(t.price_kobo)}</div>

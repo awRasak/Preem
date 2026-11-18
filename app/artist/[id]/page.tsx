@@ -406,12 +406,13 @@ export default async function ArtistProfilePage({
                     total_tickets: show.total_tickets,
                     cover_art_path: show.cover_art_path,
                     soldCount: soldByShow.get(show.id) ?? 0,
-                    tiers: (show.tiers ?? []).map((t: { id: string; name: string; price_kobo: number; quantity: number; design: string }) => ({
+                    tiers: (show.tiers ?? []).map((t: { id: string; name: string; price_kobo: number; quantity: number; design: string; design_image_path: string | null }) => ({
                       id: t.id,
                       name: t.name,
                       price_kobo: t.price_kobo,
                       quantity: t.quantity,
                       design: t.design,
+                      design_image_path: t.design_image_path,
                     })),
                   }}
                 />

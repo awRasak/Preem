@@ -33,7 +33,7 @@ type ShowRow = {
     | { id: string; stage_name: string; avatar_url: string | null; approval_status?: string }
     | { id: string; stage_name: string; avatar_url: string | null; approval_status?: string }[]
     | null;
-  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; sort_order: number; soldCount?: number }[];
+  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; design_image_path: string | null; sort_order: number; soldCount?: number }[];
   times?: { id: string; label: string; start_at: string; end_at: string | null; sort_order: number }[];
 };
 
@@ -227,15 +227,28 @@ export default async function ShowPage({
                       const tierLeft = Math.max(0, t.quantity - tierSold);
                       const tierSoldOut = tierSold >= t.quantity;
                       return (
-                        <div key={t.id} className="flex items-center justify-between">
-                          <div>
-                            <span className="font-bold">{t.name}</span>
-                            <span className="ml-2 text-xs text-muted capitalize">{t.design}</span>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold">{formatNaira(t.price_kobo)}</div>
-                            <div className="text-[11px] text-muted">
-                              {tierSoldOut ? "Sold out" : `${tierLeft} left`}
+                        <div key={t.id} className="flex items-center gap-3">
+                          {t.design_image_path && (
+                            <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                              <Image
+                                src={t.design_image_path}
+                                alt={t.name}
+                                fill
+                                className="object-cover"
+                                sizes="48px"
+                              />
+                            </div>
+                          )}
+                          <div className="flex flex-1 items-center justify-between">
+                            <div>
+                              <span className="font-bold">{t.name}</span>
+                              <span className="ml-2 text-xs text-muted capitalize">{t.design}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold">{formatNaira(t.price_kobo)}</div>
+                              <div className="text-[11px] text-muted">
+                                {tierSoldOut ? "Sold out" : `${tierLeft} left`}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -280,6 +293,7 @@ export default async function ShowPage({
                   price_kobo: t.price_kobo,
                   quantity: t.quantity,
                   design: t.design,
+      design_image_path: t.design_image_path,
                   soldCount: t.soldCount ?? 0,
                 }))}
               />

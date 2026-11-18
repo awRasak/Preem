@@ -21,7 +21,7 @@ export type ShowCardShow = {
   soldCount: number;
   artist?: { id: string; stage_name: string; avatar_url: string | null };
   artist_name?: string;
-  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string }[];
+  tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; design_image_path?: string | null }[];
 };
 
 export function ShowCard({

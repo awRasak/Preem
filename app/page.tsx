@@ -41,7 +41,7 @@ export default async function MarketplacePage() {
     supabase.auth.getUser(),
     supabase
       .from("shows")
-      .select("*, artist:artists!shows_artist_id_fkey(id, stage_name, avatar_url), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)")
+      .select("*, artist:artists!shows_artist_id_fkey(id, stage_name, avatar_url), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, design_image_path, sort_order)")
       .eq("status", "published")
       .gte("start_at", new Date().toISOString())
       .order("start_at", { ascending: true })
@@ -88,7 +88,7 @@ export default async function MarketplacePage() {
     cover_art_path: string | null;
     featured_on_marquee: boolean | null;
     artist: { id: string; stage_name: string; avatar_url: string | null } | null;
-    tiers: { id: string; name: string; price_kobo: number; quantity: number; design: string }[] | null;
+    tiers: { id: string; name: string; price_kobo: number; quantity: number; design: string; design_image_path: string | null }[] | null;
   }>).filter((s) => s.artist).map((s) => ({
     id: s.id,
     slug: s.slug,
@@ -109,6 +109,7 @@ export default async function MarketplacePage() {
       price_kobo: t.price_kobo,
       quantity: t.quantity,
       design: t.design,
+      design_image_path: t.design_image_path,
     })),
   }));
 

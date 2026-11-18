@@ -45,7 +45,7 @@ export default async function ExplorePage() {
   const admin = createAdminClient();
   const { data: showsData } = await supabase
     .from("shows")
-    .select("*, artist:artists!shows_artist_id_fkey(id, stage_name, avatar_url), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)")
+    .select("*, artist:artists!shows_artist_id_fkey(id, stage_name, avatar_url), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, design_image_path, sort_order)")
     .eq("status", "published")
     .gte("start_at", new Date().toISOString())
     .order("start_at", { ascending: true });
@@ -92,6 +92,7 @@ export default async function ExplorePage() {
       price_kobo: t.price_kobo,
       quantity: t.quantity,
       design: t.design,
+      design_image_path: t.design_image_path,
     })),
   }));
 
