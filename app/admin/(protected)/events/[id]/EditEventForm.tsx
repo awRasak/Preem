@@ -102,12 +102,14 @@ export function EditEventForm({
       })),
   );
   const [showTimeForm, setShowTimeForm] = useState(false);
+  const [editingTimeIndex, setEditingTimeIndex] = useState<number | null>(null);
   const [timeLabel, setTimeLabel] = useState("");
   const [timeStartDate, setTimeStartDate] = useState("");
   const [timeStartTime, setTimeStartTime] = useState("");
   const [timeEndDate, setTimeEndDate] = useState("");
   const [timeEndTime, setTimeEndTime] = useState("");
   const [showTierForm, setShowTierForm] = useState(false);
+  const [editingTierIndex, setEditingTierIndex] = useState<number | null>(null);
   const [tierName, setTierName] = useState("");
   const [tierPrice, setTierPrice] = useState("");
   const [tierQty, setTierQty] = useState("");
@@ -158,15 +160,28 @@ export function EditEventForm({
     const qty = Math.round(Number(tierQty));
     if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) return;
     if (!Number.isInteger(qty) || qty <= 0) return;
-    setTiers((prev) => [
-      ...prev,
-      { name: tierName.trim(), priceNaira: tierPrice, quantity: tierQty, design: tierDesign },
-    ]);
+    const entry = { name: tierName.trim(), priceNaira: tierPrice, quantity: tierQty, design: tierDesign };
+    if (editingTierIndex !== null) {
+      setTiers((prev) => prev.map((t, i) => (i === editingTierIndex ? entry : t)));
+      setEditingTierIndex(null);
+    } else {
+      setTiers((prev) => [...prev, entry]);
+    }
     setTierName("");
     setTierPrice("");
     setTierQty("");
     setTierDesign("standard");
     setShowTierForm(false);
+  }
+
+  function editTier(index: number) {
+    const t = tiers[index];
+    setTierName(t.name);
+    setTierPrice(t.priceNaira);
+    setTierQty(t.quantity);
+    setTierDesign(t.design);
+    setEditingTierIndex(index);
+    setShowTierForm(true);
   }
 
   function removeTier(index: number) {
@@ -175,22 +190,36 @@ export function EditEventForm({
 
   function addTime() {
     if (!timeLabel.trim() || !timeStartDate) return;
-    setTimes((prev) => [
-      ...prev,
-      {
-        label: timeLabel.trim(),
-        startDate: timeStartDate,
-        startTime: timeStartTime || "00:00",
-        endDate: timeEndDate,
-        endTime: timeEndTime || "",
-      },
-    ]);
+    const entry = {
+      label: timeLabel.trim(),
+      startDate: timeStartDate,
+      startTime: timeStartTime || "00:00",
+      endDate: timeEndDate,
+      endTime: timeEndTime || "",
+    };
+    if (editingTimeIndex !== null) {
+      setTimes((prev) => prev.map((t, i) => (i === editingTimeIndex ? entry : t)));
+      setEditingTimeIndex(null);
+    } else {
+      setTimes((prev) => [...prev, entry]);
+    }
     setTimeLabel("");
     setTimeStartDate("");
     setTimeStartTime("");
     setTimeEndDate("");
     setTimeEndTime("");
     setShowTimeForm(false);
+  }
+
+  function editTime(index: number) {
+    const t = times[index];
+    setTimeLabel(t.label);
+    setTimeStartDate(t.startDate);
+    setTimeStartTime(t.startTime);
+    setTimeEndDate(t.endDate);
+    setTimeEndTime(t.endTime);
+    setEditingTimeIndex(index);
+    setShowTimeForm(true);
   }
 
   function removeTime(index: number) {
@@ -427,13 +456,22 @@ export function EditEventForm({
                       <span>{t.endDate} {t.endTime}</span>
                     </>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => removeTime(i)}
-                    className="ml-auto text-muted hover:text-[#ff6b6b]"
-                  >
-                    x
-                  </button>
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => editTime(i)}
+                      className="text-muted hover:text-accent"
+                    >
+                      edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeTime(i)}
+                      className="text-muted hover:text-[#ff6b6b]"
+                    >
+                      x
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -523,13 +561,22 @@ export function EditEventForm({
                   <span>{t.quantity} tickets</span>
                   <span className="text-muted">-</span>
                   <span className="capitalize">{t.design}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeTier(i)}
-                    className="ml-auto text-muted hover:text-[#ff6b6b]"
-                  >
-                    x
-                  </button>
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => editTier(i)}
+                      className="text-muted hover:text-accent"
+                    >
+                      edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeTier(i)}
+                      className="text-muted hover:text-[#ff6b6b]"
+                    >
+                      x
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
