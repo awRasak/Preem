@@ -176,7 +176,9 @@ export default async function ShowPage({
                 <Badge status="live">On sale</Badge>
               )}
             </div>
-            <div className="mb-1 font-mono text-sm text-muted">{formatShowDate(show.start_at)}</div>
+            <div className="mb-1 font-mono text-sm text-muted">
+              {new Date(show.start_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+            </div>
             <div className="mb-4 text-sm text-muted">
               {[show.venue, show.city].filter(Boolean).join(" · ") || "Venue TBA"}
             </div>
