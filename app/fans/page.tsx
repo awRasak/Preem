@@ -612,6 +612,7 @@ async function ShowTicketsSection({
     amount_kobo: number;
     status: string;
     paystack_ref: string;
+    ticket_code: string;
     created_at: string;
     purchased_at: string | null;
     shows:
@@ -665,6 +666,16 @@ async function ShowTicketsSection({
                   {cancelled ? " · Cancelled by artist" : ""}
                 </div>
                 <div className="mt-1 font-mono text-[11px] text-muted">Ref {t.paystack_ref}</div>
+                {t.ticket_code && (
+                  <div className="mt-2 rounded-lg border border-accent/30 bg-accent/10 p-2 text-center">
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-muted">
+                      Entry pass
+                    </div>
+                    <div className="mt-0.5 font-mono text-sm font-bold text-accent">
+                      {t.ticket_code}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <div className="text-sm font-bold">{formatNaira(t.amount_kobo)}</div>

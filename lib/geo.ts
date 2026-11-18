@@ -25,9 +25,13 @@ export function gatewayForCountry(
   // Default to Monipay. Monipay is not used for:
   //   1. International payments → Squad
   //   2. When Monipay fails → Paystack (fallback)
+  // Default to Monipay. Monipay is not used for:
+  //   1. International payments → Squad
+  //   2. When Monipay fails → Paystack (fallback)
+  // Squad remains a fallback for Nigeria as well.
   const order: Gateway[] =
     normalized === "NG"
-      ? ["monipay", "paystack"]
+      ? ["monipay", "paystack", "squad"]
       : ["squad", "paystack"];
   return order.find((gateway) => gateways[`${gateway}Enabled`]) ?? null;
 }

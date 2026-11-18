@@ -58,9 +58,10 @@ describe("gatewayForCountry", () => {
     expect(
       gatewayForCountry("NG", { paystackEnabled: true, monipayEnabled: false, squadEnabled: false }),
     ).toBe("paystack");
+    // Monipay is not available for international payments.
     expect(
       gatewayForCountry("US", { paystackEnabled: false, monipayEnabled: true, squadEnabled: false }),
-    ).toBe("monipay");
+    ).toBeNull();
     // Squad alone covers both markets (it charges in NGN).
     expect(
       gatewayForCountry("NG", { paystackEnabled: false, monipayEnabled: false, squadEnabled: true }),

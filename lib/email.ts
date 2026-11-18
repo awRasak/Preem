@@ -147,6 +147,7 @@ export async function sendTicketReceiptEmail({
   artistName,
   amountKobo,
   reference,
+  ticketCode,
 }: {
   to: string;
   fanName: string;
@@ -157,6 +158,7 @@ export async function sendTicketReceiptEmail({
   artistName: string;
   amountKobo: number;
   reference: string;
+  ticketCode?: string | null;
 }) {
   if (!resend) return;
 
@@ -201,6 +203,11 @@ export async function sendTicketReceiptEmail({
             <td style="padding: 8px 0; text-align: right; font-family: monospace; font-size: 12px;">${reference}</td>
           </tr>
         </table>
+        ${ticketCode ? `<div style="margin: 20px 0; padding: 16px; border: 2px dashed #ddd; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Entry pass code</div>
+          <div style="font-family: monospace; font-size: 24px; font-weight: bold; color: #1a1a1a;">${escapeHtml(ticketCode)}</div>
+          <div style="font-size: 11px; color: #aaa; margin-top: 4px;">Show this code at the venue for entry</div>
+        </div>` : ""}
         <p style="color: #aaa; font-size: 12px; margin-top: 32px;">Keep your reference handy for entry. Questions? Reply to this email.</p>
       </div>
     `,

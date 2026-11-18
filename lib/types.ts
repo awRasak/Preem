@@ -126,6 +126,16 @@ export type ShowTicketTier = {
   created_at: string;
 };
 
+export type ShowTime = {
+  id: string;
+  show_id: string;
+  label: string;
+  start_at: string;
+  end_at: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
 export type Show = {
   id: string;
   artist_id: string;
@@ -146,6 +156,7 @@ export type Show = {
   created_at: string;
   artist?: Pick<Artist, "id" | "stage_name" | "avatar_url">;
   tiers?: ShowTicketTier[];
+  times?: ShowTime[];
 };
 
 export type TrackChangeStatus = "pending" | "approved" | "rejected" | "cancelled";
@@ -175,6 +186,7 @@ export type ShowTicket = {
   status: PurchaseStatus;
   purchased_at: string | null;
   created_at: string;
+  ticket_code: string;
   tier?: Pick<ShowTicketTier, "name" | "design"> | null;
 };
 

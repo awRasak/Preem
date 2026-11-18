@@ -129,7 +129,7 @@ export async function POST(req: Request) {
   }
 
   const row = (Array.isArray(claim) ? claim[0] : claim) as
-    | { ticket_id: string | null; ticket_amount_kobo: number | null; ticket_tier_name: string | null; ticket_tier_design: string | null; error_code: string | null }
+    | { ticket_id: string | null; ticket_amount_kobo: number | null; ticket_tier_name: string | null; ticket_tier_design: string | null; ticket_code: string | null; error_code: string | null }
     | null;
 
   if (!row || row.error_code || !row.ticket_id) {
@@ -165,5 +165,6 @@ export async function POST(req: Request) {
     publicKey: publicKeyForGateway(gateway),
     tierName: row.ticket_tier_name ?? null,
     tierDesign: row.ticket_tier_design ?? "standard",
+    ticketCode: row.ticket_code ?? null,
   });
 }

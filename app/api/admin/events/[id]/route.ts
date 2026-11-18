@@ -12,6 +12,13 @@ const tierSchema = z.object({
   design: z.enum(["standard", "vip", "premium", "table", "backstage"]).default("standard"),
 });
 
+const timeSchema = z.object({
+  label: z.string().trim().min(1).max(60),
+  start_at: z.string().datetime({ offset: true }),
+  end_at: z.string().datetime({ offset: true }).optional().nullable(),
+  sort_order: z.number().int().min(0).optional(),
+});
+
 const editSchema = z.object({
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000).optional().nullable(),
@@ -22,6 +29,7 @@ const editSchema = z.object({
   sales_close_at: z.string().datetime({ offset: true }).optional().nullable(),
   cover_art_path: z.string().trim().max(400).optional().nullable(),
   tiers: z.array(tierSchema).min(1, "At least one ticket tier is required."),
+  times: z.array(timeSchema).optional(),
 });
 
 function validId(id: string) {
@@ -44,7 +52,7 @@ export async function PUT(
 
   const parsed = await parseBody(req, editSchema);
   if (!parsed.ok) return parsed.response;
-  const { title, description, venue, city, start_at, end_at, sales_close_at, cover_art_path, tiers } =
+  const { title, description, venue, city, start_at, end_at, sales_close_at, cover_art_path, tiers, times } =
     parsed.data;
 
   const start = new Date(start_at);
@@ -131,6 +139,19 @@ export async function PUT(
   const { error: tierError } = await supabase.from("show_ticket_tiers").insert(tierRows);
   if (tierError) {
     return NextResponse.json({ error: "Event updated but tiers failed to save." }, { status: 500 });
+  }
+
+  // Replace times.
+  await supabase.from("show_times").delete().eq("show_id", id);
+  if (times && times.length > 0) {
+    const timeRows = times.map((t, i) => ({
+      show_id: id,
+      label: t.label,
+      start_at: t.start_at,
+      end_at: t.end_at ?? null,
+      sort_order: t.sort_order ?? i,
+    }));
+    await supabase.from("show_times").insert(timeRows);
   }
 
   return NextResponse.json({ ok: true, show: data });

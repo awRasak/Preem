@@ -34,6 +34,7 @@ type ShowRow = {
     | { id: string; stage_name: string; avatar_url: string | null; approval_status?: string }[]
     | null;
   tiers?: { id: string; name: string; price_kobo: number; quantity: number; design: string; sort_order: number; soldCount?: number }[];
+  times?: { id: string; label: string; start_at: string; end_at: string | null; sort_order: number }[];
 };
 
 type Resolved = {
@@ -47,7 +48,7 @@ async function resolveShow(idOrSlug: string): Promise<Resolved | null> {
   const base = supabase
     .from("shows")
     .select(
-      "*, artist:artists!shows_artist_id_fkey(id, stage_name, avatar_url, approval_status), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)",
+      "*, artist:artists!shows_artist_id_fkey(id, stage_name, avatar_url, approval_status), tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order), times:show_times(id, label, start_at, end_at, sort_order)",
     )
     .eq("status", "published");
 
@@ -181,6 +182,37 @@ export default async function ShowPage({
             </div>
             {show.description && (
               <p className="mb-5 whitespace-pre-wrap text-sm text-paper/90">{show.description}</p>
+            )}
+
+            {(show.times ?? []).length > 0 && (
+              <div className="mb-5 rounded-xl border border-line bg-surface p-4">
+                <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
+                  Schedule
+                </h3>
+                <div className="space-y-2">
+                  {(show.times ?? [])
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map((t) => (
+                      <div key={t.id} className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{t.label}</span>
+                        <span className="text-xs text-muted">
+                          {new Date(t.start_at).toLocaleString("en-NG", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                          {t.end_at &&
+                            " – " +
+                              new Date(t.end_at).toLocaleString("en-NG", {
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
             )}
 
             <div className="mb-5 rounded-xl border border-line bg-surface p-4">

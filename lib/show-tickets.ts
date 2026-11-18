@@ -60,6 +60,7 @@ export async function markShowTicketSuccess(
       artistName: artist?.stage_name ?? "",
       amountKobo: updated.amount_kobo,
       reference: updated.paystack_ref,
+      ticketCode: updated.ticket_code ?? null,
     }).catch((err) => console.error("sendTicketReceiptEmail failed:", err));
   }
 

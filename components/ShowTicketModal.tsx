@@ -79,6 +79,7 @@ export function BuyTicketButton({
   } = useBuyerDetails();
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState("");
+  const [ticketCode, setTicketCode] = useState<string | null>(null);
   const router = useRouter();
   // Synchronous double-submit guard -- see BuyButton's payingRef for why
   // state alone can't close the double-tap race. Released on every path
@@ -148,6 +149,7 @@ export function BuyTicketButton({
       payingRef.current = false;
       return;
     }
+    if (body.ticketCode) setTicketCode(body.ticketCode);
 
     // The server geo-routes the payment: Nigeria goes local (Monipay),
     // everyone else international (Squad). The client never chooses.
@@ -296,6 +298,19 @@ export function BuyTicketButton({
                   <div className="mt-2 border-t border-line pt-2 font-mono text-xs text-muted">
                     Reference {reference}
                   </div>
+                  {ticketCode && (
+                    <div className="mt-3 rounded-lg border border-accent/30 bg-accent/10 p-3 text-center">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-muted">
+                        Entry pass code
+                      </div>
+                      <div className="mt-1 font-mono text-lg font-bold text-accent">
+                        {ticketCode}
+                      </div>
+                      <div className="mt-1 text-[10px] text-muted">
+                        Show this code at the venue for entry
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <p className="mb-4 text-xs text-muted">
                   Keep your reference handy for entry.

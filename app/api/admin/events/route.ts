@@ -12,6 +12,13 @@ const tierSchema = z.object({
   design: z.enum(["standard", "vip", "premium", "table", "backstage"]).default("standard"),
 });
 
+const timeSchema = z.object({
+  label: z.string().trim().min(1).max(60),
+  start_at: z.string().datetime({ offset: true }),
+  end_at: z.string().datetime({ offset: true }).optional().nullable(),
+  sort_order: z.number().int().min(0).optional(),
+});
+
 const schema = z.object({
   artistId: z.string().uuid(),
   title: z.string().trim().min(1).max(120),
@@ -25,6 +32,7 @@ const schema = z.object({
   total_tickets: z.number().int().positive().max(100_000).optional(),
   cover_art_path: z.string().trim().max(400).optional().nullable(),
   tiers: z.array(tierSchema).min(1, "At least one ticket tier is required."),
+  times: z.array(timeSchema).optional(),
 });
 
 export async function POST(req: Request) {
@@ -76,6 +84,7 @@ export async function POST(req: Request) {
   }
 
   const tiers = parsed.data.tiers;
+  const times = parsed.data.times ?? [];
   // Capacity and base price come from tiers (tiers are required).
   const totalTickets = tiers.reduce((sum, t) => sum + t.quantity, 0);
   const basePrice = Math.min(...tiers.map((t) => t.price_kobo));
@@ -103,21 +112,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not create event." }, { status: 500 });
   }
 
-  // Insert tiers if provided.
-  if (tiers.length > 0) {
-    const tierRows = tiers.map((t, i) => ({
+  // Insert tiers.
+  const tierRows = tiers.map((t, i) => ({
+    show_id: data.id,
+    name: t.name,
+    price_kobo: t.price_kobo,
+    quantity: t.quantity,
+    design: t.design,
+    sort_order: i,
+  }));
+  const { error: tierError } = await supabase.from("show_ticket_tiers").insert(tierRows);
+  if (tierError) {
+    await supabase.from("shows").delete().eq("id", data.id);
+    return NextResponse.json({ error: "Could not save ticket tiers." }, { status: 500 });
+  }
+
+  // Insert schedule times.
+  if (times.length > 0) {
+    const timeRows = times.map((t, i) => ({
       show_id: data.id,
-      name: t.name,
-      price_kobo: t.price_kobo,
-      quantity: t.quantity,
-      design: t.design,
-      sort_order: i,
+      label: t.label,
+      start_at: t.start_at,
+      end_at: t.end_at ?? null,
+      sort_order: t.sort_order ?? i,
     }));
-    const { error: tierError } = await supabase.from("show_ticket_tiers").insert(tierRows);
-    if (tierError) {
-      // Roll back the show to avoid an orphan with no tiers.
-      await supabase.from("shows").delete().eq("id", data.id);
-      return NextResponse.json({ error: "Could not save ticket tiers." }, { status: 500 });
+    const { error: timeError } = await supabase.from("show_times").insert(timeRows);
+    if (timeError) {
+      console.error("Could not save show times:", timeError.message);
     }
   }
 

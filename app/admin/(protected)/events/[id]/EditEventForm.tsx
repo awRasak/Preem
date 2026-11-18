@@ -57,6 +57,7 @@ export function EditEventForm({
     cover_art_path: string | null;
     status: string;
     tiers: { id: string; name: string; price_kobo: number; quantity: number; design: string; sort_order: number }[] | null;
+    times: { id: string; label: string; start_at: string; end_at: string | null; sort_order: number }[] | null;
   };
   artists: Artist[];
 }) {
@@ -86,6 +87,26 @@ export function EditEventForm({
         design: t.design as Tier["design"],
       })),
   );
+
+  // Event schedule
+  type EventTime = { label: string; startDate: string; startTime: string; endDate: string; endTime: string };
+  const [times, setTimes] = useState<EventTime[]>(
+    (show.times ?? [])
+      .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
+      .map((t: { label: string; start_at: string; end_at: string | null }) => ({
+        label: t.label,
+        startDate: toLocalDate(t.start_at),
+        startTime: toLocalTime(t.start_at),
+        endDate: toLocalDate(t.end_at),
+        endTime: toLocalTime(t.end_at),
+      })),
+  );
+  const [showTimeForm, setShowTimeForm] = useState(false);
+  const [timeLabel, setTimeLabel] = useState("");
+  const [timeStartDate, setTimeStartDate] = useState("");
+  const [timeStartTime, setTimeStartTime] = useState("");
+  const [timeEndDate, setTimeEndDate] = useState("");
+  const [timeEndTime, setTimeEndTime] = useState("");
   const [showTierForm, setShowTierForm] = useState(false);
   const [tierName, setTierName] = useState("");
   const [tierPrice, setTierPrice] = useState("");
@@ -152,6 +173,30 @@ export function EditEventForm({
     setTiers((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function addTime() {
+    if (!timeLabel.trim() || !timeStartDate) return;
+    setTimes((prev) => [
+      ...prev,
+      {
+        label: timeLabel.trim(),
+        startDate: timeStartDate,
+        startTime: timeStartTime || "00:00",
+        endDate: timeEndDate,
+        endTime: timeEndTime || "",
+      },
+    ]);
+    setTimeLabel("");
+    setTimeStartDate("");
+    setTimeStartTime("");
+    setTimeEndDate("");
+    setTimeEndTime("");
+    setShowTimeForm(false);
+  }
+
+  function removeTime(index: number) {
+    setTimes((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -191,6 +236,12 @@ export function EditEventForm({
           start_at: startIso,
           sales_close_at: salesCloseIso,
           cover_art_path: coverPath,
+          times: times.map((t, i) => ({
+            label: t.label,
+            start_at: new Date(t.startDate + "T" + (t.startTime || "00:00")).toISOString(),
+            end_at: t.endDate ? new Date(t.endDate + "T" + (t.endTime || "00:00")).toISOString() : null,
+            sort_order: i,
+          })),
           tiers: tiers.map((t) => ({
             name: t.name,
             price_kobo: Math.round(Number(t.priceNaira) * 100),
@@ -356,6 +407,100 @@ export function EditEventForm({
           </Field>
         </div>
 
+        {/* Event schedule */}
+        <div className="rounded-xl border border-line bg-surface-2/30 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold">Event schedule</h3>
+            <button
+              type="button"
+              onClick={() => setShowTimeForm(!showTimeForm)}
+              className="text-xs font-bold text-accent underline"
+            >
+              {showTimeForm ? "Cancel" : "+ Add time slot"}
+            </button>
+          </div>
+          {times.length === 0 && !showTimeForm && (
+            <p className="text-xs text-muted">
+              No schedule yet — add time slots like Red Carpet, Main Event, After Party.
+            </p>
+          )}
+          {times.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {times.map((t, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-lg border border-line bg-surface p-2 text-xs">
+                  <span className="font-bold">{t.label}</span>
+                  <span className="text-muted">·</span>
+                  <span>{t.startDate} {t.startTime}</span>
+                  {t.endDate && (
+                    <>
+                      <span className="text-muted">→</span>
+                      <span>{t.endDate} {t.endTime}</span>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeTime(i)}
+                    className="ml-auto text-muted hover:text-[#ff6b6b]"
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {showTimeForm && (
+            <div className="grid gap-2 rounded-lg border border-line bg-surface p-3">
+              <Field label="Label">
+                <Input
+                  value={timeLabel}
+                  onChange={(e) => setTimeLabel(e.target.value)}
+                  placeholder="e.g. Red Carpet, Main Event, After Party"
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Start date">
+                  <input
+                    type="date"
+                    value={timeStartDate}
+                    onChange={(e) => setTimeStartDate(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+                  />
+                </Field>
+                <Field label="Start time">
+                  <input
+                    type="time"
+                    value={timeStartTime}
+                    onChange={(e) => setTimeStartTime(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+                  />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="End date (optional)">
+                  <input
+                    type="date"
+                    value={timeEndDate}
+                    onChange={(e) => setTimeEndDate(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+                  />
+                </Field>
+                <Field label="End time">
+                  <input
+                    type="time"
+                    value={timeEndTime}
+                    onChange={(e) => setTimeEndTime(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+                  />
+                </Field>
+              </div>
+              <Button type="button" variant="primary" className="w-full" onClick={addTime}>
+                Add time slot
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Ticket tiers */}
         <div className="rounded-xl border border-line bg-surface-2/30 p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold">Ticket tiers</h3>
