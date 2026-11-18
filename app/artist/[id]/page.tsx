@@ -154,7 +154,7 @@ export default async function ArtistProfilePage({
   // from the admin client since show_tickets has no anonymous policy.
   const { data: shows } = await supabase
     .from("shows")
-    .select("*")
+    .select("*, tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order)")
     .eq("artist_id", artist.id)
     .eq("status", "published")
     .gte("start_at", new Date().toISOString())
@@ -406,6 +406,13 @@ export default async function ArtistProfilePage({
                     total_tickets: show.total_tickets,
                     cover_art_path: show.cover_art_path,
                     soldCount: soldByShow.get(show.id) ?? 0,
+                    tiers: (show.tiers ?? []).map((t: { id: string; name: string; price_kobo: number; quantity: number; design: string }) => ({
+                      id: t.id,
+                      name: t.name,
+                      price_kobo: t.price_kobo,
+                      quantity: t.quantity,
+                      design: t.design,
+                    })),
                   }}
                 />
               ))}
