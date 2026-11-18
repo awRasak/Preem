@@ -19,6 +19,7 @@ export default async function AdminSettingsPage() {
         dropCommissionBps={settings.dropCommissionBps}
         giftCommissionBps={settings.giftCommissionBps}
         merchCommissionBps={settings.merchCommissionBps}
+        showCommissionBps={settings.showCommissionBps}
         paystackEnabled={settings.paystackEnabled}
         monipayEnabled={settings.monipayEnabled}
         squadEnabled={settings.squadEnabled}

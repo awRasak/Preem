@@ -5,6 +5,8 @@ export type PlatformSettings = {
   giftCommissionBps: number;
   // Physical merch takes a smaller cut (5%) than music.
   merchCommissionBps: number;
+  // Show tickets take a flat 5% platform cut.
+  showCommissionBps: number;
   paystackEnabled: boolean;
   monipayEnabled: boolean;
   // International checkout rail (see lib/geo.ts) -- off until real keys.
@@ -23,6 +25,7 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   dropCommissionBps: 2000,
   giftCommissionBps: 500,
   merchCommissionBps: 500,
+  showCommissionBps: 500,
   paystackEnabled: true,
   monipayEnabled: false,
   squadEnabled: false,
@@ -51,7 +54,7 @@ export async function getPlatformSettings(
   const { data } = await supabase
     .from("platform_settings")
     .select(
-      "drop_commission_bps, gift_commission_bps, merch_commission_bps, paystack_enabled, monipay_enabled, squad_enabled, ngn_per_usd",
+      "drop_commission_bps, gift_commission_bps, merch_commission_bps, show_commission_bps, paystack_enabled, monipay_enabled, squad_enabled, ngn_per_usd",
     )
     .eq("id", true)
     .maybeSingle();
@@ -62,6 +65,7 @@ export async function getPlatformSettings(
     giftCommissionBps: data.gift_commission_bps,
     // Rows predating 0034 read back null -- same fail-safe as squad_enabled.
     merchCommissionBps: data.merch_commission_bps ?? 500,
+    showCommissionBps: data.show_commission_bps ?? 500,
     paystackEnabled: data.paystack_enabled,
     monipayEnabled: data.monipay_enabled,
     // Old rows/databases predating 0033 read back null -- treat missing as

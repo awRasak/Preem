@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ArtistShell } from "@/components/ArtistShell";
 import { ApprovalCelebration } from "./ApprovalCelebration";
 import { WithdrawCard } from "./WithdrawCard";
-import { MIN_PAYOUT_KOBO, SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
+import { MIN_PAYOUT_KOBO } from "@/lib/payouts";
 import { Button } from "@/components/Button";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira, isDropLive } from "@/lib/format";
@@ -145,7 +145,7 @@ export default async function ArtistDashboardPage() {
     0,
   );
   withdrawableKobo += (unpaidTickets ?? []).reduce(
-    (sum, t) => sum + applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS),
+    (sum, t) => sum + applyCommission(t.amount_kobo, settings.showCommissionBps),
     0,
   );
   const royaltyRowList = (royaltyRows ?? []) as { amount_kobo: number; paid_out: boolean }[];

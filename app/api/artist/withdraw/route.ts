@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
-import { MIN_PAYOUT_KOBO, SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
+import { MIN_PAYOUT_KOBO } from "@/lib/payouts";
 import {
   claimItems,
   findCandidatePurchases,
@@ -209,7 +209,7 @@ export async function POST() {
       if (error) throw new Error(error.message);
       for (const row of claimed ?? []) {
         claimedTicketIds.push(row.id);
-        claimedKobo += applyCommission(row.amount_kobo, SHOW_TICKET_COMMISSION_BPS);
+        claimedKobo += applyCommission(row.amount_kobo, settings.showCommissionBps);
       }
     }
     if (royaltyIds.length > 0) {

@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
 import { loadSheetContext, planArtistShares } from "@/lib/payout-shares";
-import { SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
+// settings.showCommissionBps replaced by settings.showCommissionBps
 import { PayoutsTable, type PayoutArtist } from "../../PayoutsTable";
 
 export const revalidate = 0;
@@ -98,7 +98,7 @@ export default async function AdminPayoutsPage() {
     balanceByArtist.set(
       show.artist_id,
       (balanceByArtist.get(show.artist_id) ?? 0) +
-        applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS),
+        applyCommission(t.amount_kobo, settings.showCommissionBps),
     );
   }
 

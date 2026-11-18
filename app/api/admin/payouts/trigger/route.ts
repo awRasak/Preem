@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import * as paystack from "@/lib/paystack";
 import * as monipay from "@/lib/monipay";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
-import { SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
+// settings.showCommissionBps replaced by settings.showCommissionBps
 import {
   claimItems,
   findCandidatePurchases,
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
   const merchOf = (rows: typeof merch) =>
     rows.reduce((sum, m) => sum + applyCommission(m.amount_kobo, settings.merchCommissionBps), 0);
   const ticketOf = (rows: typeof tickets) =>
-    rows.reduce((sum, t) => sum + applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS), 0);
+    rows.reduce((sum, t) => sum + applyCommission(t.amount_kobo, settings.showCommissionBps), 0);
   const paystackAmountKobo =
     paystackPurchases.reduce((sum, id) => sum + shareOf(id), 0) +
     gifts.reduce((sum, g) => sum + applyCommission(g.amount_kobo, settings.giftCommissionBps), 0) +
@@ -226,7 +226,7 @@ export async function POST(req: Request) {
         if (error) throw new Error(error.message);
         for (const row of claimed ?? []) {
           claimedTicketIds.push(row.id);
-          claimedTicketKobo += applyCommission(row.amount_kobo, SHOW_TICKET_COMMISSION_BPS);
+          claimedTicketKobo += applyCommission(row.amount_kobo, settings.showCommissionBps);
         }
       }
 

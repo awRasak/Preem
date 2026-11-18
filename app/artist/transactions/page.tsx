@@ -6,7 +6,7 @@ import { ArtistShell } from "@/components/ArtistShell";
 import { StatBox } from "@/components/StatBox";
 import { formatNaira } from "@/lib/format";
 import { applyCommission, getPlatformSettings } from "@/lib/platform-settings";
-import { SHOW_TICKET_COMMISSION_BPS } from "@/lib/payouts";
+// settings.showCommissionBps replaced by settings.showCommissionBps
 import { loadSheetContext, planArtistShares } from "@/lib/payout-shares";
 import { TransactionsList, type Tx } from "./TransactionsList";
 
@@ -222,7 +222,7 @@ export default async function ArtistTransactionsPage() {
       direction: "in",
       title: showTitle.get(t.show_id) ?? "Show",
       sub: `${t.fan_name || "Anonymous"} · ${t.paystack_ref}`,
-      amountKobo: applyCommission(t.amount_kobo, SHOW_TICKET_COMMISSION_BPS),
+      amountKobo: applyCommission(t.amount_kobo, settings.showCommissionBps),
       at: t.purchased_at ?? t.created_at,
       status: "success",
     });

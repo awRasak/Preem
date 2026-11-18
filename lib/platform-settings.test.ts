@@ -46,6 +46,7 @@ describe("getPlatformSettings", () => {
       dropCommissionBps: 1500,
       giftCommissionBps: 300,
       merchCommissionBps: 500,
+      showCommissionBps: 500,
       paystackEnabled: true,
       monipayEnabled: false,
       // Row predates the squad_enabled column -> read back as off.
