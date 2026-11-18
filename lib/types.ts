@@ -122,6 +122,7 @@ export type ShowTicketTier = {
   price_kobo: number;
   quantity: number;
   design: TicketDesign;
+  design_image_path: string | null;
   sort_order: number;
   created_at: string;
 };

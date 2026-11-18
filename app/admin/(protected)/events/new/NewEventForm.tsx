@@ -18,6 +18,7 @@ type Tier = {
   priceNaira: string;
   quantity: string;
   design: "standard" | "vip" | "premium" | "table" | "backstage";
+  designImagePath: string | null;
 };
 
 const DESIGN_OPTIONS: { value: Tier["design"]; label: string }[] = [
@@ -64,6 +65,8 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
   const [tierPrice, setTierPrice] = useState("");
   const [tierQty, setTierQty] = useState("");
   const [tierDesign, setTierDesign] = useState<Tier["design"]>("standard");
+  const [tierDesignImagePath, setTierDesignImagePath] = useState<string | null>(null);
+  const [tierDesignUploading, setTierDesignUploading] = useState(false);
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -114,13 +117,44 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
     }
   }
 
+  async function handleTierDesignUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !artistId) return;
+    setTierDesignUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = artistId + "/" + crypto.randomUUID() + "." + ext;
+      const res = await fetch("/api/admin/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bucket: "artwork", path }),
+      });
+      if (!res.ok) throw new Error("Could not prepare upload.");
+      const { signedUrl } = await res.json();
+      const xhr = new XMLHttpRequest();
+      await new Promise<void>((resolve, reject) => {
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
+        xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error("Storage error")));
+        xhr.onerror = () => reject(new Error("Network error"));
+        xhr.send(file);
+      });
+      const supabase = createClient();
+      setTierDesignImagePath(supabase.storage.from("artwork").getPublicUrl(path).data.publicUrl);
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setTierDesignUploading(false);
+    }
+  }
+
   function addTier() {
     if (!tierName.trim()) return;
     const price = Math.round(Number(tierPrice) * 100);
     const qty = Math.round(Number(tierQty));
     if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) return;
     if (!Number.isInteger(qty) || qty <= 0) return;
-    const entry = { name: tierName.trim(), priceNaira: tierPrice, quantity: tierQty, design: tierDesign };
+    const entry = { name: tierName.trim(), priceNaira: tierPrice, quantity: tierQty, design: tierDesign, designImagePath: tierDesignImagePath };
     if (editingTierIndex !== null) {
       setTiers((prev) => prev.map((t, i) => (i === editingTierIndex ? entry : t)));
       setEditingTierIndex(null);
@@ -131,6 +165,7 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
     setTierPrice("");
     setTierQty("");
     setTierDesign("standard");
+    setTierDesignImagePath(null);
     setShowTierForm(false);
   }
 
@@ -237,6 +272,7 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
             price_kobo: Math.round(Number(t.priceNaira) * 100),
             quantity: Math.round(Number(t.quantity)),
             design: t.design,
+            design_image_path: t.designImagePath,
           })),
         }),
       });
@@ -525,6 +561,20 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
                     </option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Ticket design image (optional)">
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={tierDesignUploading}
+                  onChange={handleTierDesignUpload}
+                  className="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border file:border-line-strong file:bg-surface-2 file:px-3 file:py-2 file:text-xs file:font-bold file:text-paper"
+                />
+                {tierDesignImagePath && (
+                  <div className="relative mt-2 h-20 w-full overflow-hidden rounded-lg bg-surface-2">
+                    <img src={tierDesignImagePath} alt="Ticket design" className="h-full w-full object-contain" />
+                  </div>
+                )}
               </Field>
               <Button type="button" variant="primary" className="w-full" onClick={addTier}>
                 Add tier

@@ -15,7 +15,7 @@ export default async function AdminEditEventPage({
   const [{ data: show }, { data: artists }] = await Promise.all([
     supabase
       .from("shows")
-      .select("*, tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, sort_order), times:show_times(id, label, start_at, end_at, sort_order)")
+      .select("*, tiers:show_ticket_tiers(id, name, price_kobo, quantity, design, design_image_path, sort_order), times:show_times(id, label, start_at, end_at, sort_order)")
       .eq("id", id)
       .single(),
     supabase

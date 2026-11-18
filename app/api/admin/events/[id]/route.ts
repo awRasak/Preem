@@ -10,6 +10,7 @@ const tierSchema = z.object({
   price_kobo: z.number().int().positive().max(10_000_000),
   quantity: z.number().int().positive().max(100_000),
   design: z.enum(["standard", "vip", "premium", "table", "backstage"]).default("standard"),
+  design_image_path: z.string().trim().max(500).optional().nullable(),
 });
 
 const timeSchema = z.object({
@@ -134,6 +135,7 @@ export async function PUT(
     price_kobo: t.price_kobo,
     quantity: t.quantity,
     design: t.design,
+    design_image_path: t.design_image_path ?? null,
     sort_order: i,
   }));
   const { error: tierError } = await supabase.from("show_ticket_tiers").insert(tierRows);

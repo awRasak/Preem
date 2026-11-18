@@ -17,6 +17,7 @@ type Tier = {
   priceNaira: string;
   quantity: string;
   design: "standard" | "vip" | "premium" | "table" | "backstage";
+  designImagePath: string | null;
 };
 
 const DESIGN_OPTIONS = [
@@ -56,7 +57,7 @@ export function EditEventForm({
     description: string | null;
     cover_art_path: string | null;
     status: string;
-    tiers: { id: string; name: string; price_kobo: number; quantity: number; design: string; sort_order: number }[] | null;
+    tiers: { id: string; name: string; price_kobo: number; quantity: number; design: string; design_image_path: string | null; sort_order: number }[] | null;
     times: { id: string; label: string; start_at: string; end_at: string | null; sort_order: number }[] | null;
   };
   artists: Artist[];
@@ -80,11 +81,12 @@ export function EditEventForm({
   const [tiers, setTiers] = useState<Tier[]>(
     (show.tiers ?? [])
       .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
-      .map((t: { name: string; price_kobo: number; quantity: number; design: string }) => ({
+      .map((t: { name: string; price_kobo: number; quantity: number; design: string; design_image_path: string | null }) => ({
         name: t.name,
         priceNaira: String(t.price_kobo / 100),
         quantity: String(t.quantity),
         design: t.design as Tier["design"],
+        designImagePath: t.design_image_path,
       })),
   );
 
@@ -111,6 +113,8 @@ export function EditEventForm({
   const [tierPrice, setTierPrice] = useState("");
   const [tierQty, setTierQty] = useState("");
   const [tierDesign, setTierDesign] = useState<Tier["design"]>("standard");
+  const [tierDesignImagePath, setTierDesignImagePath] = useState<string | null>(null);
+  const [tierDesignUploading, setTierDesignUploading] = useState(false);
 
   async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -151,13 +155,44 @@ export function EditEventForm({
     }
   }
 
+  async function handleTierDesignUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTierDesignUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = artistId + "/" + crypto.randomUUID() + "." + ext;
+      const res = await fetch("/api/admin/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bucket: "artwork", path }),
+      });
+      if (!res.ok) throw new Error("Could not prepare upload.");
+      const { signedUrl } = await res.json();
+      const xhr = new XMLHttpRequest();
+      await new Promise<void>((resolve, reject) => {
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
+        xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error("Storage error")));
+        xhr.onerror = () => reject(new Error("Network error"));
+        xhr.send(file);
+      });
+      const supabase = createClient();
+      setTierDesignImagePath(supabase.storage.from("artwork").getPublicUrl(path).data.publicUrl);
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setTierDesignUploading(false);
+    }
+  }
+
   function addTier() {
     if (!tierName.trim()) return;
     const price = Math.round(Number(tierPrice) * 100);
     const qty = Math.round(Number(tierQty));
     if (!Number.isFinite(price) || price < MIN_CHECKOUT_KOBO) return;
     if (!Number.isInteger(qty) || qty <= 0) return;
-    const entry = { name: tierName.trim(), priceNaira: tierPrice, quantity: tierQty, design: tierDesign };
+    const entry = { name: tierName.trim(), priceNaira: tierPrice, quantity: tierQty, design: tierDesign, designImagePath: tierDesignImagePath };
     if (editingTierIndex !== null) {
       setTiers((prev) => prev.map((t, i) => (i === editingTierIndex ? entry : t)));
       setEditingTierIndex(null);
@@ -168,6 +203,7 @@ export function EditEventForm({
     setTierPrice("");
     setTierQty("");
     setTierDesign("standard");
+    setTierDesignImagePath(null);
     setShowTierForm(false);
   }
 
@@ -177,6 +213,7 @@ export function EditEventForm({
     setTierPrice(t.priceNaira);
     setTierQty(t.quantity);
     setTierDesign(t.design);
+    setTierDesignImagePath(t.designImagePath);
     setEditingTierIndex(index);
     setShowTierForm(true);
   }
@@ -267,6 +304,7 @@ export function EditEventForm({
             price_kobo: Math.round(Number(t.priceNaira) * 100),
             quantity: Math.round(Number(t.quantity)),
             design: t.design,
+            design_image_path: t.designImagePath,
           })),
         }),
       });
@@ -581,6 +619,20 @@ export function EditEventForm({
                     </option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Ticket design image (optional)">
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={tierDesignUploading}
+                  onChange={handleTierDesignUpload}
+                  className="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border file:border-line-strong file:bg-surface-2 file:px-3 file:py-2 file:text-xs file:font-bold file:text-paper"
+                />
+                {tierDesignImagePath && (
+                  <div className="relative mt-2 h-20 w-full overflow-hidden rounded-lg bg-surface-2">
+                    <img src={tierDesignImagePath} alt="Ticket design" className="h-full w-full object-contain" />
+                  </div>
+                )}
               </Field>
               <Button type="button" variant="primary" className="w-full" onClick={addTier}>
                 Add tier
