@@ -45,7 +45,7 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
   const [venue, setVenue] = useState("");
   const [city, setCity] = useState("");
   const [startDate, setStartDate] = useState(toLocalInputValue(new Date()).split("T")[0]);
-  const [startTime, setStartTime] = useState("19:00");
+  const [startTime] = useState("19:00");
   const [salesCloseDate, setSalesCloseDate] = useState("");
   const [salesCloseTime, setSalesCloseTime] = useState("");
   const [description, setDescription] = useState("");
@@ -314,24 +314,14 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
           <Field label="City">
             <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lagos" />
           </Field>
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="Start date">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-              />
-            </Field>
-            <Field label="Start time">
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-              />
-            </Field>
-          </div>
+          <Field label="Start date">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+            />
+          </Field>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Sales close date (optional)">
@@ -360,7 +350,7 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
               onClick={() => setShowTimeForm(!showTimeForm)}
               className="text-xs font-bold text-accent underline"
             >
-              {showTimeForm ? "Cancel" : "+ Add time slot"}
+              + Add time slot
             </button>
           </div>
           {times.length === 0 && !showTimeForm && (
@@ -437,9 +427,14 @@ export function NewEventForm({ artists }: { artists: Artist[] }) {
                   />
                 </Field>
               </div>
-              <Button type="button" variant="primary" className="w-full" onClick={addTime}>
-                Add time slot
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowTimeForm(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" variant="primary" className="flex-1" onClick={addTime}>
+                  Add time slot
+                </Button>
+              </div>
             </div>
           )}
         </div>

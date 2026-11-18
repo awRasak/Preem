@@ -67,7 +67,7 @@ export function EditEventForm({
   const [venue, setVenue] = useState(show.venue ?? "");
   const [city, setCity] = useState(show.city ?? "");
   const [startDate, setStartDate] = useState(toLocalDate(show.start_at));
-  const [startTime, setStartTime] = useState(toLocalTime(show.start_at));
+  const [startTime] = useState("19:00");
   const [salesCloseDate, setSalesCloseDate] = useState(toLocalDate(show.sales_close_at));
   const [salesCloseTime, setSalesCloseTime] = useState(toLocalTime(show.sales_close_at));
   const [description, setDescription] = useState(show.description ?? "");
@@ -369,24 +369,14 @@ export function EditEventForm({
           <Field label="City">
             <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lagos" />
           </Field>
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="Start date">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-              />
-            </Field>
-            <Field label="Start time">
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
-              />
-            </Field>
-          </div>
+          <Field label="Start date">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded-lg border border-line bg-surface-2 px-3.5 py-2.5 text-base text-paper focus:border-line-strong focus:outline-none"
+            />
+          </Field>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Sales close date (optional)">
@@ -416,7 +406,7 @@ export function EditEventForm({
               onClick={() => setShowTimeForm(!showTimeForm)}
               className="text-xs font-bold text-accent underline"
             >
-              {showTimeForm ? "Cancel" : "+ Add time slot"}
+              + Add time slot
             </button>
           </div>
           {times.length === 0 && !showTimeForm && (
@@ -493,9 +483,14 @@ export function EditEventForm({
                   />
                 </Field>
               </div>
-              <Button type="button" variant="primary" className="w-full" onClick={addTime}>
-                Add time slot
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowTimeForm(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" variant="primary" className="flex-1" onClick={addTime}>
+                  Add time slot
+                </Button>
+              </div>
             </div>
           )}
         </div>
