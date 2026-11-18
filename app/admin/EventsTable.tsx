@@ -146,14 +146,15 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                     {[e.venue, e.city].filter(Boolean).join(" - ") || "TBA"}
                   </p>
                   {e.times.length > 0 && (
-                    <div className="mt-1 space-y-0.5">
+                    <div className="mt-sp-2 space-y-1">
                       {e.times
                         .sort((a, b) => a.sort_order - b.sort_order)
                         .map((t, i) => (
-                          <div key={i} className="text-[11px] text-muted">
-                            <span className="font-medium text-paper/70">{t.label}</span>
-                            {" · "}
-                            {new Date(t.start_at).toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })}
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="font-medium">{t.label}</span>
+                            <span className="font-mono text-muted">
+                              {new Date(t.start_at).toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })}
+                            </span>
                           </div>
                         ))}
                     </div>
