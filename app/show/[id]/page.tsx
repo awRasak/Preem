@@ -90,7 +90,7 @@ async function resolveShow(idOrSlug: string): Promise<Resolved | null> {
     soldCount: soldByTier.get(t.id) ?? 0,
   }));
 
-  return { show: { ...show, tiers }, artist, soldCount: totalSold };
+  return { show: { ...show, tiers, times: show.times ?? [] }, artist, soldCount: totalSold };
 }
 
 export async function generateMetadata({
