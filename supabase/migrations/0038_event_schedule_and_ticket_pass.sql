@@ -90,7 +90,7 @@ declare
   v_show public.shows%rowtype;
   v_tier public.show_ticket_tiers%rowtype;
   v_price int;
-  v_taken int;
+  v_taken bigint;
   v_cap int;
   v_close timestamptz;
   v_tier_name text;
@@ -126,20 +126,13 @@ begin
     v_cap := v_tier.quantity;
     v_tier_name := v_tier.name;
     v_tier_design := v_tier.design;
-    select count(*)::int into v_taken
-    from public.show_tickets
-    where tier_id = p_tier_id
-      and status in ('pending', 'success');
+    select (select count(*) from public.show_tickets where tier_id = p_tier_id and status in ('pending', 'success')) into v_taken;
   else
     v_price := v_show.ticket_price_kobo;
     v_cap := v_show.total_tickets;
     v_tier_name := null;
     v_tier_design := 'standard';
-    select count(*)::int into v_taken
-    from public.show_tickets
-    where show_id = p_show_id
-      and tier_id is null
-      and status in ('pending', 'success');
+    select (select count(*) from public.show_tickets where show_id = p_show_id and tier_id is null and status in ('pending', 'success')) into v_taken;
   end if;
 
   if p_amount_kobo < v_price then
@@ -174,5 +167,3 @@ revoke all on function public.create_show_ticket(uuid, uuid, text, text, text, i
 revoke all on function public.create_show_ticket(uuid, uuid, text, text, text, int, text, text) from anon;
 revoke all on function public.create_show_ticket(uuid, uuid, text, text, text, int, text, text) from authenticated;
 grant execute on function public.create_show_ticket(uuid, uuid, text, text, text, int, text, text) to service_role;
-SQL
-echo "written"
