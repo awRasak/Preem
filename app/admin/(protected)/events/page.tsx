@@ -11,7 +11,7 @@ export default async function AdminEventsPage() {
     supabase
       .from("shows")
       .select(
-        "id, title, artist_id, venue, city, start_at, status, ticket_price_kobo, total_tickets, cover_art_path, artists(stage_name), tiers:show_ticket_tiers(name, price_kobo, quantity, design)",
+        "id, title, artist_id, venue, city, start_at, status, ticket_price_kobo, total_tickets, cover_art_path, artists(stage_name), tiers:show_ticket_tiers(name, price_kobo, quantity, design), times:show_times(label, start_at, sort_order)",
       )
       .order("start_at", { ascending: false })
       .limit(500),
@@ -43,6 +43,7 @@ export default async function AdminEventsPage() {
       totalTickets: s.total_tickets,
       coverArtPath: s.cover_art_path,
       tiers: (s.tiers ?? []) as { name: string; price_kobo: number; quantity: number; design: string }[],
+      times: (s.times ?? []) as { label: string; start_at: string; sort_order: number }[],
     };
   });
 

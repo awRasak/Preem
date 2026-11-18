@@ -24,6 +24,7 @@ export type AdminEvent = {
   totalTickets: number;
   coverArtPath: string | null;
   tiers: { name: string; price_kobo: number; quantity: number; design: string }[];
+  times: { label: string; start_at: string; sort_order: number }[];
 };
 
 const PAGE_SIZE = 12;
@@ -144,6 +145,19 @@ export function EventsTable({ events }: { events: AdminEvent[] }) {
                   <p className="mt-sp-1 truncate text-xs text-muted">
                     {[e.venue, e.city].filter(Boolean).join(" - ") || "TBA"}
                   </p>
+                  {e.times.length > 0 && (
+                    <div className="mt-1 space-y-0.5">
+                      {e.times
+                        .sort((a, b) => a.sort_order - b.sort_order)
+                        .map((t, i) => (
+                          <div key={i} className="text-[11px] text-muted">
+                            <span className="font-medium text-paper/70">{t.label}</span>
+                            {" · "}
+                            {new Date(t.start_at).toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" })}
+                          </div>
+                        ))}
+                    </div>
+                  )}
 
                   {e.tiers.length > 0 ? (
                     <div className="mt-sp-2 space-y-1">
