@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
+import { ImageCropper } from "@/components/ImageCropper";
 import { Field, Input, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { Spinner } from "@/components/Loader";
@@ -33,6 +34,7 @@ export function EditArtistForm({
   const [form, setForm] = useState<EditableArtist>(initial);
   const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
   const [uploading, setUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +45,19 @@ export function EditArtistForm({
     setSuccess(false);
   }
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setCropFile(file);
+  }
+
+  async function handleCroppedUpload(croppedFile: File) {
+    setCropFile(null);
     setUploading(true);
     setUploadPercent(0);
     setError(null);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
+      const ext = croppedFile.name.split(".").pop() || "jpg";
       const path = `${artistId}/${crypto.randomUUID()}.${ext}`;
       const res = await fetch("/api/admin/upload-url", {
         method: "POST",
@@ -62,13 +69,13 @@ export function EditArtistForm({
       const xhr = new XMLHttpRequest();
       await new Promise<void>((resolve, reject) => {
         xhr.open("PUT", signedUrl);
-        xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
+        xhr.setRequestHeader("content-type", croppedFile.type || "application/octet-stream");
         xhr.upload.onprogress = (ev) => {
           if (ev.lengthComputable) setUploadPercent(Math.round((ev.loaded / ev.total) * 100));
         };
         xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(`Storage error (${xhr.status})`)));
         xhr.onerror = () => reject(new Error("Network error"));
-        xhr.send(file);
+        xhr.send(croppedFile);
       });
       const supabase = createClient();
       setAvatarUrl(supabase.storage.from("artwork").getPublicUrl(path).data.publicUrl);
@@ -104,7 +111,15 @@ export function EditArtistForm({
   }
 
   return (
-    <form onSubmit={handleSave}>
+    <>
+      {cropFile && (
+        <ImageCropper
+          file={cropFile}
+          onConfirm={handleCroppedUpload}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
+      <form onSubmit={handleSave}>
       <div className="mb-5 flex items-center gap-4">
         <Avatar src={avatarUrl} seed={artistId} alt={form.stageName} size={72} />
         <label className="cursor-pointer text-xs font-bold text-paper underline">
@@ -174,5 +189,6 @@ export function EditArtistForm({
         )}
       </Button>
     </form>
+    </>
   );
 }

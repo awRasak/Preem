@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileWithProgress } from "@/lib/storage-upload";
 import { Avatar } from "@/components/Avatar";
+import { ImageCropper } from "@/components/ImageCropper";
 import { Field, Input, Textarea } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { ProgressBar, Spinner } from "@/components/Loader";
@@ -47,13 +48,19 @@ export function ProfileForm({
   const [snapchatUrl, setSnapchatUrl] = useState(currentSnapchatUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setCropFile(file);
+  }
+
+  async function handleCroppedUpload(croppedFile: File) {
+    setCropFile(null);
     setUploading(true);
     setUploadPercent(0);
     setError(null);
@@ -68,7 +75,7 @@ export function ProfileForm({
         artistId,
         session.access_token,
         "artwork",
-        file,
+        croppedFile,
         "avatar",
         (p) => setUploadPercent(p),
       );
@@ -121,6 +128,13 @@ export function ProfileForm({
 
   return (
     <>
+      {cropFile && (
+        <ImageCropper
+          file={cropFile}
+          onConfirm={handleCroppedUpload}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
       <form onSubmit={handleSave}>
         <p className="mb-4 text-xs text-muted">
           Everything here is optional — add what you like and save.
